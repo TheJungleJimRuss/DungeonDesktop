@@ -1,7 +1,7 @@
 # Project notes
 
 ## Status
-2026-11-17: Spec 0002 fully built (slices 2-5). Slice 4 Social (tickets in .agents/issues/dm-site-slice-4) and slice 5 Battle Map (.agents/issues/dm-site-slice-5) done. 224 Vitest, 12 Playwright, build clean. Not committed; not a git repo. Per-ticket history in NOTES_ARCHIVE.md.
+2026-11-17: Spec 0002 fully built (slices 2-5). Slice 4 Social (tickets in .agents/issues/dm-site-slice-4) and slice 5 Battle Map (.agents/issues/dm-site-slice-5) done. 224 Vitest, 12 Playwright, build clean. First commit 3ddee86 on main. Per-ticket history in NOTES_ARCHIVE.md.
 2026-11-17: Follow-ups done: per-token "Link to combatant" select, background images downscaled to 2048 px (src/storage/imageResize.ts, injectable resizer; jsdom falls back to the original), several pinned NPCs (JSON id list per Campaign, old single id still read). 232 Vitest, 13 Playwright, build clean. Not committed.
 
 ## Current goal
@@ -28,6 +28,5 @@ Spec 0002 done. Settle open design questions from slices 4-5 (see Next steps), t
 - Battle Map: the map needs an in-progress Encounter (keyed by encounterId); the panel shows a hint otherwise. Grid size inputs commit on blur/Enter (committing per keystroke remounts the input and drops focus). In a letterboxed SVG (max-height) compute pointer squares from the CTM, not the element box (e2e does the box maths itself).
 
 ## Next steps
-- Commit (git init first).
 - Open questions: Battle Map only exists during an Encounter; ruler has no keyboard path; Social location filter replaces party scoping rather than narrowing.
 - Background image is stored as {type, ArrayBuffer} on the map record, not a Blob (fake-indexeddb can't clone jsdom Blobs).
