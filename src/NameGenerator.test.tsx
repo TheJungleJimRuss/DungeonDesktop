@@ -2,8 +2,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { listCampaigns } from "./storage";
-import { setPartyLocation } from "./storage/campaigns";
-import { createLocation } from "./storage/locations";
 import { listNpcs } from "./storage/npcs";
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -17,49 +15,62 @@ async function openCampaign(user: User) {
 }
 beforeEach(() => localStorage.clear());
 
-const names = (panel: HTMLElement) => within(panel).getAllByRole("listitem").map((li) => li.querySelector(".gen-name")!.textContent!);
+const card = () => screen.getByRole("region", { name: /npc card/i });
+const suggestions = () => within(card()).getAllByRole("button", { name: /^use name /i }).map((b) => b.textContent!);
 
-describe("Name Generator", () => {
-  it("shows names, rerolls, and respects the style", async () => {
+async function newNpcInSocial(user: User) {
+  await user.keyboard("{Alt>}3{/Alt}");
+  await user.click(await screen.findByRole("button", { name: /new npc/i }));
+  return within(card());
+}
+
+describe("Name suggestions in the NPC card", () => {
+  it("is no longer a separate panel in Social mode", async () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user);
     await user.keyboard("{Alt>}3{/Alt}");
-    const panel = await screen.findByRole("region", { name: "Name Generator" });
-    const first = names(panel);
-    expect(first.length).toBeGreaterThanOrEqual(5);
-    await user.click(within(panel).getByRole("button", { name: /reroll/i }));
-    expect(names(panel)).not.toEqual(first);
-    await user.selectOptions(within(panel).getByRole("combobox", { name: /name style/i }), "dwarven");
-    expect(names(panel).length).toBeGreaterThanOrEqual(5);
+    await screen.findByRole("region", { name: /npc card/i });
+    expect(screen.queryByRole("region", { name: "Name Generator" })).toBeNull();
   });
 
-  it("creates an NPC at the party location and selects it on the card", async () => {
+  it("stays hidden until asked for, and can be hidden again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user);
+    const c = await newNpcInSocial(user);
+    expect(c.queryByRole("region", { name: /name suggestions/i })).toBeNull();
+    await user.click(c.getByRole("button", { name: /suggest names/i }));
+    expect(suggestions().length).toBeGreaterThanOrEqual(5);
+    await user.click(c.getByRole("button", { name: /^hide$/i }));
+    expect(c.queryByRole("region", { name: /name suggestions/i })).toBeNull();
+  });
+
+  it("rerolls and respects the style", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user);
+    const c = await newNpcInSocial(user);
+    await user.click(c.getByRole("button", { name: /suggest names/i }));
+    const first = suggestions();
+    await user.click(c.getByRole("button", { name: /reroll/i }));
+    expect(suggestions()).not.toEqual(first);
+    await user.selectOptions(c.getByRole("combobox", { name: /name style/i }), "dwarven");
+    expect(suggestions().length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("fills the Name field with the picked name, and the NPC saves with it", async () => {
     const user = userEvent.setup();
     render(<App />);
     const id = await openCampaign(user);
-    const loc = await createLocation(id, { name: "Neverwinter", notes: "" });
-    await setPartyLocation(id, loc.id);
-    await user.keyboard("{Alt>}3{/Alt}");
-    const panel = await screen.findByRole("region", { name: "Name Generator" });
-    const [first] = names(panel);
-    await user.click(within(panel).getAllByRole("button", { name: /create npc/i })[0]);
-    const card = await screen.findByRole("region", { name: "NPC card" });
-    expect(await within(card).findByRole("heading", { name: first })).toBeInTheDocument();
-    const npcs = await listNpcs(id);
-    expect(npcs).toHaveLength(1);
-    expect(npcs[0]).toMatchObject({ name: first, locationId: loc.id, locationTag: "Neverwinter" });
-  });
-
-  it("creates an NPC with no location when the party has none", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    const id = await openCampaign(user);
-    await user.keyboard("{Alt>}3{/Alt}");
-    const panel = await screen.findByRole("region", { name: "Name Generator" });
-    await user.click(within(panel).getAllByRole("button", { name: /create npc/i })[0]);
-    await screen.findByRole("region", { name: "NPC card" });
-    const npcs = await listNpcs(id);
-    expect(npcs[0].locationId).toBeUndefined();
+    const c = await newNpcInSocial(user);
+    await user.click(c.getByRole("button", { name: /suggest names/i }));
+    const [first] = suggestions();
+    await user.click(c.getByRole("button", { name: `Use name ${first}` }));
+    expect(c.getByLabelText(/^name/i)).toHaveValue(first);
+    expect(c.queryByRole("region", { name: /name suggestions/i })).toBeNull();
+    await user.click(c.getByRole("button", { name: /save/i }));
+    expect(await c.findByRole("heading", { name: first })).toBeInTheDocument();
+    expect((await listNpcs(id)).map((n) => n.name)).toEqual([first]);
   });
 });

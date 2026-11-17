@@ -1,33 +1,18 @@
 import { useEffect, useState } from "react";
 import type { Campaign } from "../storage";
 import { setLastMode } from "../storage";
-import { DASHBOARD_LAYOUT, DASHBOARD_SHORTCUT, MODES, getMode, type ModeDefinition, type ModeId } from "../modes/modes";
+import { DASHBOARD_SHORTCUT, MODES, getMode, type ModeDefinition, type ModeId, type PanelPlacement } from "../modes/modes";
 import { useShortcut, useShortcutListener } from "../shortcuts/shortcuts";
 import ModeLayout, { PanelFrame } from "./ModeLayout";
 import GlobalSearch from "./GlobalSearch";
+import { useDashboard } from "../storage/dashboard";
+import { DashboardToolbar, useDashboardEditing } from "./DashboardCustomizer";
+import DashboardGrid from "./DashboardGrid";
+import QuickAdd from "./QuickAdd";
 import ShortcutHelp from "./ShortcutHelp";
-import { MainPopoutProvider, usePopout } from "../popout/PopoutContext";
 import { selectionIdOf, selectStatBlock } from "../srd/selection";
 import { customSelectionId } from "../storage/customEntries";
 import { SRD_ATTRIBUTION, SRD_CHANGES } from "../srd/attribution";
-
-/** The Campaign screen: the Dashboard, or one of the Modes, plus the switcher. */
-function PopoutBar() {
-  const p = usePopout();
-  if (!p || (p.popped.size === 0 && !p.blocked)) return null;
-  return (
-    <div className="row popout-bar" role="status">
-      {p.blocked && <span className="import-error">The browser blocked the pop-out window. Allow pop-ups and try again.</span>}
-      {p.popped.size > 0 && !p.windowOpen && (
-        <>
-          <span className="muted">{p.popped.size} panel{p.popped.size === 1 ? "" : "s"} popped out, window closed.</span>
-          <button className="primary" onClick={p.reopen}>Reopen pop-out</button>
-          <button onClick={p.bringBackAll}>Bring all back</button>
-        </>
-      )}
-    </div>
-  );
-}
 
 /** Registers Esc and one switch shortcut per Mode with the central shortcut layer. */
 function ModeShortcuts({ select }: { select: (id: ModeId | null) => void }) {
@@ -41,8 +26,11 @@ function ModeShortcut({ mode, select }: { mode: ModeDefinition; select: (id: Mod
   return null;
 }
 
+export const STAT_BLOCKS_SHORTCUT = "Alt+S";
+
 /** Opens global search with Ctrl+K (Cmd+K on macOS). */
-function SearchShortcuts({ open, help }: { open: () => void; help: () => void }) {
+function SearchShortcuts({ open, help, statBlocks }: { open: () => void; help: () => void; statBlocks: () => void }) {
+  useShortcut(STAT_BLOCKS_SHORTCUT, "Show or hide Stat Blocks", statBlocks);
   useShortcut("Shift+?", "Keyboard shortcuts", help);
   useShortcut("?", "Keyboard shortcuts", help);
   useShortcut("Ctrl+K", "Search", open);
@@ -50,10 +38,8 @@ function SearchShortcuts({ open, help }: { open: () => void; help: () => void })
   return null;
 }
 
-/** A search result opened from a Mode that has no Stat Block panel: shown beside the Mode until closed. */
+/** The Stat Blocks panel, floating over the rest of the screen until toggled off (navbar button or Close). */
 function StatBlockDrawer({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
-  const popout = usePopout();
-  if (popout?.popped.has("stat-blocks")) return null;
   return (
     <aside className="stat-drawer" aria-label="Stat Block drawer">
       <button className="panel-ctl" onClick={onClose}>Close Stat Block</button>
@@ -62,6 +48,9 @@ function StatBlockDrawer({ campaign, onClose }: { campaign: Campaign; onClose: (
   );
 }
 
+const placementOf = (e: { panelId: string }): PanelPlacement => ({ panelId: e.panelId, col: 1, colSpan: 1, row: 1, rowSpan: 1 });
+
+/** The Campaign screen: the Dashboard, or one of the Modes, plus the switcher. */
 export default function Dashboard({ campaign, onExit }: { campaign: Campaign; onExit: () => void }) {
   const [mode, setMode] = useState<ModeId | null>(null); // null = Dashboard
   const last = getMode(campaign.lastMode);
@@ -70,17 +59,19 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
   const [searching, setSearching] = useState(false);
   const [helping, setHelping] = useState(false);
   const [drawer, setDrawer] = useState(false);
-  const [workspaces, setWorkspaces] = useState<Partial<Record<ModeId, string>>>({});
-  const tabs = current?.workspaces;
-  const workspace = tabs?.find((w) => w.id === workspaces[current!.id]) ?? tabs?.[0];
   useEffect(() => {
     document.title = `${current ? current.label : "Dashboard"} · ${campaign.name} · Dungeon Desktop`;
     return () => { document.title = "Dungeon Desktop"; };
   }, [current, campaign.name]);
-  const layout = workspace ? workspace.layout : current ? current.layout : DASHBOARD_LAYOUT;
+  const [customizing, setCustomizing] = useState(false);
+  const entries = useDashboard(campaign);
+  const editing = useDashboardEditing(campaign.id, entries);
+  const onDashboard = !current;
+  const layout = current ? current.layout : entries.map(placementOf);
 
   const select = (id: ModeId | null) => {
     setMode(id);
+    setCustomizing(false); // leaving (or re-entering) the Dashboard ends customizing
     if (id) {
       setRemembered(getMode(id));
       void setLastMode(campaign.id, id);
@@ -88,19 +79,22 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
   };
 
   return (
-    <MainPopoutProvider campaign={campaign}>
     <div className="shell">
       <ModeShortcuts select={select} />
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <SearchShortcuts open={() => setSearching(true)} help={() => setHelping(true)} />
+      <SearchShortcuts open={() => setSearching(true)} help={() => setHelping(true)} statBlocks={() => setDrawer((d) => !d)} />
       <header className="topbar">
         <button onClick={onExit}>All campaigns</button>
         <span className="campaign-name">{campaign.name}</span>
         <button onClick={() => setSearching(true)} aria-keyshortcuts="Control+K Meta+K" title="Search (Ctrl+K or Cmd+K)">
-          Search <kbd>Ctrl K</kbd>
+          Search
         </button>
+        <QuickAdd campaign={campaign} />
         <button onClick={() => select(null)} aria-current={mode === null ? "page" : undefined}>
-          Dashboard <kbd>Esc</kbd>
+          Dashboard
+        </button>
+        <button className="stat-toggle" onClick={() => setDrawer((d) => !d)} aria-pressed={drawer} aria-keyshortcuts={STAT_BLOCKS_SHORTCUT} title={`Show or hide Stat Blocks (${STAT_BLOCKS_SHORTCUT})`}>
+          Stat Blocks
         </button>
         <nav aria-label="Modes" className="mode-nav">
           {MODES.map((m) => (
@@ -111,7 +105,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
               aria-keyshortcuts={m.shortcut}
               title={`${m.label} (${m.shortcut})`}
             >
-              {m.label} <kbd>{m.shortcut}</kbd>
+              {m.label}
             </button>
           ))}
         </nav>
@@ -125,19 +119,19 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
               Continue in {remembered.label}
             </button>
           )}
+          {onDashboard && (
+            <button onClick={() => setCustomizing((c) => !c)}>{customizing ? "Done" : "Customize Dashboard"}</button>
+          )}
         </div>
-        {current && tabs && (
-          <div role="tablist" aria-label={`${current.label} workspaces`} className="row workspace-tabs">
-            {tabs.map((w) => (
-              <button key={w.id} role="tab" aria-selected={w === workspace}
-                onClick={() => setWorkspaces((x) => ({ ...x, [current.id]: w.id }))}>{w.label}</button>
-            ))}
-          </div>
+        {onDashboard && customizing && <DashboardToolbar entries={entries} editing={editing} />}
+        {onDashboard
+          ? <DashboardGrid entries={entries} campaign={campaign} editing={customizing ? editing : undefined} />
+          : <ModeLayout layout={layout} campaign={campaign} />}
+        {onDashboard && entries.length === 0 && (
+          <p className="muted">Your Dashboard is empty. Click "Customize Dashboard", then "Add panel" to choose what to show.</p>
         )}
-        <PopoutBar />
-        <ModeLayout layout={layout} campaign={campaign} />
       </main>
-      {drawer && !layout.some((pl) => pl.panelId === "stat-blocks") && (
+      {drawer && (
         <StatBlockDrawer campaign={campaign} onClose={() => setDrawer(false)} />
       )}
       {helping && <ShortcutHelp onClose={() => setHelping(false)} />}
@@ -148,6 +142,5 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
       )}
       <footer className="srd-attribution muted">{SRD_ATTRIBUTION} {SRD_CHANGES}</footer>
     </div>
-    </MainPopoutProvider>
   );
 }

@@ -1,18 +1,14 @@
-import { useId } from "react";
-import "../panels/placeholders";
+import { useId, type ReactNode } from "react";
 import "../panels/NpcListPanel";
-import "../panels/NpcCardPanel";
 import "../panels/NameGeneratorPanel";
-import "../panels/PinnedNpcPanel";
 import "../panels/LocationListPanel";
-import "../panels/LocationViewPanel";
 import "../panels/WorldMapPanel";
 import "../panels/BattleMapPanel";
 import "../panels/RoutePanel";
 import "../panels/PassivePerceptionPanel";
 import "../panels/PinnedNotesPanel";
 import "../panels/ScratchNotesPanel";
-import "../panels/PartyPanel";
+import "../panels/PlayerCardPanel";
 import "../panels/CharacterSheetsPanel";
 import "../panels/SessionPrepPanel";
 import "../panels/SessionSummaryPanel";
@@ -23,30 +19,18 @@ import "../panels/CustomEntriesPanel";
 import "../panels/DiceRollerPanel";
 import "../panels/InitiativeTrackerPanel";
 import { getPanel } from "../panels/registry";
-import { usePopout } from "../popout/PopoutContext";
 import type { PanelPlacement } from "../modes/modes";
 import type { Campaign } from "../storage";
 
-/** Frame around one panel. `data-panel-id` is the handle a Pop-out Window will use. */
-export function PanelFrame({ panelId, campaign, placement }: { panelId: string; campaign: Campaign; placement?: PanelPlacement }) {
+/** Frame around one panel. `data-panel-id` identifies the panel. */
+export function PanelFrame({ panelId, campaign, placement, controls }: { panelId: string; campaign: Campaign; placement?: PanelPlacement; controls?: ReactNode }) {
   const def = getPanel(panelId);
   const titleId = useId();
   const Body = def.component;
-  const popout = usePopout();
   const style = placement && {
     gridColumn: `${placement.col} / span ${placement.colSpan}`,
     gridRow: `${placement.row} / span ${placement.rowSpan}`,
   };
-  if (popout?.role === "main" && popout.popped.has(def.id)) {
-    return (
-      <section className="panel panel-popped" data-panel-id={def.id} data-popped style={style}>
-        <p className="muted">{def.title}: popped out</p>
-        <button onClick={() => popout.bringBack(def.id)} title={`Bring back ${def.title}`}>
-          Popped out — bring back
-        </button>
-      </section>
-    );
-  }
   return (
     <section
       className="panel"
@@ -57,14 +41,7 @@ export function PanelFrame({ panelId, campaign, placement }: { panelId: string; 
     >
       <div className="panel-head">
         <h2 id={titleId} className="panel-title">{def.title}</h2>
-        {popout?.role === "main" && (
-          <button className="panel-ctl" aria-label={`Pop out ${def.title}`} title="Send to Pop-out Window"
-            onClick={() => popout.popOut(def.id)}>Pop out ↗</button>
-        )}
-        {popout?.role === "popout" && (
-          <button className="panel-ctl" aria-label={`Bring back ${def.title}`} title="Return to main window"
-            onClick={() => popout.bringBack(def.id)}>Bring back</button>
-        )}
+        {controls}
       </div>
       <div className="panel-body"><Body campaign={campaign} /></div>
     </section>

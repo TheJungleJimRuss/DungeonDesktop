@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { requestRoll, resetRolls, setRng } from "./dice/roller";
 import { seqRng } from "./dice/dice";
+import { buildExpression } from "./panels/DiceRollerPanel";
 
 async function openCombat(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByRole("textbox", { name: /new campaign name/i }), "Alpha");
@@ -17,32 +18,52 @@ async function openCombat(user: ReturnType<typeof userEvent.setup>) {
 describe("Dice Roller panel", () => {
   afterEach(resetRolls);
 
-  it("rolls an expression into the history, shows advantage dice, rejects bad input, and the shortcut focuses it", async () => {
+  it("rolls the picked count, die and bonus into the history, shows advantage dice, rejects bad counts, and the shortcut focuses it", async () => {
     setRng(seqRng([0.5, 0.99, 0.0, 0.99]));
     const user = userEvent.setup();
     render(<App />);
     await openCombat(user);
-    const input = screen.getByRole("textbox", { name: /dice expression/i });
-    expect(input).not.toHaveFocus();
+    const count = screen.getByRole("spinbutton", { name: /number of dice/i });
+    const die = screen.getByRole("combobox", { name: /die type/i });
+    const bonus = screen.getByRole("spinbutton", { name: /bonus/i });
+    const adv = screen.getByRole("combobox", { name: /advantage/i });
+    expect(count).not.toHaveFocus();
     await user.keyboard("{Alt>}d{/Alt}");
-    expect(input).toHaveFocus();
+    expect(count).toHaveFocus();
 
-    await user.type(input, "2d6+3{Enter}");
+    await user.clear(count);
+    await user.type(count, "2");
+    await user.selectOptions(die, "d6");
+    await user.clear(bonus);
+    await user.type(bonus, "3");
+    expect(adv).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /^roll$/i }));
     const history = screen.getByRole("list", { name: /roll history/i });
+    expect(history).toHaveTextContent("2d6+3");
     expect(within(history).getByText("13")).toBeInTheDocument();
     expect(history).toHaveTextContent("[4, 6]");
 
-    await user.clear(input);
-    await user.type(input, "1d20+5");
-    await user.selectOptions(screen.getByLabelText(/advantage/i), "advantage");
+    await user.clear(count);
+    await user.type(count, "1");
+    await user.selectOptions(die, "d20");
+    await user.clear(bonus);
+    await user.type(bonus, "5");
+    expect(adv).toBeEnabled();
+    await user.selectOptions(adv, "advantage");
     await user.click(screen.getByRole("button", { name: /^roll$/i }));
     expect(history).toHaveTextContent("[1, 20] advantage, kept 20");
     expect(within(history).getByText("25")).toBeInTheDocument();
 
-    await user.clear(input);
-    await user.type(input, "banana{Enter}");
-    expect(screen.getByRole("alert")).toHaveTextContent(/not a valid dice expression/i);
+    await user.clear(count);
+    await user.type(count, "0");
+    await user.click(screen.getByRole("button", { name: /^roll$/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/between 1 and 100 dice/i);
     expect(within(history).getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("builds expressions with negative and zero bonuses", () => {
+    expect(buildExpression(3, 8, -2)).toBe("3d8-2");
+    expect(buildExpression(1, 100, 0)).toBe("1d100");
   });
 
   it("lets other panels request a roll through the shared interface", async () => {

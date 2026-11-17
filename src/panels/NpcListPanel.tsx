@@ -3,6 +3,7 @@ import { registerPanel, type PanelProps } from "./registry";
 import { usePartyLocation } from "../storage/campaigns";
 import { useLocations } from "../storage/locations";
 import { NEW_NPC, selectNpc, useNpcs, useSelectedNpcId } from "../storage/npcs";
+import { NpcCard } from "./NpcCardPanel";
 
 const distinct = (xs: string[]) => [...new Set(xs.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -76,8 +77,20 @@ function NpcList({ campaign, social }: PanelProps & { social: boolean }) {
   );
 }
 
-const NpcListPanel = (props: PanelProps) => <NpcList {...props} social={false} />;
-const SocialNpcListPanel = (props: PanelProps) => <NpcList {...props} social />;
+/** List and the selected NPC's card side by side, in one panel. */
+function NpcsPanel(props: PanelProps & { social: boolean }) {
+  return (
+    <div className="npc-split-wrap">
+      <div className="npc-split">
+        <NpcList {...props} />
+        <section className="npc-split-card" aria-label="NPC card"><NpcCard campaign={props.campaign} /></section>
+      </div>
+    </div>
+  );
+}
 
-registerPanel({ id: "social-npc-list", title: "NPCs", component: SocialNpcListPanel });
+const NpcListPanel = (props: PanelProps) => <NpcsPanel {...props} social={false} />;
+const SocialNpcListPanel = (props: PanelProps) => <NpcsPanel {...props} social />;
+
+registerPanel({ id: "social-npc-list", title: "NPCs", component: SocialNpcListPanel, notOnDashboard: true });
 export default registerPanel({ id: "npc-list", title: "NPCs", component: NpcListPanel });

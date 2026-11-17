@@ -6,11 +6,10 @@
 
 **Mode**: A screen layout tuned to one situation in play (Combat, Exploration/Travel, Social/Roleplay, Prep). The DM switches Modes as the game moves between situations.
 
-**Dashboard**: The main screen of a Campaign: session summary, party at a glance, pinned notes, and buttons that switch Mode.
+**Dashboard**: The main screen of a Campaign and the buttons that switch Mode. Its panels are the DM's choice, per Campaign: any panel, dragged and resized freely on a grid while customizing. By default it shows the session summary, player card and pinned notes.
+_Avoid_: "cards" for the Dashboard's panels (a card is one entry's display, such as the NPC card).
 
 **Party**: The player characters in a Campaign.
-
-**Pop-out Window**: A second browser window, intended for a second monitor, that shows extra DM information alongside the main window. It is for the DM only; there is no player-facing screen.
 
 **World Map**: A map of nodes (places such as cities) joined by edges with distances, used to track travel between locations.
 
@@ -33,5 +32,3 @@
 **Condition**: A standard 5e 2024 status effect (Blinded, Prone, Stunned, ...) applied to a Combatant, optionally for a number of rounds. A timed Condition counts down at the end (default) or start of its Combatant's turn and warns the DM when it ends; its rules text comes from the SRD.
 
 **Scratch Note**: A quick note jotted during a conversation in Social mode, optionally attached to an NPC and/or a scene (default: the NPC selected on the card). Shown on that NPC's card and on the scene in Prep. Separate from Pinned notes.
-
-**Pinned NPC**: An NPC kept on show in the Pop-out Window regardless of the NPC selection. A Campaign can have several; they stack in the order pinned, each with its own Unpin.

@@ -17,28 +17,6 @@ async function openCampaign(user: User) {
   await screen.findByRole("heading", { name: /dashboard/i });
 }
 
-describe("Prep workspaces", () => {
-  it("focuses one workspace at a time and keeps the choice", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await openCampaign(user);
-    await user.keyboard("{Alt>}4{/Alt}");
-    await screen.findByRole("region", { name: /^scenes$/i });
-    expect(screen.getByRole("region", { name: /custom entries/i })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: /monsters/i }));
-    expect(screen.getByRole("region", { name: /custom entries/i })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /^scenes$/i })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "New monster" }));
-    expect(await screen.findByRole("form", { name: /custom monster editor/i })).toBeInTheDocument();
-
-    await user.keyboard("{Alt>}1{/Alt}");
-    await user.keyboard("{Alt>}4{/Alt}");
-    expect(screen.getByRole("tab", { name: /monsters/i })).toHaveAttribute("aria-selected", "true");
-  });
-});
-
 describe("Add players dropdown", () => {
   it("adds one member or the whole Party from a single dropdown", async () => {
     const user = userEvent.setup();

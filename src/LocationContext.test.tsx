@@ -1,9 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { listCampaigns } from "./storage";
-import { createLocation, setNpcLocation } from "./storage/locations";
-import { createNpc, emptyNpcDraft } from "./storage/npcs";
 import { addPartyMember } from "./storage/party";
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -20,33 +18,6 @@ const member = (name: string, over: object = {}) => ({
 });
 
 beforeEach(() => localStorage.clear());
-
-describe("Location context in Exploration", () => {
-  it("shows a clicked node's notes and linked NPCs", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    const id = await openExploration(user);
-    const inn = await createLocation(id, { name: "Neverwinter", notes: "Smells of fish." });
-    await createLocation(id, { name: "Waterdeep", notes: "Towers everywhere." });
-    const npc = await createNpc(id, { ...emptyNpcDraft(), name: "Harbormaster Lo" });
-    await createNpc(id, { ...emptyNpcDraft(), name: "Elsewhere Eve" });
-    await setNpcLocation(npc.id, inn);
-    await user.keyboard("{Alt>}2{/Alt}");
-
-    const map = await screen.findByRole("region", { name: "World Map" });
-    const loc = await screen.findByRole("region", { name: "Location" });
-    expect(loc).toHaveTextContent(/select a location/i);
-
-    await user.click(within(map).getByRole("button", { name: "Location Neverwinter" }));
-    await waitFor(() => expect(loc).toHaveTextContent("Smells of fish."));
-    expect(within(loc).getByRole("button", { name: "Harbormaster Lo" })).toBeInTheDocument();
-    expect(within(loc).queryByRole("button", { name: "Elsewhere Eve" })).toBeNull();
-
-    await user.click(within(map).getByRole("button", { name: "Location Waterdeep" }));
-    await waitFor(() => expect(loc).toHaveTextContent("Towers everywhere."));
-    expect(loc).toHaveTextContent(/no npcs linked here/i);
-  });
-});
 
 describe("Passive Perception in Exploration", () => {
   it("shows per-member values from sheets and the highest", async () => {

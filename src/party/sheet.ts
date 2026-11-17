@@ -36,6 +36,9 @@ export const SKILLS: SkillDef[] = [
 export type SkillLevel = "proficient" | "expertise";
 export type SkillProficiencies = Record<string, SkillLevel | undefined>;
 
+/** Current HP after a change (negative = damage), kept between 0 and max. */
+export const applyHpChange = (current: number, max: number, delta: number) => Math.max(0, Math.min(max, current + delta));
+
 export const abilityMod = (score: number) => Math.floor((score - 10) / 2);
 
 export const proficiencyBonus = (level: number) => 2 + Math.floor((Math.max(1, Math.min(20, level)) - 1) / 4);
@@ -91,7 +94,7 @@ export function attackExpression(a: Attack): string | null {
 }
 
 /** "Dagger" or "Dagger ×3". */
-export const attackLabel = (a: Attack) => ((a.quantity ?? 1) > 1 ? `${a.name} ×${a.quantity}` : a.name);
+export const attackLabel = (a: Attack) => countLabel(a);
 
 /** "2d6+3 slashing", or "—" with no damage. */
 export function attackDamageText(a: Attack): string {
@@ -107,17 +110,40 @@ export function asAttacks(v: (Attack | string)[] | string | undefined): Attack[]
     .filter((a) => a.name);
 }
 
+/** An item inside a pack. */
+export interface PackItem {
+  name: string;
+  /** How many; absent = 1. */
+  quantity?: number;
+}
+
 /** An equipment entry: a single item, or a pack holding several items. */
 export interface EquipmentEntry {
   name: string;
+  /** How many; absent = 1. */
+  quantity?: number;
   /** Present on packs (even when empty); absent on single items. */
-  contents?: string[];
+  contents?: PackItem[];
 }
 
 export const isPack = (e: EquipmentEntry) => Array.isArray(e.contents);
 
-/** Reads an equipment list, tolerating the earlier string-list and text formats. */
+/** "Torch" or "Torch ×10". */
+export const countLabel = (e: { name: string; quantity?: number }) => ((e.quantity ?? 1) > 1 ? `${e.name} ×${e.quantity}` : e.name);
+
+/** A whole-number count of at least 1; anything else becomes 1. */
+export const toCount = (n: number) => (Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1);
+
+const asPackItem = (x: PackItem | string): PackItem => (typeof x === "string" ? { name: x.trim() } : x);
+
+/** Reads an equipment list, tolerating the earlier string-list and text formats and string pack contents. */
 export function asEquipment(v: (EquipmentEntry | string)[] | string | undefined): EquipmentEntry[] {
   const raw = Array.isArray(v) ? v : (v ?? "").split("\n");
-  return raw.map((x) => (typeof x === "string" ? { name: x.trim() } : x)).filter((e) => e.name);
+  return raw
+    .map((x): EquipmentEntry => {
+      if (typeof x === "string") return { name: x.trim() };
+      if (!Array.isArray(x.contents)) return x;
+      return { ...x, contents: (x.contents as (PackItem | string)[]).map(asPackItem).filter((c) => c.name) };
+    })
+    .filter((e) => e.name);
 }

@@ -66,14 +66,15 @@ async function createNpc(user: User, f: Fields, secrets: string[] = []) {
 const pick = (user: User, name: string) => user.click(within(list()).getByRole("button", { name: new RegExp(`^${name}`) }));
 
 describe("NPC cards in Prep mode", () => {
-  it("shows the NPC list and card as separate panels with an empty state", async () => {
+  it("shows the NPC list and card in one panel with an empty state", async () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user, "Alpha");
     await openPrep(user);
     expect(list()).toBeInTheDocument();
     expect(card()).toBeInTheDocument();
-    expect(list()).not.toContainElement(card());
+    expect(list()).toContainElement(card());
+    expect(document.querySelector('[data-panel-id="npc-card"]')).toBeNull();
     expect(within(list()).getByText(/no npcs yet/i)).toBeInTheDocument();
   });
 

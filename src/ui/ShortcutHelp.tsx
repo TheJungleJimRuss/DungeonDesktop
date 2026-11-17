@@ -16,7 +16,7 @@ export default function ShortcutHelp({ onClose }: { onClose: () => void }) {
       <div role="dialog" aria-modal="true" aria-labelledby="sc-title" className="dialog">
         <h2 id="sc-title">Keyboard shortcuts</h2>
         <dl className="shortcut-list">
-          {rows.map((r) => (<div key={r.combo}><dt>{r.label}</dt><dd><kbd>{r.combo}</kbd></dd></div>))}
+          {rows.map((r) => (<div key={r.combo}><dt>{r.label}</dt><dd>{r.combo.startsWith("Alt+") && !r.combo.slice(4).includes("+") ? <><kbd>{r.combo.slice(4)}</kbd> or <kbd>{r.combo}</kbd></> : <kbd>{r.combo}</kbd>}</dd></div>))}
         </dl>
         <div className="row end"><button ref={closeRef} onClick={onClose}>Close</button></div>
       </div>

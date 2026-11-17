@@ -1,14 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { usePopout } from "../popout/PopoutContext";
-import { setPoppedPanels, getPoppedPanels } from "../popout/popoutState";
-import { PINNED_NPC_PANEL, pinNpc, unpinNpc, usePinnedNpcIds } from "../popout/pinnedNpc";
+import NameSuggestions from "../names/NameSuggestions";
 import StatBlock from "../srd/StatBlock";
 import StatBlockPicker from "../srd/StatBlockPicker";
 import { resolveNpcStatBlock, type NpcStatBlock } from "../srd/npcStatBlock";
 import { useCustomEntries } from "../storage/customEntries";
 import { useLocations } from "../storage/locations";
 import { useScratchNotes } from "../storage/notes";
-import { registerPanel, type PanelProps } from "./registry";
+import type { PanelProps } from "./registry";
 import {
   NEW_NPC, createNpc, deleteNpc, emptyNpcDraft, selectNpc, updateNpc, useNpcs, useSelectedNpcId,
   type Npc, type NpcDraft,
@@ -41,14 +39,17 @@ function NpcForm({ campaignId, initial, onSave, onCancel }: { campaignId: string
   return (
     <form className="npc-form" onSubmit={(e) => { e.preventDefault(); onSave(d); }}>
       {FIELDS.map(([key, label]) => (
-        <label key={key}>
-          <span className="muted">{label}</span>
-          {LONG.has(key) ? (
-            <textarea rows={2} value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
-          ) : (
-            <input value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
-          )}
-        </label>
+        <div key={key} className="npc-field">
+          <label>
+            <span className="muted">{label}</span>
+            {LONG.has(key) ? (
+              <textarea rows={2} value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
+            ) : (
+              <input value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
+            )}
+          </label>
+          {key === "name" && <NameSuggestions onPick={(name) => setD((x) => ({ ...x, name }))} />}
+        </div>
       ))}
       <label>
         <span className="muted">Location</span>
@@ -168,14 +169,12 @@ export function NpcView({ campaignId, npc, onEdit, onDelete, actions }: { campai
   );
 }
 
-function NpcCardPanel({ campaign }: PanelProps) {
+/** The selected NPC's card (or the new/edit form). Embedded in the NPCs panel. */
+export function NpcCard({ campaign }: PanelProps) {
   const npcs = useNpcs(campaign.id);
   const selected = useSelectedNpcId(campaign.id);
   const [editing, setEditing] = useState<string | null>(null); // npc id being edited
   const [confirming, setConfirming] = useState(false);
-  const popout = usePopout();
-  const pinnedIds = usePinnedNpcIds(campaign.id);
-  const pinPanelShown = popout?.popped.has(PINNED_NPC_PANEL) ?? false;
 
   if (!npcs) return <p className="muted">Loading...</p>;
   if (selected === NEW_NPC) {
@@ -201,19 +200,9 @@ function NpcCardPanel({ campaign }: PanelProps) {
       />
     );
   }
-  const isPinned = pinnedIds.includes(npc.id) && pinPanelShown;
-  const pin = () => {
-    pinNpc(campaign.id, npc.id);
-    if (pinPanelShown) return; // the panel is already in the Pop-out Window; the new NPC joins its stack
-    if (popout?.role === "main") popout.popOut(PINNED_NPC_PANEL);
-    else setPoppedPanels(campaign.id, [...getPoppedPanels(campaign.id), PINNED_NPC_PANEL]);
-  };
-  const pinButton = isPinned
-    ? <button onClick={() => unpinNpc(campaign.id, npc.id)}>Unpin from Pop-out</button>
-    : <button onClick={pin}>Pin to Pop-out</button>;
   return (
     <>
-      <NpcView campaignId={campaign.id} npc={npc} actions={pinButton} onEdit={() => setEditing(npc.id)} onDelete={() => setConfirming(true)} />
+      <NpcView campaignId={campaign.id} npc={npc} onEdit={() => setEditing(npc.id)} onDelete={() => setConfirming(true)} />
       {confirming && (
         <div className="backdrop">
           <div role="dialog" aria-modal="true" aria-labelledby="del-npc-title" className="dialog">
@@ -233,5 +222,3 @@ function NpcCardPanel({ campaign }: PanelProps) {
     </>
   );
 }
-
-export default registerPanel({ id: "npc-card", title: "NPC card", component: NpcCardPanel });

@@ -29,7 +29,7 @@ async function openPrep(user: User) {
   await screen.findByRole("region", { name: /^locations$/i });
 }
 const locs = () => within(screen.getByRole("region", { name: /^locations$/i }));
-const view = () => within(screen.getByRole("region", { name: /^location$/i }));
+const view = locs;
 const npcList = () => within(screen.getByRole("region", { name: /^npcs$/i }));
 const card = () => within(screen.getByRole("region", { name: /npc card/i }));
 

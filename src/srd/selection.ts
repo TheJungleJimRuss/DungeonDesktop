@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { notifyChange, onChange } from "../sync/changeBus";
 import type { RefType } from "./reference";
 
-/** Which monster the Stat Block panel shows, per Campaign. Kept in localStorage (shared with the Pop-out Window
+/** Which monster the Stat Block panel shows, per Campaign. Kept in localStorage (shared with other tabs
  *  via the change bus) with an in-memory fallback where storage is unavailable. */
 const key = (campaignId: string) => `dungeon-desktop:statblock-selection:${campaignId}`;
 const topic = (campaignId: string) => `statblock-selection:${campaignId}`;

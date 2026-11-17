@@ -89,7 +89,7 @@ export function useNpcs(campaignId: string): Npc[] | undefined {
 
 /* ---- Selection: which NPC the card panel shows. ----
  * Per Campaign, kept in localStorage and a tiny pub/sub, so the list and card panels
- * share it without a common parent (and a future Pop-out Window shares it via the
+ * share it without a common parent (and other tabs share it via the
  * `storage` event). "new" means a blank card is being drafted. */
 export const NEW_NPC = "new";
 const selKey = (campaignId: string) => `dungeon-desktop:npc-selection:${campaignId}`;

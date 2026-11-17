@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import type { Campaign } from "../storage";
 
 /** Props every panel receives. A panel must render from these alone (plus its own
- *  storage reads), so the same panel can later be mounted in a Pop-out Window. */
+ *  storage reads), so the same panel can be mounted anywhere. */
 export interface PanelProps {
   campaign: Campaign;
 }
@@ -12,6 +12,8 @@ export interface PanelDefinition {
   id: string;
   title: string;
   component: ComponentType<PanelProps>;
+  /** True keeps the panel out of the Dashboard's "Add panel" picker (a variant of another panel). */
+  notOnDashboard?: boolean;
 }
 
 const panels = new Map<string, PanelDefinition>();
@@ -27,4 +29,13 @@ export function getPanel(id: string): PanelDefinition {
   const def = panels.get(id);
   if (!def) throw new Error(`Unknown panel id: ${id}`);
   return def;
+}
+
+export function hasPanel(id: string): boolean {
+  return panels.has(id);
+}
+
+/** Every registered panel, sorted by title. */
+export function listPanels(): PanelDefinition[] {
+  return [...panels.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

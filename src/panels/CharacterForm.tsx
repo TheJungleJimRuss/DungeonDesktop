@@ -1,7 +1,9 @@
+import { passivePerceptionOf } from "../party/passive";
+import type { PartyMember } from "../storage/party";
 import { useState, type FormEvent } from "react";
-import { asList, type PartyMemberInput } from "../storage/party";
+import { asLanguages, asList, type PartyMemberInput } from "../storage/party";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, asEquipment, attackLabel, isPack, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, asEquipment, attackLabel, isPack, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
 } from "../party/sheet";
 
@@ -35,19 +37,40 @@ function ListEditor({ label, noun, items, onChange }: { label: string; noun: str
   );
 }
 
-/** Equipment: single items and packs that hold several items. */
+/** Count input shown on every equipment row; a cleared field waits for a number instead of snapping to 1. */
+function CountInput({ of, value, onChange }: { of: string; value: number | undefined; onChange: (n: number) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  return (
+    <span className="qty"><span aria-hidden="true">Count</span>
+      <input type="number" min={1} aria-label={`Count of ${of}`} value={text ?? String(value ?? 1)}
+        onChange={(e) => { setText(e.target.value); if (e.target.valueAsNumber >= 1) onChange(toCount(e.target.valueAsNumber)); }}
+        onBlur={() => setText(null)} />
+    </span>
+  );
+}
+
+/** Equipment: single items and packs that hold several items, each with a count. */
 function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChange: (items: EquipmentEntry[]) => void }) {
   const [draft, setDraft] = useState("");
+  const [draftCount, setDraftCount] = useState(1);
   const [packDrafts, setPackDrafts] = useState<Record<number, string>>({});
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const toggle = (i: number) => setCollapsed((s) => { const n = new Set(s); if (!n.delete(i)) n.add(i); return n; });
+  const remove = (i: number) => {
+    onChange(items.filter((_, j) => j !== i));
+    setCollapsed((s) => new Set([...s].filter((j) => j !== i).map((j) => (j > i ? j - 1 : j))));
+  };
+  const withCount = <T extends { name: string }>(x: T, n: number): T & { quantity?: number } => (n > 1 ? { ...x, quantity: n } : x);
   const add = (pack: boolean) => {
     const t = draft.trim();
-    if (t) onChange([...items, pack ? { name: t, contents: [] } : { name: t }]);
+    if (t) onChange([...items, withCount(pack ? { name: t, contents: [] } : { name: t }, toCount(draftCount))]);
     setDraft("");
+    setDraftCount(1);
   };
   const patch = (i: number, e: EquipmentEntry) => onChange(items.map((x, j) => (j === i ? e : x)));
   const addToPack = (i: number) => {
     const t = (packDrafts[i] ?? "").trim();
-    if (t) patch(i, { ...items[i], contents: [...(items[i].contents ?? []), t] });
+    if (t) patch(i, { ...items[i], contents: [...(items[i].contents ?? []), { name: t }] });
     setPackDrafts({ ...packDrafts, [i]: "" });
   };
   return (
@@ -57,15 +80,22 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
         {items.map((e, i) => (
           <li key={i} className={isPack(e) ? "pack" : undefined}>
             <div className="pack-head">
-              <span>{e.name}{isPack(e) ? " (pack)" : ""}</span>
-              <button type="button" aria-label={`Remove ${isPack(e) ? "pack" : "item"} ${e.name}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>Remove</button>
+              {isPack(e)
+                ? <button type="button" className="pack-toggle" aria-expanded={!collapsed.has(i)} aria-label={`${collapsed.has(i) ? "Expand" : "Collapse"} ${e.name}`} onClick={() => toggle(i)}>
+                    <span aria-hidden="true">{collapsed.has(i) ? "▸" : "▾"}</span> {e.name} (pack{collapsed.has(i) ? `, ${e.contents!.length} item${e.contents!.length === 1 ? "" : "s"}` : ""})
+                  </button>
+                : <span>{e.name}</span>}
+              <CountInput of={e.name} value={e.quantity} onChange={(n) => patch(i, withCount({ ...e, quantity: undefined }, n))} />
+              <button type="button" aria-label={`Remove ${isPack(e) ? "pack" : "item"} ${e.name}`} onClick={() => remove(i)}>Remove</button>
             </div>
-            {isPack(e) && (
+            {isPack(e) && !collapsed.has(i) && (
               <div className="pack-body">
                 <ul>
                   {e.contents!.map((c, k) => (
-                    <li key={k}><span>{c}</span>
-                      <button type="button" aria-label={`Remove ${c} from ${e.name}`} onClick={() => patch(i, { ...e, contents: e.contents!.filter((_, m) => m !== k) })}>Remove</button>
+                    <li key={k}><span>{c.name}</span>
+                      <CountInput of={`${c.name} in ${e.name}`} value={c.quantity}
+                        onChange={(n) => patch(i, { ...e, contents: e.contents!.map((x, m) => (m === k ? withCount({ name: x.name }, n) : x)) })} />
+                      <button type="button" aria-label={`Remove ${c.name} from ${e.name}`} onClick={() => patch(i, { ...e, contents: e.contents!.filter((_, m) => m !== k) })}>Remove</button>
                     </li>
                   ))}
                 </ul>
@@ -83,6 +113,10 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
       <div className="row">
         <input aria-label="New item" value={draft} onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(false); } }} />
+        <label className="qty">Count
+          <input type="number" min={1} value={Number.isNaN(draftCount) ? "" : draftCount} onChange={(e) => setDraftCount(e.target.valueAsNumber)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(false); } }} />
+        </label>
         <button type="button" onClick={() => add(false)} aria-label="Add item">Add</button>
         <button type="button" onClick={() => add(true)} aria-label="Add pack">Add as pack</button>
       </div>
@@ -190,7 +224,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     onSave({
       ...v, attacks: asAttacks(v.attacks), equipment: asEquipment(v.equipment), name: v.name.trim(), level: n(v.level, 1) || 1, ac: n(v.ac, 0), maxHp,
       currentHp: Math.max(0, Math.min(n(v.currentHp, maxHp), maxHp)),
-      passivePerception: n(v.passivePerception, 0),
+      passivePerception: passivePerceptionOf({ ...v, abilities, level: n(v.level, 1) || 1 } as PartyMember),
       xp: v.xp === undefined || Number.isNaN(v.xp) ? undefined : v.xp,
       abilities: ABILITIES.reduce((acc, a) => ({ ...acc, [a]: n(abilities[a], 10) }), DEFAULT_ABILITIES),
       coins: CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: n(coins[c], 0) }), NO_COINS),
@@ -204,7 +238,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         {text("background", "Background")}{text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}
       </fieldset>
       <fieldset><legend>Combat</legend>
-        {num("ac", "AC")}{num("maxHp", "Max HP")}{num("currentHp", "Current HP")}{num("passivePerception", "Passive Perception")}
+        {num("ac", "AC")}{num("maxHp", "Max HP")}{num("currentHp", "Current HP")}<label>Passive Perception<input readOnly value={passivePerceptionOf({ ...v, abilities, level: n(v.level, 1) || 1 } as PartyMember)} /></label>
         {text("speed", "Speed")}{text("hitDice", "Hit Dice")}
         <label className="check"><input type="checkbox" checked={!!v.inspiration} onChange={(e) => set("inspiration", e.target.checked)} />Heroic Inspiration</label>
       </fieldset>
@@ -253,7 +287,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         <AttackEditor items={asAttacks(v.attacks)} onChange={(items) => set("attacks", items)} /><EquipmentEditor items={asEquipment(v.equipment)} onChange={(items) => set("equipment", items)} />
       </fieldset>
       <fieldset><legend>Features and proficiencies</legend>
-        {list("features", "Features and traits", "trait")}{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}{text("languages", "Languages")}
+        {list("features", "Features and traits", "trait")}{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
       </fieldset>
       <fieldset><legend>Story</legend>
         {area("personality", "Personality, ideals, bonds, flaws")}{area("backstory", "Backstory")}{area("notes", "Notes")}

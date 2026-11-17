@@ -1,4 +1,5 @@
 import type { StoredImage } from "./battleMaps";
+import { normalizeDashboard } from "./dashboard";
 import { COLLECTIONS, getDb, type CampaignRecord, type CollectionName, type CollectionRecord } from "./db";
 
 export const EXPORT_FORMAT = "dungeon-desktop-campaign";
@@ -96,7 +97,10 @@ export function parseCampaignFile(text: string): ParseResult {
     }
     collections[name] = rows as CollectionRecord[];
   }
-  const campaign: CampaignRecord = { ...(c as unknown as CampaignRecord) };
+  const { dashboard: rawDashboard, ...rest } = c as unknown as CampaignRecord;
+  // A damaged Dashboard never blocks an import; unknown panel ids are dropped when it is read.
+  const dashboard = normalizeDashboard(rawDashboard);
+  const campaign: CampaignRecord = dashboard ? { ...rest, dashboard } : rest;
   return { ok: true, data: { format: EXPORT_FORMAT, version: EXPORT_VERSION, exportedAt: Number(raw.exportedAt) || 0, campaign, collections } };
 }
 

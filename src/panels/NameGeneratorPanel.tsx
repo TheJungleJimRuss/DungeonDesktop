@@ -7,10 +7,11 @@ import { registerPanel, type PanelProps } from "./registry";
 
 const COUNT = 6;
 
-/** Social mode: roll fantasy names and turn one into a saved NPC with a click. */
+/** Social mode: hidden behind a Generate names button until needed; roll fantasy names and turn one into a saved NPC with a click. */
 function NameGenerator({ campaign }: PanelProps) {
+  const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<NameStyleId>("any");
-  const [names, setNames] = useState(() => generateNames(Math.random, "any", COUNT));
+  const [names, setNames] = useState<string[]>([]);
   const reroll = (s: NameStyleId = style) => setNames(generateNames(Math.random, s, COUNT));
 
   const create = async (name: string) => {
@@ -23,6 +24,14 @@ function NameGenerator({ campaign }: PanelProps) {
     selectNpc(campaign.id, npc.id);
   };
 
+  if (!open) {
+    return (
+      <div className="name-generator">
+        <button className="primary" onClick={() => { reroll(); setOpen(true); }}>Generate names</button>
+      </div>
+    );
+  }
+
   return (
     <div className="name-generator">
       <div className="row">
@@ -31,6 +40,7 @@ function NameGenerator({ campaign }: PanelProps) {
           {STYLES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </select>
         <button className="primary" onClick={() => reroll()}>Reroll</button>
+        <button onClick={() => setOpen(false)}>Hide</button>
       </div>
       <ul className="npc-items">
         {names.map((n) => (
@@ -44,4 +54,5 @@ function NameGenerator({ campaign }: PanelProps) {
   );
 }
 
+// Legacy panel id kept registered; Modes offer names inside the NPC form instead.
 export default registerPanel({ id: "name-generator", title: "Name Generator", component: NameGenerator });

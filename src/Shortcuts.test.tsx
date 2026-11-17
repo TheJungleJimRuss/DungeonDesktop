@@ -47,15 +47,21 @@ describe("central shortcut layer", () => {
     off();
   });
 
-  it("does not fire twice when a Pop-out Window is open in the same session", async () => {
+  it("runs an Alt shortcut from the bare key when not typing", async () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user, "Alpha");
-    render(<App search="?popout=none" />); // a second window's listener alongside the main one
     const hits: string[] = [];
-    const off = registerShortcut({ combo: "Alt+K", label: "Probe", handler: () => hits.push("k") });
-    await user.keyboard("{Alt>}k{/Alt}");
-    expect(hits).toEqual(["k"]);
+    const off = registerShortcut({ combo: "Alt+J", label: "Probe", handler: () => hits.push("j") });
+    await user.keyboard("j");
+    expect(hits).toEqual(["j"]);
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    await user.click(input);
+    await user.keyboard("j");
+    expect(hits).toHaveLength(1);
+    expect(input.value).toBe("j");
+    input.remove();
     off();
   });
 });

@@ -56,14 +56,15 @@ describe("Dashboard and Mode switcher", () => {
     expect(await screen.findByRole("heading", { name: /^dashboard$/i })).toBeInTheDocument();
   });
 
-  it("no longer switches Mode on bare number keys, and shows Alt hints on the buttons", async () => {
+  it("switches Mode on bare number keys when not typing, and keeps shortcut hints off the buttons", async () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user, "Alpha");
     await user.keyboard("1");
-    expect(screen.getByRole("heading", { name: /^dashboard$/i })).toBeInTheDocument();
-    expect(modeButton(/combat/i)).toHaveTextContent("Alt+1");
-    expect(modeButton(/prep/i)).toHaveTextContent("Alt+4");
+    expect(await screen.findByRole("heading", { level: 1, name: /^combat$/i })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(modeButton(/combat/i)).not.toHaveTextContent("Alt+1");
+    expect(modeButton(/prep/i)).not.toHaveTextContent("Alt+4");
   });
 
   it("ignores Esc while a dialog is open", async () => {

@@ -15,6 +15,23 @@ export interface CampaignRecord {
   lastMode?: string;
   /** Id of the Location where the Party currently is. Optional: old records have none. */
   partyLocationId?: string;
+  /** The DM's own Dashboard arrangement (grid positions). Missing = the default Dashboard. */
+  dashboard?: StoredDashboard;
+}
+
+/** One panel on the Dashboard grid (120 columns of about 8 px, 8 px rows; x, y, w, h in grid units). */
+export interface DashboardEntry {
+  panelId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** What a Campaign stores for its Dashboard. `grid: "fine"` marks the 120-column grid (older shapes are plain lists). */
+export interface StoredDashboard {
+  grid: "fine";
+  panels: DashboardEntry[];
 }
 
 /** Every collection record belongs to exactly one Campaign. */

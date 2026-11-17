@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { setMonsterSource } from "./srd/monsters";
@@ -51,16 +51,24 @@ describe("global search and Stat Block", () => {
     expect(await screen.findByRole("article", { name: "Goblin Warrior Stat Block" })).toBeInTheDocument();
   });
 
-  it("shows the Stat Block panel in Combat mode and keeps the selection", async () => {
+  it("toggles the Stat Blocks overlay from the navbar and keeps the selection across Modes", async () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user, "Alpha");
     await user.keyboard("{Control>}k{/Control}owlbear{Enter}");
     await screen.findByRole("article", { name: "Owlbear Stat Block" });
     await user.keyboard("{Alt>}1{/Alt}");
-    const panel = await screen.findByRole("region", { name: "Stat Blocks" });
-    expect(await within(panel).findByRole("article", { name: "Owlbear Stat Block" })).toBeInTheDocument();
+    expect(await screen.findByRole("article", { name: "Owlbear Stat Block" })).toBeInTheDocument();
+    const toggle = screen.getByRole("button", { name: "Stat Blocks" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await user.click(toggle);
     expect(screen.queryByLabelText("Stat Block drawer")).toBeNull();
+    await user.click(toggle);
+    expect(await screen.findByRole("article", { name: "Owlbear Stat Block" })).toBeInTheDocument();
+    await user.keyboard("{Alt>}s{/Alt}");
+    await waitFor(() => expect(screen.queryByLabelText("Stat Block drawer")).toBeNull());
+    await user.keyboard("{Alt>}s{/Alt}");
+    expect(await screen.findByLabelText("Stat Block drawer")).toBeInTheDocument();
   });
 
   it("shows the SRD attribution in the app", async () => {

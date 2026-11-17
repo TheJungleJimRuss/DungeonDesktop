@@ -2,6 +2,7 @@ import { useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { createLocation, selectLocation, useLocations, useSelectedLocationId } from "../storage/locations";
 import { useNpcs } from "../storage/npcs";
+import { LocationView } from "./LocationViewPanel";
 
 function LocationListPanel({ campaign }: PanelProps) {
   const locations = useLocations(campaign.id);
@@ -42,6 +43,8 @@ function LocationListPanel({ campaign }: PanelProps) {
           })}
         </ul>
       )}
+      <hr />
+      <LocationView campaign={campaign} />
     </div>
   );
 }

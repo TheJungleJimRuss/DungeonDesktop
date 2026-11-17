@@ -169,7 +169,7 @@ describe("Sessions and scenes", () => {
     expect(sc.getByText(/Gundren/)).toBeInTheDocument();
     // delete the location and an NPC through the app
     await user.click(screen.getByRole("button", { name: /^phandalin/i }));
-    await user.click(within(screen.getByRole("region", { name: /^location$/i })).getByRole("button", { name: /^delete/i }));
+    await user.click(within(screen.getByRole("region", { name: /^locations$/i })).getByRole("button", { name: /^delete/i }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /delete/i }));
     expect(await sc.findByText("Deleted location")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /^elda/i }));

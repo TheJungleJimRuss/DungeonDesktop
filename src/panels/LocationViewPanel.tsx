@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { registerPanel, type PanelProps } from "./registry";
+import type { PanelProps } from "./registry";
 import {
   deleteLocation, selectLocation, setNpcLocation, updateLocation, useLocations, useSelectedLocationId, type Location,
 } from "../storage/locations";
@@ -24,7 +24,7 @@ function LocationForm({ loc, onDone }: { loc: Location; onDone: () => void }) {
   );
 }
 
-function LocationViewPanel({ campaign }: PanelProps) {
+export function LocationView({ campaign }: PanelProps) {
   const locations = useLocations(campaign.id);
   const npcs = useNpcs(campaign.id);
   const selected = useSelectedLocationId(campaign.id);
@@ -87,5 +87,3 @@ function LocationViewPanel({ campaign }: PanelProps) {
     </article>
   );
 }
-
-export default registerPanel({ id: "location-view", title: "Location", component: LocationViewPanel });

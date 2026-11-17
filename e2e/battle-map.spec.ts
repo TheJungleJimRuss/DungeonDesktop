@@ -10,7 +10,7 @@ async function openCombat(page: Page, name: string) {
   await page.getByRole("button", { name: /start encounter/i }).click();
 }
 
-test("tokens snap to squares on pointer drag and stay in sync with the Pop-out Window", async ({ page }) => {
+test("tokens snap to squares on pointer drag", async ({ page }) => {
   await openCombat(page, "Map Camp");
   const map = page.getByRole("region", { name: "Battle Map" });
   await map.getByLabel("Token name").fill("Goblin");
@@ -30,24 +30,6 @@ test("tokens snap to squares on pointer drag and stay in sync with the Pop-out W
   await expect(token).toHaveAttribute("data-col", "3");
   await expect(token).toHaveAttribute("data-row", "2");
 
-  const [pop] = await Promise.all([page.context().waitForEvent("page"), page.getByRole("button", { name: "Pop out Battle Map" }).click()]);
-  await pop.waitForLoadState();
-  const popMap = pop.getByRole("region", { name: "Battle Map" });
-  const popToken = popMap.getByRole("button", { name: "Token Goblin", exact: true });
-  await expect(popToken).toHaveAttribute("data-col", "3");
-
-  await popToken.focus();
-  await pop.keyboard.press("ArrowRight");
-  await pop.keyboard.press("ArrowDown");
-  await expect(popToken).toHaveAttribute("data-col", "4");
-  await popMap.getByLabel("Token name").fill("Ogre");
-  await popMap.getByRole("button", { name: "Add token", exact: true }).click();
-  await expect(popMap.getByRole("button", { name: "Token Ogre", exact: true })).toBeVisible();
-
-  await pop.close();
-  await expect(map.getByRole("button", { name: "Token Goblin", exact: true })).toHaveAttribute("data-col", "4");
-  await expect(map.getByRole("button", { name: "Token Goblin", exact: true })).toHaveAttribute("data-row", "3");
-  await expect(map.getByRole("button", { name: "Token Ogre", exact: true })).toBeVisible();
 });
 
 test("ruler measures by pointer drag, snapping to squares, and leaves token dragging alone when off", async ({ page }) => {
@@ -79,7 +61,7 @@ test("ruler measures by pointer drag, snapping to squares, and leaves token drag
   await expect(token).toHaveAttribute("data-col", "3");
 });
 
-test("selecting a linked token in the Pop-out Window highlights the Combatant in the main tracker", async ({ page }) => {
+test("clicking a linked token highlights the Combatant in the tracker", async ({ page }) => {
   await openCombat(page, "Link Camp");
   await page.getByLabel("Ad-hoc name").fill("Bandit");
   await page.getByLabel("Ad-hoc HP").fill("9");
@@ -91,9 +73,7 @@ test("selecting a linked token in the Pop-out Window highlights the Combatant in
   await map.getByRole("button", { name: "Add tokens for all combatants" }).click();
   await expect(map.getByRole("button", { name: "Token Cultist", exact: true })).toBeVisible();
 
-  const [pop] = await Promise.all([page.context().waitForEvent("page"), page.getByRole("button", { name: "Pop out Battle Map" }).click()]);
-  await pop.waitForLoadState();
-  await pop.getByRole("region", { name: "Battle Map" }).getByRole("button", { name: "Token Cultist", exact: true }).click();
+  await map.getByRole("button", { name: "Token Cultist", exact: true }).click();
   await expect(page.getByRole("listitem", { name: "Cultist" }).getByText("Selected")).toBeVisible();
 });
 

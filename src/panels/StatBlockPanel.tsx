@@ -53,4 +53,4 @@ function StatBlockBody({ campaign }: PanelProps) {
   );
 }
 
-registerPanel({ id: "stat-blocks", title: "Stat Blocks", component: StatBlockBody });
+registerPanel({ id: "stat-blocks", title: "Stat Blocks", notOnDashboard: true, component: StatBlockBody });

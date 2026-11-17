@@ -173,8 +173,10 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
           );
         })}
       </ol>
-      <AddCombatants campaign={campaign} onAdd={addAll} />
-      <SaveEncounterControl campaignId={campaign.id} enc={enc} />
+      <div className="init-side">
+        <AddCombatants campaign={campaign} onAdd={addAll} />
+        <SaveEncounterControl campaignId={campaign.id} enc={enc} />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { notifyChange, onChange } from "../sync/changeBus";
 
 /** Which combatant the Combatant Stat Block panel shows when the DM picked one in the tracker, per Campaign.
  *  The pick remembers whose turn it was, so it lapses when the turn moves on (the panel then follows the active
- *  combatant again). Kept like srd/selection.ts: localStorage, synced to the Pop-out Window, memory fallback. */
+ *  combatant again). Kept like srd/selection.ts: localStorage, synced to other tabs, memory fallback. */
 export interface CombatPick { combatantId: string; activeId?: string }
 const key = (campaignId: string) => `dungeon-desktop:combat-pick:${campaignId}`;
 const topic = (campaignId: string) => `combat-pick:${campaignId}`;

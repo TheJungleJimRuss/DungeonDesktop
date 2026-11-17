@@ -5,6 +5,7 @@ import { listCampaigns } from "./storage";
 import { setPartyLocation } from "./storage/campaigns";
 import { createLocation } from "./storage/locations";
 import { createNpc, emptyNpcDraft } from "./storage/npcs";
+import { addPartyMember } from "./storage/party";
 
 type User = ReturnType<typeof userEvent.setup>;
 async function openCampaign(user: User) {
@@ -85,5 +86,35 @@ describe("Social mode", () => {
     const prep = within(await screen.findByRole("region", { name: "NPC card" }));
     const li = (await prep.findByText("Smuggles elves")).closest("li")!;
     expect(within(li).getByText("Revealed")).toBeInTheDocument();
+  });
+
+  it("shows the list and the selected NPC's card in one panel, with no separate NPC card panel", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await seed(user);
+    await user.keyboard("{Alt>}3{/Alt}");
+    const panel = within(await screen.findByRole("region", { name: "NPCs" }));
+    await user.click(await panel.findByRole("button", { name: /Harbormaster Lo/ }));
+    const card = within(panel.getByRole("region", { name: "NPC card" }));
+    expect(await card.findByRole("heading", { name: "Harbormaster Lo" })).toBeInTheDocument();
+    expect(document.querySelector('[data-panel-id="npc-card"]')).toBeNull();
+  });
+
+  it("has a player card that shows the picked player character", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const id = await seed(user);
+    const base = { class: "Rogue", level: 3, ac: 14, maxHp: 20, passivePerception: 13, notes: "" };
+    await addPartyMember(id, { ...base, name: "Mira", notes: "Hates nobles" });
+    await addPartyMember(id, { ...base, name: "Tor", class: "Fighter", ac: 18,
+      abilities: { str: 16, dex: 10, con: 14, int: 10, wis: 14, cha: 8 }, skills: { insight: "proficient" } });
+    await user.keyboard("{Alt>}3{/Alt}");
+    const panel = within(await screen.findByRole("region", { name: "Player card" }));
+    await user.click(await panel.findByRole("button", { name: "Mira" }));
+    expect(panel.getByRole("article", { name: "Mira player card" })).toHaveTextContent("Hates nobles");
+    await user.click(panel.getByRole("button", { name: "Tor" }));
+    const tor = panel.getByRole("article", { name: "Tor player card" });
+    expect(tor).toHaveTextContent("AC 18");
+    expect(tor).toHaveTextContent("Passive Insight 14"); // 10 + Wis +2 + proficiency +2
   });
 });

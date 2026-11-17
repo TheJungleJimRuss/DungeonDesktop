@@ -19,7 +19,7 @@ async function open(user: User, name: string) {
   await user.click(within(screen.getByRole("listitem", { name })).getByRole("button", { name: /open/i }));
   await screen.findByRole("heading", { name: /dashboard/i });
 }
-const party = () => screen.getByRole("region", { name: /party/i });
+const party = () => screen.getByRole("region", { name: /player card/i });
 const row = (name: string) => screen.getByRole("listitem", { name });
 
 beforeEach(() => localStorage.clear());
@@ -32,23 +32,16 @@ describe("Party HP and end combat", () => {
     await addPartyMember(id, THIA);
     expect(currentHpOf((await listParty(id))[0])).toBe(28);
     await open(user, "Alpha");
-    expect(await within(party()).findByRole("listitem", { name: "Thia" })).toHaveTextContent("HP 28/28");
+    expect(await within(party()).findByRole("article", { name: /thia player card/i })).toHaveTextContent("HP 28/28");
   });
 
-  it("edits current HP on the sheet, starts combat from it, and writes remaining HP back on End encounter", async () => {
+  it("starts combat from it, and writes remaining HP back on End encounter", async () => {
     const user = userEvent.setup();
     render(<App />);
     const id = await createAndOpen(user, "Alpha");
-    await addPartyMember(id, THIA);
+    await addPartyMember(id, { ...THIA, currentHp: 20 });
     await open(user, "Alpha");
-
-    await user.click(await within(party()).findByRole("button", { name: /edit thia/i }));
-    const cur = within(party()).getByLabelText("Current HP");
-    expect(cur).toHaveValue(28);
-    await user.clear(cur);
-    await user.type(cur, "20");
-    await user.click(within(party()).getByRole("button", { name: /save member/i }));
-    expect(await within(party()).findByRole("listitem", { name: "Thia" })).toHaveTextContent("HP 20/28");
+    expect(await within(party()).findByRole("article", { name: /thia player card/i })).toHaveTextContent("HP 20/28");
 
     await user.keyboard("{Alt>}1{/Alt}");
     const p = await screen.findByRole("region", { name: "Initiative" });
@@ -68,7 +61,7 @@ describe("Party HP and end combat", () => {
 
     await user.keyboard("{Escape}");
     await screen.findByRole("heading", { name: /dashboard/i });
-    expect(await within(party()).findByRole("listitem", { name: "Thia" })).toHaveTextContent("HP 12/28");
+    expect(await within(party()).findByRole("article", { name: /thia player card/i })).toHaveTextContent("HP 12/28");
   });
 
   it("includes current HP in the export", async () => {

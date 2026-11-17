@@ -35,7 +35,8 @@ export interface PartyMember {
   attacks?: Attack[];
   features?: string[];
   proficiencies?: string[];
-  languages?: string;
+  /** Older records may hold a comma/newline-separated string; read through asLanguages(). */
+  languages?: string[] | string;
   /** Items and packs; older records may hold strings, read through asEquipment(). */
   equipment?: EquipmentEntry[];
   coins?: Coins;
@@ -83,5 +84,9 @@ export async function writeBackPartyHp(combatants: { kind: string; partyId?: str
 }
 
 /** Normalizes a list field; tolerates the earlier single-text-box format. */
+/** Languages as a list; older records stored "Common, Elvish" as one string. */
+export const asLanguages = (v: string[] | string | undefined): string[] =>
+  Array.isArray(v) ? v : (v ?? "").split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+
 export const asList = (v: string[] | string | undefined): string[] =>
   Array.isArray(v) ? v : (v ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
