@@ -1,0 +1,10 @@
+export function convertMonster(raw: unknown): Record<string, unknown>;
+export function convertMonsters(raw: unknown[]): Record<string, unknown>[];
+export function convertSpell(raw: unknown): Record<string, unknown>;
+export function convertMagicItem(raw: unknown): Record<string, unknown>;
+export function convertEquipment(raw: unknown): Record<string, unknown>;
+export function convertCondition(raw: unknown): Record<string, unknown>;
+export function convertSpells(raw: unknown[]): Record<string, unknown>[];
+export function convertMagicItems(raw: unknown[]): Record<string, unknown>[];
+export function convertEquipments(raw: unknown[]): Record<string, unknown>[];
+export function convertConditions(raw: unknown[]): Record<string, unknown>[];
