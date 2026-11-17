@@ -4,6 +4,7 @@ import { setLastMode } from "../storage";
 import { DASHBOARD_SHORTCUT, MODES, getMode, type ModeDefinition, type ModeId, type PanelPlacement } from "../modes/modes";
 import { useShortcut, useShortcutListener } from "../shortcuts/shortcuts";
 import ModeLayout, { PanelFrame } from "./ModeLayout";
+import { EmptyState, ModeSwitchContext } from "./PanelStates";
 import GlobalSearch from "./GlobalSearch";
 import { useDashboard } from "../storage/dashboard";
 import { DashboardToolbar, useDashboardEditing } from "./DashboardCustomizer";
@@ -111,6 +112,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
         </nav>
         <button onClick={() => setHelping(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
       </header>
+      <ModeSwitchContext.Provider value={select}>
       <main className="panel-area" id="main-content" tabIndex={-1}>
         <div className="row mode-head">
           <h1>{current ? current.label : "Dashboard"}</h1>
@@ -128,9 +130,12 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
           ? <DashboardGrid entries={entries} campaign={campaign} editing={customizing ? editing : undefined} />
           : <ModeLayout layout={layout} campaign={campaign} />}
         {onDashboard && entries.length === 0 && (
-          <p className="muted">Your Dashboard is empty. Click "Customize Dashboard", then "Add panel" to choose what to show.</p>
+          <EmptyState action={!customizing && <button className="primary" onClick={() => setCustomizing(true)}>Choose panels</button>}>
+            Your Dashboard is empty. Customize it, then use "Add panel" to choose what to show.
+          </EmptyState>
         )}
       </main>
+      </ModeSwitchContext.Provider>
       {drawer && (
         <StatBlockDrawer campaign={campaign} onClose={() => setDrawer(false)} />
       )}

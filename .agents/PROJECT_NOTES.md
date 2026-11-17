@@ -6,6 +6,8 @@
 
 2026-11-17: Spec 0003 Customizable Dashboard built (docs/specs/0003-customizable-dashboard.md): per-Campaign `dashboard` field on the Campaign record, src/storage/dashboard.ts, src/modes/dashboardLayout.ts, src/ui/DashboardCustomizer.tsx. Revision 2: drag and resize via react-grid-layout 2.3.0 (src/ui/DashboardGrid.tsx; grid positions {x,y,w,h}; revision-1 entries migrate on read); drag covered by e2e/dashboard-drag.spec.ts. Not committed.
 
+2026-11-17: UI polish: src/ui/PanelStates.tsx (`Loading` delayed skeleton, `EmptyState` with `goTo` Mode jump via ModeSwitchContext from Dashboard), campaign picker restyle (ghost buttons, meta line), CSS section "UI polish 2". 254 Vitest. Not committed.
+
 ## Current goal
 Spec 0002 done. Settle open design questions from slices 4-5 (see Next steps), then decide the next spec.
 
@@ -18,6 +20,7 @@ Spec 0002 done. Settle open design questions from slices 4-5 (see Next steps), t
 - Vocabulary in GLOSSARY.md. Spec and tickets are local files (.agents/issues/dm-site/issues/).
 
 ## Gotchas
+- Panel loading/empty text: use `<Loading />` and `<EmptyState goTo="party">` from src/ui/PanelStates.tsx, not bare `<p className="muted">`.
 - Never run bare `tsc -b`: tsconfig has no noEmit, so it writes a .js beside every .ts/.tsx, and Vite resolves .js first (stale code in tests). Use `npx tsc --noEmit`.
 - Panels list themselves with listPanels(); `notOnDashboard: true` in registerPanel hides one from the Dashboard picker (used for social-npc-list).
 - New panel: registerPanel in src/panels/registry.ts, place it in src/modes/modes.ts, import it in ui/ModeLayout.tsx.

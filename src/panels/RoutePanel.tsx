@@ -5,6 +5,7 @@ import { useEdges } from "../storage/edges";
 import { setPartyLocation } from "../storage/campaigns";
 import { PACES, formatDays } from "../travel/travel";
 import { neighbours, routeTotals, shortestRoute } from "../travel/route";
+import { Loading } from "../ui/PanelStates";
 
 function RoutePanel({ campaign }: PanelProps) {
   const locations = useLocations(campaign.id);
@@ -15,7 +16,7 @@ function RoutePanel({ campaign }: PanelProps) {
   const [to, setTo] = useState("");
   const [note, setNote] = useState("");
 
-  if (!locations) return <p className="muted">Loading...</p>;
+  if (!locations) return <Loading />;
   const name = (id: string) => locations.find((l) => l.id === id)?.name ?? "?";
   // drop nodes that no longer exist (deleted locations)
   const live = path.every((id) => locations.some((l) => l.id === id)) ? path : [];

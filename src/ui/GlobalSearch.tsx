@@ -3,6 +3,7 @@ import { crLabel } from "../srd/monsters";
 import { monsterFilterOptions, loadSearchData, REF_TYPES, searchReference, spellLevelLabel, type RefHit, type RefType, type SearchData } from "../srd/reference";
 import { buildIndex, search } from "../srd/search";
 import { listCustomEntries, type CustomEntry } from "../storage/customEntries";
+import { Loading } from "./PanelStates";
 
 /** Global search dialog. Results are grouped by type (only Monsters so far). Enter or click opens the result. */
 export default function GlobalSearch({ campaignId, onOpen, onOpenCustom, onClose }: {
@@ -43,7 +44,7 @@ export default function GlobalSearch({ campaignId, onOpen, onOpenCustom, onClose
         <input ref={input} type="search" aria-label="Search" placeholder="Search monsters, spells, items, conditions…" value={query}
           onChange={(e) => { setQuery(e.target.value); setActive(0); }} />
         {error && <p className="import-error">The SRD data could not be loaded.</p>}
-        {!error && !data && <p className="muted">Loading SRD data…</p>}
+        {!error && !data && <Loading label="Loading SRD data…" lines={4} />}
         {data && (query.trim() || (monsterFilters && (cr !== undefined || creatureType))) && results.length === 0 && customResults.length === 0 && <p className="muted">No matches.</p>}
         <div className="search-filters" role="group" aria-label="Filter by type">
           {[{ type: undefined, label: "All" }, ...REF_TYPES].map((t) => (

@@ -8,6 +8,7 @@ import {
   ABILITIES, ABILITY_NAMES, CURRENCIES, asAttacks, asEquipment, countLabel, isPack, type EquipmentEntry, attackDamageText, attackLabel, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS,
   abilityMod, applyHpChange, proficiencyBonus, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc,
 } from "../party/sheet";
+import { EmptyState } from "../ui/PanelStates";
 
 /** Small one-line adder shown at the foot of a sheet section. */
 function AddInline({ label, onAdd, extra }: { label: string; onAdd: (text: string) => void; extra?: { label: string; onAdd: (text: string) => void } }) {
@@ -271,7 +272,7 @@ function CharacterSheetsPanel({ campaign }: PanelProps) {
         <li className="roster-add"><button className="primary" onClick={() => setEditing("new")}>Add character</button></li>
       </ul>
       <div className="sheet-main">
-        {!current && <p className="muted">No party members yet. Use “Add character” to create the first sheet.</p>}
+        {!current && <EmptyState>No party members yet. Use “Add character” to create the first sheet.</EmptyState>}
         {current && (
           <>
             <div className="row">

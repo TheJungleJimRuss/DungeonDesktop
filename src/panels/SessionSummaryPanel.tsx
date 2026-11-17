@@ -1,11 +1,12 @@
 import { registerPanel, type PanelProps } from "./registry";
 import { sessionRemaining, useSessions } from "../storage/sessions";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 function SessionSummaryPanel({ campaign }: PanelProps) {
   const sessions = useSessions(campaign.id);
-  if (!sessions) return <p className="muted">Loading...</p>;
+  if (!sessions) return <Loading />;
   const current = sessions.find((s) => s.current);
-  if (!current) return <p className="muted">Nothing here yet. No current session: create one in Prep mode.</p>;
+  if (!current) return <EmptyState goTo="prep">Nothing here yet. No current session: create one in Prep mode.</EmptyState>;
   const left = sessionRemaining(current);
   return (
     <div className="session-summary">

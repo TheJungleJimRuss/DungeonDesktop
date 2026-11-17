@@ -2,6 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import * as repo from "../storage";
 import type { Campaign } from "../storage";
 import { ExportButton, ImportCampaign } from "./CampaignPortability";
+import { getMode } from "../modes/modes";
+
+const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+/** "today", "yesterday", "3 days ago", "2 months ago"... */
+export function relativeDay(ms: number, now = Date.now()): string {
+  const days = Math.round((startOfDay(ms) - startOfDay(now)) / 86_400_000);
+  if (days > -30) return rtf.format(days, "day");
+  if (days > -365) return rtf.format(Math.round(days / 30), "month");
+  return rtf.format(Math.round(days / 365), "year");
+}
+function startOfDay(ms: number) { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
 
 export default function CampaignPicker({ onOpen }: { onOpen: (c: Campaign) => void }) {
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
@@ -31,9 +42,13 @@ export default function CampaignPicker({ onOpen }: { onOpen: (c: Campaign) => vo
 
   return (
     <main className="picker">
-      <h1>Choose a campaign</h1>
+      <header className="picker-head">
+        <p className="picker-brand">Dungeon Desktop</p>
+        <h1>Choose a campaign</h1>
+        <p className="muted">Everything stays on this device. Export a campaign to back it up or move it.</p>
+      </header>
       <form
-        className="row"
+        className="row picker-create"
         onSubmit={(e) => {
           e.preventDefault();
           if (!newName.trim()) {
@@ -53,7 +68,9 @@ export default function CampaignPicker({ onOpen }: { onOpen: (c: Campaign) => vo
       {exportError && <p role="alert" className="import-error">{exportError}</p>}
 
       {campaigns === null ? null : campaigns.length === 0 ? (
-        <p className="muted">No campaigns yet. Create one to begin.</p>
+        <div className="empty-state picker-empty">
+          <p className="muted">No campaigns yet. Create one to begin.</p>
+        </div>
       ) : (
         <ul className="campaign-list">
           {campaigns.map((c) => (
@@ -73,12 +90,20 @@ export default function CampaignPicker({ onOpen }: { onOpen: (c: Campaign) => vo
                 </form>
               ) : (
                 <>
-                  <span className="grow name">{c.name}</span>
-                  <button className="primary" onClick={() => onOpen(c)}>Open</button>
-                  <button onClick={() => setRenaming({ id: c.id, name: c.name })}>Rename</button>
-                  <button onClick={run(() => repo.duplicateCampaign(c.id))}>Duplicate</button>
-                  <ExportButton campaign={c} onError={setExportError} />
-                  <button className="danger" onClick={() => setDeleting(c)}>Delete</button>
+                  <div className="grow campaign-info">
+                    <span className="name">{c.name}</span>
+                    <span className="campaign-meta muted">
+                      Created {relativeDay(c.createdAt)}
+                      {getMode(c.lastMode) && <> · last in {getMode(c.lastMode)!.label}</>}
+                    </span>
+                  </div>
+                  <div className="campaign-actions row">
+                    <button className="ghost" onClick={() => setRenaming({ id: c.id, name: c.name })}>Rename</button>
+                    <button className="ghost" onClick={run(() => repo.duplicateCampaign(c.id))}>Duplicate</button>
+                    <ExportButton campaign={c} onError={setExportError} />
+                    <button className="ghost danger" onClick={() => setDeleting(c)}>Delete</button>
+                    <button className="primary" onClick={() => onOpen(c)}>Open</button>
+                  </div>
                 </>
               )}
             </li>

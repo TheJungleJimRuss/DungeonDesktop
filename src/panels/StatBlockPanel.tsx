@@ -10,11 +10,12 @@ import {
   CUSTOM_PREFIX, customSelectionId, duplicateMonster, monsterFromEntry, useCustomEntries,
   type CustomEntry, type ItemData, type SpellData,
 } from "../storage/customEntries";
+import { Loading } from "../ui/PanelStates";
 
 /** A selected custom entry (id `custom:<id>`), live: edits and deletes show without reload. */
 function CustomBody({ campaign, id }: { campaign: PanelProps["campaign"]; id: string }) {
   const entries = useCustomEntries(campaign.id);
-  if (!entries) return <p className="muted">Loading Stat Block…</p>;
+  if (!entries) return <Loading label="Loading Stat Block…" />;
   const e: CustomEntry | undefined = entries.find((x) => customSelectionId(x.id) === id);
   if (!e) return <p className="muted">That custom entry no longer exists.</p>;
   return (
@@ -41,7 +42,7 @@ function StatBlockBody({ campaign }: PanelProps) {
   const ref = parseRefSelection(id);
   if (ref) return <RefSelectionBody type={ref.type} id={ref.id} />;
   if (custom) return <CustomBody campaign={campaign} id={id} />;
-  if (monster === undefined) return <p className="muted">Loading Stat Block…</p>;
+  if (monster === undefined) return <Loading label="Loading Stat Block…" />;
   if (monster === null) return <p className="muted">That creature is no longer in the SRD data.</p>;
   const duplicate = async () => selectStatBlock(campaign.id, customSelectionId((await duplicateMonster(campaign.id, monster)).id));
   return (

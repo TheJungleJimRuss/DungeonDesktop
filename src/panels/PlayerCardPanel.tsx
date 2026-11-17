@@ -7,6 +7,7 @@ import {
   ABILITIES, ABILITY_NAMES, CURRENCIES, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
   attackDamageText, attackLabel, countLabel, isPack, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc, type SkillLevel,
 } from "../party/sheet";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 /** 10 + skill modifier; null when the member has no sheet abilities to work from. */
 function passiveSkill(m: PartyMember, key: string): number | null {
@@ -223,8 +224,8 @@ function PlayerCardPanel({ campaign }: PanelProps) {
   const version = useChangeVersion("party");
   useEffect(() => { void reload(); }, [reload, version]);
 
-  if (!members) return <p className="muted">Loading...</p>;
-  if (members.length === 0) return <p className="muted">No player characters yet. Add them in Party mode.</p>;
+  if (!members) return <Loading />;
+  if (members.length === 0) return <EmptyState goTo="party">No player characters yet. Add them in Party mode.</EmptyState>;
   const current = members.find((m) => m.id === selected) ?? members[0];
   return (
     <div className="npc-list">

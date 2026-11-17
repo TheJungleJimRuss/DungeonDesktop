@@ -4,6 +4,7 @@ import { useChangeVersion } from "../sync/changeBus";
 import {
   addPinnedNote, listPinnedNotes, movePinnedNote, removePinnedNote, updatePinnedNote, type PinnedNote,
 } from "../storage/notes";
+import { EmptyState } from "../ui/PanelStates";
 
 function PinnedNotesPanel({ campaign }: PanelProps) {
   const [notes, setNotes] = useState<PinnedNote[] | null>(null);
@@ -41,7 +42,7 @@ function PinnedNotesPanel({ campaign }: PanelProps) {
         <input className="grow" aria-label="New pinned note" value={draft} onChange={(e) => setDraft(e.target.value)} />
         <button className="primary" type="submit">Add note</button>
       </form>
-      {notes && notes.length === 0 && <p className="muted">No pinned notes yet.</p>}
+      {notes && notes.length === 0 && <EmptyState>No pinned notes yet.</EmptyState>}
       <ul className="note-list">
         {notes?.map((n, i) => (
           <li key={n.id} className="row">

@@ -16,7 +16,7 @@ export interface ModeDefinition {
   label: string;
   /** Combo that switches to this Mode (see src/shortcuts). */
   shortcut: string;
-  /** The default arrangement . */
+  /** The default arrangement. */
   layout: PanelPlacement[];
 }
 

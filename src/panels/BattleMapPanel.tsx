@@ -5,6 +5,7 @@ import { distanceFeet, distanceSquares, type Square } from "../battle/measure";
 import { MAX_SQUARES, clampInt, freeSquare, updateBattleMap, useBattleMap, toStoredImage, withCombatantTokens, type BattleMap, type StoredImage, type Token } from "../storage/battleMaps";
 import { isDefeated, type Encounter } from "../combat/rules";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
+import { Loading } from "../ui/PanelStates";
 
 const CELL = 40;
 const KEYS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
@@ -176,7 +177,7 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
 
 function BattleMapPanel({ campaign }: PanelProps) {
   const enc = useActiveEncounter(campaign.id);
-  if (enc === undefined) return <p className="muted">Loading...</p>;
+  if (enc === undefined) return <Loading />;
   if (!enc) return <p className="muted">Start an Encounter in the Initiative panel to use the Battle Map.</p>;
   return <Grid campaignId={campaign.id} enc={enc} />;
 }

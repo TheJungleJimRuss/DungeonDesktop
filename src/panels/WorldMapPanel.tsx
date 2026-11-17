@@ -4,6 +4,7 @@ import { selectLocation, setLocationPosition, useLocations, type Location } from
 import { setPartyLocation, usePartyLocation } from "../storage/campaigns";
 import { MILES_PER_DAY, PACES, PACE_REMINDERS, formatDays, travelDays, type Pace } from "../travel/travel";
 import { createEdge, deleteEdge, updateEdge, useEdges } from "../storage/edges";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 const W = 800, H = 500, STEP = 10;
 const clamp = (v: number, max: number) => Math.min(max, Math.max(0, v));
@@ -24,7 +25,7 @@ function WorldMapPanel({ campaign }: PanelProps) {
   const partyAt = usePartyLocation(campaign.id);
   const [pace, setPace] = useState<Pace>("normal");
 
-  if (!locations) return <p className="muted">Loading...</p>;
+  if (!locations) return <Loading />;
   const pos = (l: Location, i: number) =>
     drag?.id === l.id ? drag : { x: l.x ?? defaultPos(i).x, y: l.y ?? defaultPos(i).y };
   const where = new Map(locations.map((l, i) => [l.id, pos(l, i)]));
@@ -60,7 +61,7 @@ function WorldMapPanel({ campaign }: PanelProps) {
   return (
     <div className="world-map">
       {locations.length === 0 ? (
-        <p className="muted">No locations yet. Add some in the Locations panel (Prep) to place them here.</p>
+        <EmptyState goTo="prep">No locations yet. Add some in the Locations panel (Prep) to place them here.</EmptyState>
       ) : (
         <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="map-canvas" role="group" aria-label="World map">
           {edges.map((e) => {

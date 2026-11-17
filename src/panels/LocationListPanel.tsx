@@ -3,6 +3,7 @@ import { registerPanel, type PanelProps } from "./registry";
 import { createLocation, selectLocation, useLocations, useSelectedLocationId } from "../storage/locations";
 import { useNpcs } from "../storage/npcs";
 import { LocationView } from "./LocationViewPanel";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 function LocationListPanel({ campaign }: PanelProps) {
   const locations = useLocations(campaign.id);
@@ -18,7 +19,7 @@ function LocationListPanel({ campaign }: PanelProps) {
     void createLocation(campaign.id, { name: n, notes: "" }).then((l) => selectLocation(campaign.id, l.id));
   };
 
-  if (!locations) return <p className="muted">Loading...</p>;
+  if (!locations) return <Loading />;
   return (
     <div className="location-list">
       <form className="row" onSubmit={add}>
@@ -27,7 +28,7 @@ function LocationListPanel({ campaign }: PanelProps) {
         <button type="submit" className="primary">Add location</button>
       </form>
       {locations.length === 0 ? (
-        <p className="muted">No locations yet. Add one above.</p>
+        <EmptyState>No locations yet. Add one above.</EmptyState>
       ) : (
         <ul className="npc-items">
           {locations.map((l) => {

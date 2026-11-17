@@ -7,6 +7,7 @@ const fileName = (name: string) => `${name.trim().replace(/[^\w\-]+/g, "-").repl
 export function ExportButton({ campaign, onError }: { campaign: Campaign; onError: (msg: string) => void }) {
   return (
     <button
+      className="ghost"
       aria-label={`Export ${campaign.name}`}
       onClick={async () => {
         const data = await repo.exportCampaign(campaign.id);

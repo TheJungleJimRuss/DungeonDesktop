@@ -4,6 +4,7 @@ import {
   deleteLocation, selectLocation, setNpcLocation, updateLocation, useLocations, useSelectedLocationId, type Location,
 } from "../storage/locations";
 import { selectNpc, useNpcs } from "../storage/npcs";
+import { Loading } from "../ui/PanelStates";
 
 function LocationForm({ loc, onDone }: { loc: Location; onDone: () => void }) {
   const [name, setName] = useState(loc.name);
@@ -32,7 +33,7 @@ export function LocationView({ campaign }: PanelProps) {
   const [confirming, setConfirming] = useState(false);
   const [toLink, setToLink] = useState("");
 
-  if (!locations || !npcs) return <p className="muted">Loading...</p>;
+  if (!locations || !npcs) return <Loading />;
   const loc = locations.find((l) => l.id === selected);
   if (!loc) return <p className="muted">Select a location, or add a new one.</p>;
   if (editing === loc.id) return <LocationForm loc={loc} onDone={() => setEditing(null)} />;

@@ -7,6 +7,7 @@ import {
 import { useLocations, type Location } from "../storage/locations";
 import { useNpcs, type Npc } from "../storage/npcs";
 import { useScratchNotes } from "../storage/notes";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 function ItemsEditor({ label, items, onChange }: { label: string; items: SceneItem[]; onChange: (i: SceneItem[]) => void }) {
   const [text, setText] = useState("");
@@ -83,7 +84,7 @@ function ScenesPanel({ campaign }: PanelProps) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const dragFrom = useRef<number | null>(null);
 
-  if (!sessions || !locations || !npcs) return <p className="muted">Loading...</p>;
+  if (!sessions || !locations || !npcs) return <Loading />;
   const session = resolveSession(sessions, selected);
   if (!session) return <p className="muted">Create a session to plan scenes.</p>;
   const locName = (id?: string) => (id ? locations.find((l) => l.id === id)?.name ?? "Deleted location" : null);
@@ -100,7 +101,7 @@ function ScenesPanel({ campaign }: PanelProps) {
           onCancel={() => setAdding(false)}
           onSave={(s) => { const { id: _i, played: _p, ...draft } = s; void addScene(session.id, draft).then(() => setAdding(false)); }} />
       )}
-      {session.scenes.length === 0 && !adding && <p className="muted">No scenes yet.</p>}
+      {session.scenes.length === 0 && !adding && <EmptyState>No scenes yet.</EmptyState>}
       <ol className="scene-items">
         {session.scenes.map((sc, i) => {
           const loc = locName(sc.locationId);

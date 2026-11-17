@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { SRD_CHANGES } from "./attribution";
 import StatBlock from "./StatBlock";
 import { getReferenceEntry, spellLevelLabel, type RefType, type Condition, type EquipmentItem, type MagicItem, type RefHit, type Spell } from "./reference";
+import { Loading } from "../ui/PanelStates";
 
 /** SRD rules text is light Markdown: paragraphs, **bold**, *italic*, "- " bullets and pipe tables. */
 function inline(text: string): ReactNode[] {
@@ -116,7 +117,7 @@ export function RefSelectionBody({ type, id }: { type: RefType; id: string }) {
     void getReferenceEntry(type, id).then((h) => live && setHit(h ?? null));
     return () => { live = false; };
   }, [type, id]);
-  if (hit === undefined) return <p className="muted">Loading…</p>;
+  if (hit === undefined) return <Loading />;
   if (hit === null) return <p className="muted">That entry is no longer in the SRD data.</p>;
   return (
     <>

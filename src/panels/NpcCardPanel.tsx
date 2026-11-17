@@ -11,6 +11,7 @@ import {
   NEW_NPC, createNpc, deleteNpc, emptyNpcDraft, selectNpc, updateNpc, useNpcs, useSelectedNpcId,
   type Npc, type NpcDraft,
 } from "../storage/npcs";
+import { Loading } from "../ui/PanelStates";
 
 const FIELDS = [
   ["name", "Name"], ["role", "Role"], ["appearance", "Appearance"], ["motivation", "Motivation"],
@@ -176,7 +177,7 @@ export function NpcCard({ campaign }: PanelProps) {
   const [editing, setEditing] = useState<string | null>(null); // npc id being edited
   const [confirming, setConfirming] = useState(false);
 
-  if (!npcs) return <p className="muted">Loading...</p>;
+  if (!npcs) return <Loading />;
   if (selected === NEW_NPC) {
     return (
       <NpcForm

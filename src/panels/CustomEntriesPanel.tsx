@@ -6,6 +6,7 @@ import {
   createCustomEntry, customSelectionId, deleteCustomEntry, emptyData, updateCustomEntry, useCustomEntries,
   type CustomEntry, type CustomKind, type ItemData, type MonsterData, type SpellData,
 } from "../storage/customEntries";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 const KINDS: CustomKind[] = ["monster", "spell", "item"];
 const NUMBER_FIELDS = [["AC", "ac"], ["HP", "hp"], ["CR", "cr"], ["XP", "xp"], ["Proficiency bonus", "pb"]] as const;
@@ -127,7 +128,7 @@ function CustomEntriesBody({ campaign }: PanelProps) {
   const entries = useCustomEntries(campaign.id);
   /** `new:<kind>` drafts a new entry; otherwise the id of the entry being edited. */
   const [editing, setEditing] = useState<string | null>(null);
-  if (!entries) return <p className="muted">Loading...</p>;
+  if (!entries) return <Loading />;
   const editedEntry = editing && !editing.startsWith("new:") ? entries.find((e) => e.id === editing) : undefined;
   const kind = editing?.startsWith("new:") ? (editing.slice(4) as CustomKind) : editedEntry?.kind;
   return (
@@ -139,7 +140,7 @@ function CustomEntriesBody({ campaign }: PanelProps) {
         <Editor key={editing} campaignId={campaign.id} kind={kind} entry={editedEntry}
           onDone={(id) => { if (id) selectStatBlock(campaign.id, customSelectionId(id)); setEditing(null); }} />
       )}
-      {entries.length === 0 ? <p className="muted">No custom entries yet. Create one, or duplicate an SRD creature from its Stat Block.</p> : (
+      {entries.length === 0 ? <EmptyState>No custom entries yet. Create one, or duplicate an SRD creature from its Stat Block.</EmptyState> : (
         <ul className="npc-items">
           {entries.map((e) => (
             <li key={e.id}>

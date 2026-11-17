@@ -4,6 +4,7 @@ import {
   carryOverToNextSession, createSession, deleteSession, resolveSession, selectSession, setCurrentSession,
   updateSession, useSelectedSessionId, useSessions, type Session,
 } from "../storage/sessions";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 function SessionEditor({ campaignId, session }: { campaignId: string; session: Session }) {
   const [title, setTitle] = useState(session.title);
@@ -49,7 +50,7 @@ function SessionPrepPanel({ campaign }: PanelProps) {
   const sessions = useSessions(campaign.id);
   const selected = useSelectedSessionId(campaign.id);
   const [title, setTitle] = useState("");
-  if (!sessions) return <p className="muted">Loading...</p>;
+  if (!sessions) return <Loading />;
   const active = resolveSession(sessions, selected);
   const add = async (e: FormEvent) => {
     e.preventDefault();
@@ -64,7 +65,7 @@ function SessionPrepPanel({ campaign }: PanelProps) {
         <input className="grow" aria-label="New session title" placeholder="New session title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <button type="submit" className="primary">Add session</button>
       </form>
-      {sessions.length === 0 ? <p className="muted">No sessions yet. Add one above.</p> : (
+      {sessions.length === 0 ? <EmptyState>No sessions yet. Add one above.</EmptyState> : (
         <ul className="npc-items">
           {sessions.map((s) => (
             <li key={s.id}>

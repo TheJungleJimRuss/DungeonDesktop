@@ -6,6 +6,7 @@ import { useSessions, type Session } from "../storage/sessions";
 import {
   addScratchNote, removeScratchNote, updateScratchNote, useScratchNotes, type ScratchAttachment,
 } from "../storage/notes";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 const sceneKey = (sessionId?: string, sceneId?: string) => (sessionId && sceneId ? `${sessionId}|${sceneId}` : "");
 const parseScene = (v: string): Pick<ScratchAttachment, "sessionId" | "sceneId"> => {
@@ -48,7 +49,7 @@ function ScratchNotesPanel({ campaign }: PanelProps) {
   const [sceneChoice, setSceneChoice] = useState("");
   const [editing, setEditing] = useState<{ id: string; text: string; npcId: string; scene: string } | null>(null);
 
-  if (!notes || !npcs || !sessions) return <p className="muted">Loading...</p>;
+  if (!notes || !npcs || !sessions) return <Loading />;
   const npcExists = (id?: string) => !!id && npcs.some((n) => n.id === id);
   const defaultNpc = npcExists(selected ?? undefined) ? selected! : "";
   const npcId = npcChoice ?? defaultNpc;
@@ -84,7 +85,7 @@ function ScratchNotesPanel({ campaign }: PanelProps) {
           <button className="primary" type="submit">Add scratch note</button>
         </div>
       </form>
-      {notes.length === 0 && <p className="muted">No scratch notes yet.</p>}
+      {notes.length === 0 && <EmptyState>No scratch notes yet.</EmptyState>}
       <ul className="note-list">
         {notes.map((n) => {
           const scene = sceneName(n.sessionId, n.sceneId);

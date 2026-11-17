@@ -4,6 +4,7 @@ import { usePartyLocation } from "../storage/campaigns";
 import { useLocations } from "../storage/locations";
 import { NEW_NPC, selectNpc, useNpcs, useSelectedNpcId } from "../storage/npcs";
 import { NpcCard } from "./NpcCardPanel";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 const distinct = (xs: string[]) => [...new Set(xs.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
@@ -29,7 +30,7 @@ function NpcList({ campaign, social }: PanelProps & { social: boolean }) {
       (!scoped || n.locationId === partyLoc?.id),
   );
 
-  if (!npcs) return <p className="muted">Loading...</p>;
+  if (!npcs) return <Loading />;
   return (
     <div className="npc-list">
       <div className="row">
@@ -58,7 +59,7 @@ function NpcList({ campaign, social }: PanelProps & { social: boolean }) {
         </p>
       )}
       {npcs.length === 0 ? (
-        <p className="muted">No NPCs yet. Create one with New NPC.</p>
+        <EmptyState>No NPCs yet. Create one with New NPC.</EmptyState>
       ) : shown.length === 0 ? (
         <p className="muted">No NPCs match.</p>
       ) : (

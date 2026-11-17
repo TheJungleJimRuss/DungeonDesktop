@@ -3,6 +3,7 @@ import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
 import { listParty, type PartyMember } from "../storage/party";
 import { highestPassive, passivePerceptionOf } from "../party/passive";
+import { Loading, EmptyState } from "../ui/PanelStates";
 
 function PassivePerceptionPanel({ campaign }: PanelProps) {
   const [members, setMembers] = useState<PartyMember[] | null>(null);
@@ -10,9 +11,9 @@ function PassivePerceptionPanel({ campaign }: PanelProps) {
   const version = useChangeVersion("party");
   useEffect(() => { void reload(); }, [reload, version]);
 
-  if (!members) return <p className="muted">Loading...</p>;
+  if (!members) return <Loading />;
   const top = highestPassive(members);
-  if (!top) return <p className="muted">No party members yet.</p>;
+  if (!top) return <EmptyState goTo="party">No party members yet.</EmptyState>;
   return (
     <div className="passive-perception">
       <p aria-label="Highest passive Perception"><strong>Highest: {top.value}</strong> ({top.names.join(", ")})</p>

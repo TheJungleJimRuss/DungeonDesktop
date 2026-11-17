@@ -9,6 +9,7 @@ import { useChangeVersion } from "../sync/changeBus";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
 import type { Combatant } from "../combat/rules";
 import { ABILITIES, abilityMod, signed } from "../party/sheet";
+import { Loading } from "../ui/PanelStates";
 
 function PartySheet({ campaignId, c }: { campaignId: string; c: Combatant }) {
   const [m, setM] = useState<PartyMember | null>(null);
@@ -50,11 +51,11 @@ function CombatantMonster({ campaignId, c }: { campaignId: string; c: Combatant 
   if (!id) return <p className="muted">{c.name} has no Stat Block (HP {c.hp}).</p>;
   let m: Monster | null | undefined = srd;
   if (isCustom) {
-    if (!customs) return <p className="muted">Loading Stat Block…</p>;
+    if (!customs) return <Loading label="Loading Stat Block…" />;
     const e = customs.find((x) => x.id === id.slice(CUSTOM_PREFIX.length) && x.kind === "monster");
     m = e ? monsterFromEntry(e) : null;
   }
-  if (m === undefined) return <p className="muted">Loading Stat Block…</p>;
+  if (m === undefined) return <Loading label="Loading Stat Block…" />;
   if (m === null) return <p className="muted">The Stat Block for {c.name} is missing.</p>;
   return <StatBlock monster={{ ...m, name: c.name }} rollable />;
 }

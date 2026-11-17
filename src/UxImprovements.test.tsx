@@ -58,3 +58,25 @@ describe("Social mode", () => {
     expect(screen.getByRole("region", { name: /npc card/i })).toBeInTheDocument();
   });
 });
+
+describe("Empty states", () => {
+  it("jumps from an empty Player Card to Party mode", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user);
+    const card = await screen.findByRole("region", { name: "Player card" });
+    await user.click(await within(card).findByRole("button", { name: "Go to Party" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Party" })).toBeInTheDocument();
+  });
+
+  it("offers to customize an empty Dashboard", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user);
+    await user.click(screen.getByRole("button", { name: /customize dashboard/i }));
+    for (const b of screen.getAllByRole("button", { name: /^remove /i })) await user.click(b);
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    await user.click(await screen.findByRole("button", { name: "Choose panels" }));
+    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+  });
+});
