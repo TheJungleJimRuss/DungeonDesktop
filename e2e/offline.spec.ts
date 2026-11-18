@@ -29,6 +29,14 @@ test("a loaded site works offline: campaigns, search and Stat Blocks", async ({ 
   await dialog.getByRole("searchbox", { name: "Search" }).fill("owlbear");
   await dialog.getByRole("button", { name: /Owlbear/ }).click();
   await expect(page.getByRole("article", { name: "Owlbear Stat Block" })).toBeVisible();
+
+  // The character-data chunk (classes, species, feats, rules) is precached too.
+  await page.keyboard.press("Control+k");
+  await dialog.getByRole("searchbox", { name: "Search" }).fill("barbarian");
+  await dialog.getByRole("button", { name: /^Barbarian\s*Class · d12/ }).click();
+  const barbarian = page.getByRole("article", { name: "Barbarian class" });
+  await expect(barbarian).toBeVisible();
+  await expect(barbarian.getByRole("columnheader", { name: "Rages" })).toBeVisible();
   await context.setOffline(false);
 });
 

@@ -5,6 +5,7 @@ import {
   addPinnedNote, listPinnedNotes, movePinnedNote, removePinnedNote, updatePinnedNote, type PinnedNote,
 } from "../storage/notes";
 import { EmptyState } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 function PinnedNotesPanel({ campaign }: PanelProps) {
   const [notes, setNotes] = useState<PinnedNote[] | null>(null);
@@ -47,7 +48,7 @@ function PinnedNotesPanel({ campaign }: PanelProps) {
         {notes?.map((n, i) => (
           <li key={n.id} className="row">
             {editing?.id === n.id ? (
-              <form className="row grow" onSubmit={save}>
+              <form {...GUARD} className="row grow" onSubmit={save}>
                 <input className="grow" aria-label="Edit note" autoFocus value={editing.text}
                   onChange={(e) => setEditing({ id: n.id, text: e.target.value })} />
                 <button type="submit" className="primary">Save note</button>

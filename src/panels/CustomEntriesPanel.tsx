@@ -7,6 +7,7 @@ import {
   type CustomEntry, type CustomKind, type ItemData, type MonsterData, type SpellData,
 } from "../storage/customEntries";
 import { Loading, EmptyState } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 const KINDS: CustomKind[] = ["monster", "spell", "item"];
 const NUMBER_FIELDS = [["AC", "ac"], ["HP", "hp"], ["CR", "cr"], ["XP", "xp"], ["Proficiency bonus", "pb"]] as const;
@@ -59,13 +60,13 @@ function fromForm(kind: CustomKind, f: Form, base: unknown): unknown {
   return { ...b, type: f.type ?? "", rarity: f.rarity ?? "", desc: f.desc ?? "" } satisfies ItemData;
 }
 
-function Field({ label, value, onChange, area, type }: { label: string; value: string; onChange: (v: string) => void; area?: boolean; type?: string }) {
+function Field({ label, value, onChange, area, type, autoFocus }: { label: string; value: string; onChange: (v: string) => void; area?: boolean; type?: string; autoFocus?: boolean }) {
   return (
     <label className={area ? "ce-field ce-wide" : "ce-field"}>
       <span>{label}</span>
       {area
         ? <textarea rows={3} value={value} onChange={(e) => onChange(e.target.value)} />
-        : <input type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} />}
+        : <input autoFocus={autoFocus} type={type ?? "text"} value={value} onChange={(e) => onChange(e.target.value)} />}
     </label>
   );
 }
@@ -83,8 +84,8 @@ function Editor({ campaignId, kind, entry, onDone }: { campaignId: string; kind:
     else onDone((await createCustomEntry(campaignId, kind, name.trim(), data)).id);
   };
   return (
-    <form className="ce-form" aria-label={`Custom ${kind} editor`} onSubmit={(e) => void save(e)}>
-      <Field label="Name" value={name} onChange={setName} />
+    <form {...GUARD} className="ce-form" aria-label={`Custom ${kind} editor`} onSubmit={(e) => void save(e)}>
+      <Field label="Name" value={name} onChange={setName} autoFocus />
       {kind === "monster" && (
         <>
           {TEXT_FIELDS.map(([l, k]) => <Field key={k} label={l} value={f[k]} onChange={set(k)} />)}

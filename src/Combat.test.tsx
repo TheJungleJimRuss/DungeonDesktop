@@ -108,6 +108,7 @@ describe("combat setup and initiative", () => {
     await expectInit("Thia", 17);
 
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     expect(await screen.findByText(/no encounter in progress/i)).toBeInTheDocument();
     expect((await exportCampaign(id))!.collections.encounters).toHaveLength(0);
   });

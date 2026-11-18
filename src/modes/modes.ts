@@ -31,9 +31,10 @@ export const DASHBOARD_DEFAULT: DashboardEntry[] = [
   { panelId: "pinned-notes", x: 60, y: 30, w: 60, h: 30 },
 ];
 
+/** Three columns, so each panel keeps room for its buttons on a 1024 px screen; Scenes sits in the first row. */
 const PREP_ALL: PanelPlacement[] = [
-  p("session-prep", 1, 3, 1, 2), p("npc-list", 4, 3, 1, 2), p("scratch-notes", 7, 3, 1, 2),
-  p("locations", 10, 3, 1, 2), p("scenes", 1, 12, 3), p("custom-entries", 1, 12, 4),
+  p("session-prep", 1, 4, 1, 2), p("scenes", 5, 4, 1, 2), p("npc-list", 9, 4, 1, 2),
+  p("locations", 1, 4, 3), p("scratch-notes", 5, 4, 3), p("custom-entries", 9, 4, 3),
 ];
 
 export const MODES: ModeDefinition[] = [

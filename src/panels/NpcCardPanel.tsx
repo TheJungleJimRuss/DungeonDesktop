@@ -12,6 +12,7 @@ import {
   type Npc, type NpcDraft,
 } from "../storage/npcs";
 import { Loading } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 const FIELDS = [
   ["name", "Name"], ["role", "Role"], ["appearance", "Appearance"], ["motivation", "Motivation"],
@@ -38,7 +39,7 @@ function NpcForm({ campaignId, initial, onSave, onCancel }: { campaignId: string
     setSecret("");
   };
   return (
-    <form className="npc-form" onSubmit={(e) => { e.preventDefault(); onSave(d); }}>
+    <form {...GUARD} className="npc-form" onSubmit={(e) => { e.preventDefault(); onSave(d); }}>
       {FIELDS.map(([key, label]) => (
         <div key={key} className="npc-field">
           <label>
@@ -46,7 +47,7 @@ function NpcForm({ campaignId, initial, onSave, onCancel }: { campaignId: string
             {LONG.has(key) ? (
               <textarea rows={2} value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
             ) : (
-              <input value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
+              <input autoFocus={key === FIELDS[0][0]} value={d[key]} onChange={(e) => setD({ ...d, [key]: e.target.value })} />
             )}
           </label>
           {key === "name" && <NameSuggestions onPick={(name) => setD((x) => ({ ...x, name }))} />}

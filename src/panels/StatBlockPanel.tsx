@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { getMonster, type Monster } from "../srd/monsters";
-import { parseRefSelection, selectStatBlock, useSelectedStatBlock } from "../srd/selection";
+import { parseRefSelection, selectionIdOf, selectStatBlock, useSelectedStatBlock } from "../srd/selection";
 import { RefSelectionBody } from "../srd/ReferenceCards";
 import StatBlock from "../srd/StatBlock";
 import { SRD_CHANGES } from "../srd/attribution";
@@ -40,7 +40,7 @@ function StatBlockBody({ campaign }: PanelProps) {
   }, [id, custom]);
   if (!id) return <p className="muted">Search (Ctrl or Cmd + K) for a creature, spell, item or condition to show it here.</p>;
   const ref = parseRefSelection(id);
-  if (ref) return <RefSelectionBody type={ref.type} id={ref.id} />;
+  if (ref) return <RefSelectionBody type={ref.type} id={ref.id} onOpen={(type, id) => selectStatBlock(campaign.id, selectionIdOf({ type, entry: { id } }))} />;
   if (custom) return <CustomBody campaign={campaign} id={id} />;
   if (monster === undefined) return <Loading label="Loading Stat Block…" />;
   if (monster === null) return <p className="muted">That creature is no longer in the SRD data.</p>;

@@ -88,6 +88,7 @@ describe("Battle Map", () => {
     await user.click(screen.getByRole("button", { name: /save encounter/i }));
     await waitFor(async () => expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     await waitFor(async () => expect(await maps(id)).toHaveLength(0));
     expect(m.getByText(/start an encounter/i)).toBeInTheDocument();
 
@@ -127,5 +128,26 @@ describe("Battle Map", () => {
     expect(m.queryByTestId("ruler-line")).not.toBeInTheDocument();
     await user.click(m.getByRole("button", { name: "Ruler" }));
     expect(m.queryByLabelText("Square 0,0")).not.toBeInTheDocument();
+  });
+});
+
+describe("Battle Map zoom", () => {
+  it("fits the whole map by default, zooms in to a fixed square size, and Fit goes back", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.type(await screen.findByRole("textbox", { name: /new campaign name/i }), "Zoomy");
+    await user.click(screen.getByRole("button", { name: /create campaign/i }));
+    await user.click(within(await screen.findByRole("listitem", { name: "Zoomy" })).getByRole("button", { name: /open/i }));
+    await screen.findByRole("heading", { name: /dashboard/i });
+    await user.keyboard("{Alt>}1{/Alt}");
+    await user.click(await within(await screen.findByRole("region", { name: "Initiative" })).findByRole("button", { name: /start encounter/i }));
+    const map = within(await screen.findByRole("region", { name: "Battle Map" }));
+    const grid = await map.findByRole("group", { name: "Battle grid" });
+    expect(grid.style.width).toBe("");
+    expect(map.getByRole("button", { name: "Fit" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(map.getByRole("button", { name: "Zoom in" }));
+    expect(grid.style.width).toBe("480px"); // jsdom has no layout, so the first step (24 px) x 20 squares
+    await user.click(map.getByRole("button", { name: "Fit" }));
+    expect(grid.style.width).toBe("");
   });
 });

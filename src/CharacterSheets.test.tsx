@@ -135,3 +135,36 @@ describe("Party tab and character sheets", () => {
     expect(s.queryByText("Torch")).not.toBeInTheDocument();
   });
 });
+
+describe("Coin on the character sheet", () => {
+  it("gains, spends and edits coin without opening Edit sheet", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user, "Purse");
+    await user.click(screen.getByRole("button", { name: /^party/i }));
+    const panel = await screen.findByRole("region", { name: /character sheets/i });
+    const p = within(panel);
+    await user.click(p.getByRole("button", { name: /add character/i }));
+    await user.type(p.getByLabelText("Name"), "Bram");
+    await user.click(p.getByRole("button", { name: /save member/i }));
+    const sheet = within(await p.findByRole("article", { name: "Bram character sheet" }));
+
+    await user.type(sheet.getByLabelText("Coin amount for Bram"), "30");
+    await user.click(sheet.getByRole("button", { name: "Gain" }));
+    await waitFor(() => expect(sheet.getByLabelText("gp Bram")).toHaveValue(30));
+
+    await user.type(sheet.getByLabelText("Coin amount for Bram"), "12");
+    await user.click(sheet.getByRole("button", { name: "Spend" }));
+    await waitFor(() => expect(sheet.getByLabelText("gp Bram")).toHaveValue(18));
+
+    await user.type(sheet.getByLabelText("Coin amount for Bram"), "5");
+    await user.selectOptions(sheet.getByLabelText("Coin type for Bram"), "pp");
+    await user.click(sheet.getByRole("button", { name: "Spend" }));
+    expect(sheet.getByRole("alert")).toHaveTextContent("Not enough pp");
+
+    await user.clear(sheet.getByLabelText("sp Bram"));
+    await user.type(sheet.getByLabelText("sp Bram"), "7{Enter}");
+    await waitFor(() => expect(sheet.getByLabelText("sp Bram")).toHaveValue(7));
+    expect(sheet.getByLabelText("gp Bram")).toHaveValue(18);
+  });
+});

@@ -6,8 +6,11 @@ import { MAX_SQUARES, clampInt, freeSquare, updateBattleMap, useBattleMap, toSto
 import { isDefeated, type Encounter } from "../combat/rules";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
 import { Loading } from "../ui/PanelStates";
+import { tokenLabel } from "../battle/tokens";
 
 const CELL = 40;
+/** On-screen square sizes (px) for zooming in; the default is to fit the whole map in the panel. */
+const ZOOMS = [24, 32, 44, 60];
 const KEYS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 const COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12", "#8e44ad", "#7f8c8d"];
 
@@ -44,6 +47,11 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
   // Ruler: transient, never saved. `locked` = the end square is chosen.
   const [ruler, setRuler] = useState(false);
   const [rule, setRule] = useState<{ a: Square; b: Square; locked: boolean } | null>(null);
+  // null = fit the whole map; a number = px per square, and the map scrolls.
+  const [zoom, setZoom] = useState<number | null>(null);
+  const cellPx = () => zoom ?? (svg.current?.getBoundingClientRect().width ?? 0) / map.width;
+  const zoomIn = () => setZoom(ZOOMS.find((z) => z > cellPx() + 1) ?? ZOOMS[ZOOMS.length - 1]);
+  const zoomOut = () => { const z = [...ZOOMS].reverse().find((x) => x < cellPx() - 1); setZoom(z ?? null); };
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const change = (fn: (m: BattleMap) => BattleMap) => updateBattleMap(campaignId, encounterId, fn);
@@ -89,15 +97,22 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
 
   return (
     <div className="battle-map">
+      <div className="row map-toolbar">
+        <button aria-pressed={ruler} onClick={toggleRuler}>Ruler</button>
+        <span className="row zoom-ctl" role="group" aria-label="Zoom">
+          <button aria-label="Zoom out" title="Zoom out" onClick={zoomOut} disabled={zoom === null}>−</button>
+          <button aria-label="Zoom in" title="Zoom in" onClick={zoomIn} disabled={zoom === ZOOMS[ZOOMS.length - 1]}>+</button>
+          <button aria-pressed={zoom === null} onClick={() => setZoom(null)} title="Show the whole map">Fit</button>
+        </span>
+        {rule && <button onClick={() => setRule(null)}>Clear measurement</button>}
+        {rule && <span role="status" aria-label="Measured distance">{distanceSquares(rule.a, rule.b)} squares, {distanceFeet(rule.a, rule.b, map.feetPerSquare)} ft</span>}
+      </div>
+      <details className="map-settings">
+        <summary>Map settings <span className="muted" aria-label="Grid summary">{map.width} × {map.height} squares, {map.feetPerSquare} ft per square</span></summary>
       <div className="row">
         <label>Width <input aria-label="Grid width" onKeyDown={commitOnEnter} type="number" min={1} max={MAX_SQUARES} defaultValue={map.width} key={`w${map.width}`} onBlur={(e) => setSize("width", e.target.value)} /></label>
         <label>Height <input aria-label="Grid height" onKeyDown={commitOnEnter} type="number" min={1} max={MAX_SQUARES} defaultValue={map.height} key={`h${map.height}`} onBlur={(e) => setSize("height", e.target.value)} /></label>
         <label>Feet per square <input aria-label="Feet per square" onKeyDown={commitOnEnter} type="number" min={1} step="any" defaultValue={map.feetPerSquare} key={`f${map.feetPerSquare}`} onBlur={(e) => setFeet(e.target.value)} /></label>
-      </div>
-      <div className="row">
-        <button aria-pressed={ruler} onClick={toggleRuler}>Ruler</button>
-        {rule && <button onClick={() => setRule(null)}>Clear measurement</button>}
-        {rule && <span role="status" aria-label="Measured distance">{distanceSquares(rule.a, rule.b)} squares, {distanceFeet(rule.a, rule.b, map.feetPerSquare)} ft</span>}
       </div>
       <div className="row">
         <label>Background image <input aria-label="Background image" type="file" accept="image/*"
@@ -109,8 +124,9 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
           <button onClick={() => void change((m) => { const { background: _drop, ...rest } = m; return rest; })}>Clear background</button>
         </>}
       </div>
-      <p className="muted" aria-label="Grid summary">{map.width} × {map.height} squares, {map.feetPerSquare} ft per square</p>
-      <svg ref={svg} viewBox={`0 0 ${map.width * CELL} ${map.height * CELL}`} className={"map-canvas battle-grid" + (bgUrl ? " has-bg" : "")} role="group" aria-label="Battle grid">
+      </details>
+      <div className={"battle-scroll" + (zoom === null ? " fit" : "")}>
+      <svg ref={svg} style={zoom === null ? undefined : { width: map.width * zoom }} viewBox={`0 0 ${map.width * CELL} ${map.height * CELL}`} className={"map-canvas battle-grid" + (bgUrl ? " has-bg" : "")} role="group" aria-label="Battle grid">
         {bgUrl && <image href={bgUrl} x={bgX * CELL} y={bgY * CELL} width={map.width * CELL * bgScale} height={map.height * CELL * bgScale} preserveAspectRatio="xMinYMin meet" pointerEvents="none" aria-hidden="true" />}
         {Array.from({ length: map.width + 1 }, (_, i) => <line key={`v${i}`} x1={i * CELL} y1={0} x2={i * CELL} y2={map.height * CELL} className="grid-line" />)}
         {Array.from({ length: map.height + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * CELL} x2={map.width * CELL} y2={i * CELL} className="grid-line" />)}
@@ -125,8 +141,9 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
               onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); setDrag({ id: t.id, x: t.x, y: t.y }); }}
               onPointerMove={(e) => { if (drag?.id === t.id) { const q = square(e); if (q) setDrag({ id: t.id, ...q }); } }}
               onPointerUp={() => { if (drag?.id === t.id) { void patchToken(t.id, { x: drag.x, y: drag.y }); setDrag(null); } }}>
-              <circle cx={CELL / 2} cy={CELL / 2} r={CELL / 2 - 4} fill={t.color} />
-              <text x={CELL / 2} y={CELL / 2 + 5} textAnchor="middle" className="token-label">{name.slice(0, 2).toUpperCase()}</text>
+              <circle cx={CELL / 2} cy={CELL / 2} r={CELL / 2 - 2} fill={t.color} />
+              {(() => { const l = tokenLabel(name); return <text x={CELL / 2} y={CELL / 2 + (l.length > 2 ? 5 : 6)} textAnchor="middle" className={"token-label" + (l.length > 2 ? " long" : "")}>{l}</text>; })()}
+              <title>{name}</title>
               {selected && <circle cx={CELL / 2} cy={CELL / 2} r={CELL / 2 - 1} className="token-selected" fill="none" />}
               {defeated && <path d={`M${CELL * 0.25} ${CELL * 0.25} L${CELL * 0.75} ${CELL * 0.75} M${CELL * 0.75} ${CELL * 0.25} L${CELL * 0.25} ${CELL * 0.75}`} className="token-defeated-mark" />}
             </g>
@@ -148,6 +165,7 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
           );
         })()}
       </svg>
+      </div>
       <form className="row" aria-label="Add token" onSubmit={add}>
         <input aria-label="Token name" placeholder="Token name" value={name} onChange={(e) => setName(e.target.value)} />
         <input aria-label="Token colour" type="color" value={color} onChange={(e) => setColor(e.target.value)} />

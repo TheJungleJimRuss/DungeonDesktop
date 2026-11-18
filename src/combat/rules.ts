@@ -32,6 +32,8 @@ export interface Combatant {
   legendaryLeft?: number;
   /** For kind "lair": the round in which the DM used this lair action. */
   lairUsedRound?: number;
+  /** Death saving throws for a party member at 0 HP; absent while above 0 HP. */
+  deathSaves?: { successes: number; failures: number };
 }
 
 export interface Encounter {
@@ -109,22 +111,36 @@ export function moveTie(e: Encounter, id: string, dir: "up" | "down"): Encounter
   return { ...e, combatants: list };
 }
 
+/** Defeated combatants are passed over, unless everyone is defeated (then plain order). */
+const takesTurn = (e: Encounter) => (c: Combatant) => !isDefeated(c) || e.combatants.every(isDefeated);
+
 export function advanceTurn(e: Encounter): Encounter {
   const n = e.combatants.length;
   if (!n) return e;
-  const i = Math.max(0, e.combatants.findIndex((c) => c.id === e.activeId));
-  const next = i + 1 < n
-    ? { ...e, started: true, activeId: e.combatants[i + 1].id }
-    : { ...e, started: true, activeId: e.combatants[0].id, round: e.round + 1 };
-  return resetLegendary(next, next.activeId);
+  const ok = takesTurn(e);
+  let i = Math.max(0, e.combatants.findIndex((c) => c.id === e.activeId));
+  let round = e.round;
+  for (let step = 0; step < n; step++) {
+    i += 1;
+    if (i >= n) { i = 0; round += 1; }
+    if (ok(e.combatants[i])) break;
+  }
+  return resetLegendary({ ...e, started: true, activeId: e.combatants[i].id, round }, e.combatants[i].id);
 }
 
 export function rewindTurn(e: Encounter): Encounter {
   const n = e.combatants.length;
   if (!n) return e;
-  const i = Math.max(0, e.combatants.findIndex((c) => c.id === e.activeId));
-  if (i > 0) return { ...e, activeId: e.combatants[i - 1].id };
-  return e.round > 1 ? { ...e, activeId: e.combatants[n - 1].id, round: e.round - 1 } : e;
+  const ok = takesTurn(e);
+  let i = Math.max(0, e.combatants.findIndex((c) => c.id === e.activeId));
+  let round = e.round;
+  for (let step = 0; step < n; step++) {
+    if (i > 0) i -= 1;
+    else if (round > 1) { i = n - 1; round -= 1; }
+    else return e; // nothing earlier in round 1
+    if (ok(e.combatants[i])) return { ...e, activeId: e.combatants[i].id, round };
+  }
+  return e;
 }
 
 // --- HP and defeat ---
@@ -133,8 +149,25 @@ export const maxHpOf = (c: Pick<Combatant, "hp" | "maxHp">) => c.maxHp ?? c.hp;
 export const tempHpOf = (c: Pick<Combatant, "tempHp">) => c.tempHp ?? 0;
 /** Bloodied: at half max HP or less, but still standing. */
 export const isBloodied = (c: Pick<Combatant, "hp" | "maxHp">) => c.hp > 0 && c.hp * 2 <= maxHpOf(c);
-/** Defeated: 0 HP. An entry with no HP tracked (max 0) is never defeated. */
-export const isDefeated = (c: Pick<Combatant, "hp" | "maxHp">) => maxHpOf(c) > 0 && c.hp <= 0;
+type HpView = Pick<Combatant, "hp" | "maxHp"> & Partial<Pick<Combatant, "kind" | "deathSaves">>;
+const atZero = (c: HpView) => maxHpOf(c) > 0 && c.hp <= 0;
+const saves = (c: HpView) => c.deathSaves ?? { successes: 0, failures: 0 };
+/** Defeated: 0 HP. A party member at 0 HP is only defeated after three failed death saves.
+ *  An entry with no HP tracked (max 0) is never defeated. */
+export const isDefeated = (c: HpView) => atZero(c) && (c.kind !== "party" || saves(c).failures >= 3);
+/** Stable: a party member at 0 HP with three successful death saves. */
+export const isStable = (c: HpView) => atZero(c) && c.kind === "party" && saves(c).successes >= 3 && saves(c).failures < 3;
+/** Dying: a party member at 0 HP still rolling death saves. */
+export const isDying = (c: HpView) => atZero(c) && c.kind === "party" && !isDefeated(c) && !isStable(c);
+
+/** Record one death saving throw for a dying party member (each count stops at 3). */
+export function recordDeathSave(e: Encounter, id: string, result: "success" | "failure"): Encounter {
+  return mapOne(e, id, (c) => {
+    if (!isDying(c)) return c;
+    const s = saves(c);
+    return { ...c, deathSaves: result === "success" ? { ...s, successes: Math.min(3, s.successes + 1) } : { ...s, failures: Math.min(3, s.failures + 1) } };
+  });
+}
 
 const mapOne = (e: Encounter, id: string, fn: (c: Combatant) => Combatant): Encounter =>
   ({ ...e, combatants: e.combatants.map((c) => (c.id === id ? fn(c) : c)) });
@@ -145,6 +178,10 @@ const whole = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 
 export function applyDamage(e: Encounter, id: string, amount: number): Encounter {
   const dmg = whole(amount);
   const next = mapOne(e, id, (c) => {
+    if (dmg > 0 && c.kind === "party" && atZero(c) && !isDefeated(c)) {
+      const s = saves(c); // damage at 0 HP costs a death save (and a stable PC starts dying again)
+      return { ...c, deathSaves: { successes: isStable(c) ? 0 : s.successes, failures: Math.min(3, s.failures + 1) } };
+    }
     const absorbed = Math.min(tempHpOf(c), dmg);
     const dc = c.concentrating && dmg > 0 ? Math.max(concentrationDc(dmg), c.concentrationCheckDc ?? 0) : c.concentrationCheckDc;
     return { ...c, maxHp: maxHpOf(c), tempHp: tempHpOf(c) - absorbed, hp: Math.max(0, c.hp - (dmg - absorbed)), ...(dc ? { concentrationCheckDc: dc } : {}) };
@@ -155,7 +192,10 @@ export function applyDamage(e: Encounter, id: string, amount: number): Encounter
 
 /** Healing raises HP up to max HP and does not touch temporary HP. */
 export function applyHealing(e: Encounter, id: string, amount: number): Encounter {
-  return mapOne(e, id, (c) => ({ ...c, maxHp: maxHpOf(c), hp: Math.min(maxHpOf(c), c.hp + whole(amount)) }));
+  return mapOne(e, id, ({ deathSaves, ...c }) => {
+    const hp = Math.min(maxHpOf(c), c.hp + whole(amount));
+    return { ...c, maxHp: maxHpOf(c), hp, ...(hp <= 0 && deathSaves ? { deathSaves } : {}) };
+  });
 }
 
 /** Temporary HP replaces the current pool (they do not stack). */

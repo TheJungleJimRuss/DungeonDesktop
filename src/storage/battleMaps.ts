@@ -84,10 +84,22 @@ export function withCombatantTokens(m: BattleMap, combatants: { id: string; kind
   const tokens = [...m.tokens];
   for (const c of combatants) {
     if (c.kind === "lair" || placed.has(c.id)) continue;
-    const spot = freeSquare({ ...m, tokens });
+    const spot = sideSquare({ ...m, tokens }, c.kind === "party" ? "left" : "right");
     tokens.push({ id: crypto.randomUUID(), name: c.name, color: TOKEN_COLORS[c.kind] ?? TOKEN_COLORS.adhoc, combatantId: c.id, ...spot });
   }
   return { ...m, tokens };
+}
+
+/** Party lines up down the left edge one square in; everyone else lines up six squares (30 ft on a 5 ft grid) further
+ *  right, so the sides start apart but both are in view. A full column moves on to the next one. Falls back to the first empty square. */
+export function sideSquare(m: BattleMap, side: "left" | "right") {
+  const inset = m.width >= 4 ? 1 : 0, top = m.height >= 4 ? 1 : 0;
+  const free = (x: number, y: number) => !m.tokens.some((t) => t.x === x && t.y === y);
+  const start = side === "left" ? inset : Math.min(m.width - 1 - inset, inset + 6);
+  for (let x = start; x < m.width; x++) {
+    for (let y = top; y < m.height; y++) if (free(x, y)) return { x, y };
+  }
+  return freeSquare(m);
 }
 
 /** First empty square, scanning row by row, so a new token never lands on another. */

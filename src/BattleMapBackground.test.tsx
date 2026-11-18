@@ -125,6 +125,7 @@ describe("Battle Map background image", () => {
     expect(JSON.stringify((await exportCampaign(id))!.collections.savedEncounters)).toContain("data:image/png;base64,");
 
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     await waitFor(async () => expect(await (await getDb()).getAll("battleMaps")).toHaveLength(0));
     await user.click(within(await screen.findByRole("listitem", { name: "Ambush" })).getByRole("button", { name: /^load/i }));
     await waitFor(() => expect(image()).not.toBeNull());

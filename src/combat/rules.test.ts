@@ -228,3 +228,100 @@ describe("lair actions", () => {
     expect(removeCombatant(e, id).combatants).toHaveLength(1);
   });
 });
+
+import { isDying, isStable, recordDeathSave } from "./rules";
+
+describe("dying player characters", () => {
+  const party = () => {
+    let e = addCombatant(mk(), { kind: "party", name: "Brakka", hp: 10, dexMod: 0, initiative: 15 });
+    e = addCombatant(e, { kind: "monster", name: "Goblin", hp: 7, dexMod: 2, initiative: 10 });
+    return { e, pc: e.combatants[0].id, gob: e.combatants[1].id };
+  };
+  const pcOf = (e: Encounter) => e.combatants.find((c) => c.kind === "party")!;
+
+  it("a PC at 0 HP is dying, not defeated", () => {
+    const { e, pc } = party();
+    const down = pcOf(applyDamage(e, pc, 20));
+    expect(isDying(down)).toBe(true);
+    expect(isDefeated(down)).toBe(false);
+  });
+  it("'remove' defeat mode never removes a dying PC", () => {
+    const { e, pc } = party();
+    const next = applyDamage(setDefeatMode(e, "remove"), pc, 20);
+    expect(next.combatants.map((c) => c.name)).toContain("Brakka");
+  });
+  it("three successes make the PC stable; three failures kill them", () => {
+    let { e, pc } = party();
+    e = applyDamage(e, pc, 20);
+    e = recordDeathSave(e, pc, "success");
+    e = recordDeathSave(e, pc, "success");
+    expect(isStable(pcOf(e))).toBe(false);
+    e = recordDeathSave(e, pc, "success");
+    expect(isStable(pcOf(e))).toBe(true);
+    expect(isDying(pcOf(e))).toBe(false);
+
+    let d = party().e; const id = d.combatants[0].id;
+    d = applyDamage(d, id, 20);
+    for (let i = 0; i < 3; i++) d = recordDeathSave(d, id, "failure");
+    expect(isDefeated(pcOf(d))).toBe(true);
+    expect(isDying(pcOf(d))).toBe(false);
+  });
+  it("damage while at 0 HP adds a failure; healing clears the saves", () => {
+    let { e, pc } = party();
+    e = applyDamage(e, pc, 20);
+    e = applyDamage(e, pc, 3);
+    expect(pcOf(e).deathSaves).toEqual({ successes: 0, failures: 1 });
+    e = applyHealing(e, pc, 4);
+    expect(pcOf(e).hp).toBe(4);
+    expect(pcOf(e).deathSaves).toBeUndefined();
+  });
+  it("death saves do nothing to a PC with HP left", () => {
+    const { e, pc } = party();
+    expect(pcOf(recordDeathSave(e, pc, "failure")).deathSaves).toBeUndefined();
+  });
+});
+
+describe("turn order skips the defeated", () => {
+  const three = () => {
+    let e = mk();
+    e = addCombatant(e, { kind: "monster", name: "A", hp: 5, dexMod: 0, initiative: 20 });
+    e = addCombatant(e, { kind: "monster", name: "B", hp: 5, dexMod: 0, initiative: 15 });
+    e = addCombatant(e, { kind: "party", name: "C", hp: 5, dexMod: 0, initiative: 10 });
+    return e;
+  };
+  const active = (e: Encounter) => e.combatants.find((c) => c.id === e.activeId)!.name;
+  const id = (e: Encounter, n: string) => e.combatants.find((c) => c.name === n)!.id;
+
+  it("Next turn passes over a defeated monster but stops on a dying PC", () => {
+    let e = three();
+    e = applyDamage(e, id(e, "B"), 10);
+    e = applyDamage(e, id(e, "C"), 10); // dying, still takes a turn for death saves
+    e = advanceTurn(e);
+    expect(active(e)).toBe("C");
+    e = advanceTurn(e);
+    expect([active(e), e.round]).toEqual(["A", 2]);
+  });
+  it("wraps into a new round when the last ones are defeated", () => {
+    let e = three();
+    e = applyDamage(e, id(e, "B"), 10);
+    e = advanceTurn(e); // A -> C
+    e = applyDamage(e, id(e, "A"), 10);
+    e = advanceTurn(e); // C -> (A, B defeated) -> C, next round
+    expect([active(e), e.round]).toEqual(["C", 2]);
+  });
+  it("Previous turn also skips the defeated", () => {
+    let e = three();
+    e = advanceTurn(advanceTurn(e)); // C, round 1
+    e = applyDamage(e, id(e, "B"), 10);
+    e = rewindTurn(e);
+    expect(active(e)).toBe("A");
+  });
+  it("falls back to plain order when everyone is defeated", () => {
+    let e = three();
+    for (const n of ["A", "B"]) e = applyDamage(e, id(e, n), 10);
+    const c = id(e, "C");
+    e = applyDamage(e, c, 10);
+    for (let i = 0; i < 3; i++) e = recordDeathSave(e, c, "failure");
+    expect(active(advanceTurn(e))).toBe("B");
+  });
+});

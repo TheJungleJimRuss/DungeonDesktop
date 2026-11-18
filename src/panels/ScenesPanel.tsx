@@ -8,6 +8,7 @@ import { useLocations, type Location } from "../storage/locations";
 import { useNpcs, type Npc } from "../storage/npcs";
 import { useScratchNotes } from "../storage/notes";
 import { Loading, EmptyState } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 function ItemsEditor({ label, items, onChange }: { label: string; items: SceneItem[]; onChange: (i: SceneItem[]) => void }) {
   const [text, setText] = useState("");
@@ -41,8 +42,8 @@ function SceneForm({ scene, locations, npcs, onSave, onCancel }: {
   const set = <K extends keyof Scene>(k: K, v: Scene[K]) => setD((x) => ({ ...x, [k]: v }));
   const missingLoc = d.locationId && !locations.some((l) => l.id === d.locationId);
   return (
-    <form className="npc-form" onSubmit={submit}>
-      <label><span className="muted">Scene title</span><input value={d.title} onChange={(e) => set("title", e.target.value)} /></label>
+    <form {...GUARD} className="npc-form" onSubmit={submit}>
+      <label><span className="muted">Scene title</span><input autoFocus value={d.title} onChange={(e) => set("title", e.target.value)} /></label>
       <label><span className="muted">Goal</span><input value={d.goal} onChange={(e) => set("goal", e.target.value)} /></label>
       <label><span className="muted">Notes</span><textarea rows={3} value={d.notes} onChange={(e) => set("notes", e.target.value)} /></label>
       <ItemsEditor label="Secret" items={d.secrets} onChange={(i) => set("secrets", i)} />

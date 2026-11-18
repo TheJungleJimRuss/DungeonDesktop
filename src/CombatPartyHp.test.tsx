@@ -57,6 +57,7 @@ describe("Party HP and end combat", () => {
     expect(currentHpOf((await listParty(id))[0])).toBe(20);
 
     await user.click(within(p).getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     await waitFor(async () => expect(currentHpOf((await listParty(id))[0])).toBe(12));
 
     await user.keyboard("{Escape}");

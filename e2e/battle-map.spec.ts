@@ -81,6 +81,7 @@ test("a background image is set, scaled under the grid and survives a reload", a
   await openCombat(page, "Bg Camp");
   const map = page.getByRole("region", { name: "Battle Map" });
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  await map.getByText("Map settings").click();
   await map.getByLabel("Background image").setInputFiles({ name: "bg.png", mimeType: "image/png", buffer: png });
   const img = map.locator(".battle-grid image");
   await expect(img).toHaveAttribute("href", /^blob:/);
@@ -91,6 +92,7 @@ test("a background image is set, scaled under the grid and survives a reload", a
   await page.getByRole("listitem", { name: "Bg Camp" }).getByRole("button", { name: "Open" }).click();
   await page.getByRole("navigation", { name: "Modes" }).getByRole("button", { name: /Combat/ }).click();
   await expect(page.getByRole("region", { name: "Battle Map" }).locator(".battle-grid image")).toHaveAttribute("width", "1600");
+  await page.getByRole("region", { name: "Battle Map" }).getByText("Map settings").click();
   await page.getByRole("region", { name: "Battle Map" }).getByRole("button", { name: "Clear background" }).click();
   await expect(page.locator(".battle-grid image")).toHaveCount(0);
 });
@@ -106,6 +108,7 @@ test("a large background image is downscaled to at most 2048 px on its longest s
     const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), "image/png"));
     return btoa(String.fromCharCode(...new Uint8Array(await blob.arrayBuffer())));
   });
+  await map.getByText("Map settings").click();
   await map.getByLabel("Background image").setInputFiles({ name: "big.png", mimeType: "image/png", buffer: Buffer.from(b64, "base64") });
   await expect(map.locator(".battle-grid image")).toHaveAttribute("href", /^blob:/);
   const size = await page.evaluate(async () => {

@@ -5,6 +5,7 @@ import {
   updateSession, useSelectedSessionId, useSessions, type Session,
 } from "../storage/sessions";
 import { Loading, EmptyState } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 function SessionEditor({ campaignId, session }: { campaignId: string; session: Session }) {
   const [title, setTitle] = useState(session.title);
@@ -17,7 +18,7 @@ function SessionEditor({ campaignId, session }: { campaignId: string; session: S
   };
   return (
     <div className="session-editor">
-      <form className="npc-form" onSubmit={saveDetails}>
+      <form {...GUARD} className="npc-form" onSubmit={saveDetails}>
         <label><span className="muted">Session title</span><input value={title} onChange={(e) => setTitle(e.target.value)} /></label>
         <label><span className="muted">Summary</span><textarea rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} /></label>
         <div className="row end"><button type="submit" className="primary">Save session</button></div>
@@ -38,7 +39,7 @@ function SessionEditor({ campaignId, session }: { campaignId: string; session: S
           <button onClick={() => setConfirming(false)}>Cancel</button>
         </div>
       )}
-      <form className="npc-form" onSubmit={(e) => { e.preventDefault(); void updateSession(session.id, { log }); }}>
+      <form {...GUARD} className="npc-form" onSubmit={(e) => { e.preventDefault(); void updateSession(session.id, { log }); }}>
         <label><span className="muted">Post-session log</span><textarea rows={4} value={log} onChange={(e) => setLog(e.target.value)} /></label>
         <div className="row end"><button type="submit">Save log</button></div>
       </form>

@@ -52,11 +52,16 @@ export function isTyping(t: EventTarget | null): boolean {
 
 const dialogOpen = () => !!document.querySelector('[role="dialog"], dialog[open]');
 
+/** Escape still leaves from a field of an editor form (those open with the cursor in them); the
+ *  unsaved-changes guard (src/ui/unsaved.ts) asks first when something was typed. */
+const escapeFromEditor = (e: KeyboardEvent) =>
+  e.key === "Escape" && !!(e.target as HTMLElement | null)?.closest?.("form[data-guard-unsaved]");
+
 /** Window-level keydown handler: skips typing and open dialogs, runs each event at most once.
  *  Since typing is already excluded, a bare key also triggers its Alt shortcut ("1" runs Alt+1). */
 export function handleKeydown(e: KeyboardEvent) {
   if (handled.has(e) || e.defaultPrevented || e.isComposing || e.repeat) return;
-  if (isTyping(e.target) || dialogOpen()) return;
+  if ((isTyping(e.target) && !escapeFromEditor(e)) || dialogOpen()) return;
   const combo = comboOf(e);
   const s = registry.get(combo) ?? (combo.includes("+") ? undefined : registry.get(`Alt+${combo}`));
   if (!s) return;

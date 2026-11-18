@@ -27,8 +27,8 @@ describe("Add players dropdown", () => {
     await user.keyboard("{Alt>}1{/Alt}");
     const p = await screen.findByRole("region", { name: "Initiative" });
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
-    await within(p).findByRole("option", { name: "Entire Party" });
-    await user.selectOptions(within(p).getByRole("combobox", { name: "Add Party member" }), "Entire Party");
+    await within(p).findByRole("option", { name: "Entire Party (2)" });
+    await user.selectOptions(within(p).getByRole("combobox", { name: "Add Party member" }), "Entire Party (2)");
     await waitFor(() => expect(within(p).getAllByRole("listitem", { name: /Thia|Bram/ })).toHaveLength(2));
     expect(within(p).queryByRole("button", { name: /^Add (Thia|Bram)$/ })).not.toBeInTheDocument();
   });

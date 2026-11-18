@@ -2,6 +2,7 @@ import { passivePerceptionOf } from "../party/passive";
 import type { PartyMember } from "../storage/party";
 import { useState, type FormEvent } from "react";
 import { asLanguages, asList, type PartyMemberInput } from "../storage/party";
+import { GUARD } from "../ui/unsaved";
 import {
   ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, asEquipment, attackLabel, isPack, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
@@ -185,7 +186,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
   const slotsMax = v.spellSlotsMax ?? [];
 
   const text = (k: keyof PartyMemberInput, label: string) => (
-    <label>{label}<input value={(v[k] as string | undefined) ?? ""} onChange={(e) => set(k, e.target.value as never)} /></label>
+    <label>{label}<input autoFocus={k === "name"} value={(v[k] as string | undefined) ?? ""} onChange={(e) => set(k, e.target.value as never)} /></label>
   );
   const area = (k: keyof PartyMemberInput, label: string) => (
     <label className="wide">{label}<textarea rows={3} value={(v[k] as string | undefined) ?? ""} onChange={(e) => set(k, e.target.value as never)} /></label>
@@ -232,7 +233,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
   };
 
   return (
-    <form className="sheet-form" onSubmit={submit} aria-label="Character sheet form">
+    <form {...GUARD} className="sheet-form" onSubmit={submit} aria-label="Character sheet form">
       <fieldset><legend>Identity</legend>
         {text("name", "Name")}{text("class", "Class")}{num("level", "Level")}{text("race", "Species")}
         {text("background", "Background")}{text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}

@@ -7,6 +7,7 @@ import {
   addScratchNote, removeScratchNote, updateScratchNote, useScratchNotes, type ScratchAttachment,
 } from "../storage/notes";
 import { Loading, EmptyState } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 const sceneKey = (sessionId?: string, sceneId?: string) => (sessionId && sceneId ? `${sessionId}|${sceneId}` : "");
 const parseScene = (v: string): Pick<ScratchAttachment, "sessionId" | "sceneId"> => {
@@ -92,7 +93,7 @@ function ScratchNotesPanel({ campaign }: PanelProps) {
           return (
             <li key={n.id}>
               {editing?.id === n.id ? (
-                <form className="npc-form" onSubmit={save}>
+                <form {...GUARD} className="npc-form" onSubmit={save}>
                   <textarea rows={2} aria-label="Edit scratch note" autoFocus value={editing.text}
                     onChange={(e) => setEditing({ ...editing, text: e.target.value })} />
                   <div className="row">

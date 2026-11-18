@@ -10,6 +10,7 @@ import { useDashboard } from "../storage/dashboard";
 import { DashboardToolbar, useDashboardEditing } from "./DashboardCustomizer";
 import DashboardGrid from "./DashboardGrid";
 import QuickAdd from "./QuickAdd";
+import { confirmLeave, trackUnsaved } from "./unsaved";
 import ShortcutHelp from "./ShortcutHelp";
 import { selectionIdOf, selectStatBlock } from "../srd/selection";
 import { customSelectionId } from "../storage/customEntries";
@@ -71,6 +72,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
   const layout = current ? current.layout : entries.map(placementOf);
 
   const select = (id: ModeId | null) => {
+    if (id !== mode && !confirmLeave()) return;
     setMode(id);
     setCustomizing(false); // leaving (or re-entering) the Dashboard ends customizing
     if (id) {
@@ -85,7 +87,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
       <a className="skip-link" href="#main-content">Skip to content</a>
       <SearchShortcuts open={() => setSearching(true)} help={() => setHelping(true)} statBlocks={() => setDrawer((d) => !d)} />
       <header className="topbar">
-        <button onClick={onExit}>All campaigns</button>
+        <button onClick={() => { if (confirmLeave()) onExit(); }}>All campaigns</button>
         <span className="campaign-name">{campaign.name}</span>
         <button onClick={() => setSearching(true)} aria-keyshortcuts="Control+K Meta+K" title="Search (Ctrl+K or Cmd+K)">
           Search
@@ -113,7 +115,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
         <button onClick={() => setHelping(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
       </header>
       <ModeSwitchContext.Provider value={select}>
-      <main className="panel-area" id="main-content" tabIndex={-1}>
+      <main className="panel-area" id="main-content" tabIndex={-1} {...trackUnsaved}>
         <div className="row mode-head">
           <h1>{current ? current.label : "Dashboard"}</h1>
           {!current && remembered && (

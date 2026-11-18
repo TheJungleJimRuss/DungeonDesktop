@@ -1,6 +1,7 @@
 /** SRD reference types besides monsters (spells, magic items, equipment, conditions), their lazy loaders, and
  *  one search over all five types. Monsters live in ./monsters (same pattern: own lazy chunk per type). */
 import { loadMonsters, type Monster } from "./monsters";
+import { loadCharacterData, type Background, type CharacterData, type Class, type ClassFeature, type Feat, type Rule, type Species, type Subclass, type Subspecies, type Trait } from "./character";
 import { buildIndex, search, type SearchIndex } from "./search";
 
 export interface Spell {
@@ -15,19 +16,33 @@ export interface EquipmentItem {
 export interface Condition { id: string; name: string; desc: string }
 
 export interface ReferenceData { spells: Spell[]; magicItems: MagicItem[]; equipment: EquipmentItem[]; conditions: Condition[] }
-export interface SearchData extends ReferenceData { monsters: Monster[] }
+export interface SearchData extends ReferenceData, CharacterData { monsters: Monster[] }
 
-export type RefType = "monster" | "spell" | "magic-item" | "equipment" | "condition";
+export type RefType = "monster" | "spell" | "magic-item" | "equipment" | "condition" | "feat" | "background" | "rule" | "species" | "subspecies" | "trait" | "class" | "subclass" | "class-feature";
 export type RefHit =
   | { type: "monster"; entry: Monster }
   | { type: "spell"; entry: Spell }
   | { type: "magic-item"; entry: MagicItem }
   | { type: "equipment"; entry: EquipmentItem }
-  | { type: "condition"; entry: Condition };
+  | { type: "condition"; entry: Condition }
+  | { type: "feat"; entry: Feat }
+  | { type: "background"; entry: Background }
+  | { type: "rule"; entry: Rule }
+  | { type: "species"; entry: Species }
+  | { type: "subspecies"; entry: Subspecies }
+  | { type: "trait"; entry: Trait }
+  | { type: "class"; entry: Class }
+  | { type: "subclass"; entry: Subclass }
+  | { type: "class-feature"; entry: ClassFeature };
 
-export const REF_TYPES: { type: RefType; label: string }[] = [
-  { type: "monster", label: "Monsters" }, { type: "spell", label: "Spells" }, { type: "magic-item", label: "Magic Items" },
-  { type: "equipment", label: "Equipment" }, { type: "condition", label: "Conditions" },
+/** One filter chip and result group each; a chip may cover several types (species + subspecies + trait, …). */
+export interface RefChip { label: string; types: RefType[] }
+export const REF_TYPES: RefChip[] = [
+  { label: "Monsters", types: ["monster"] }, { label: "Spells", types: ["spell"] }, { label: "Magic Items", types: ["magic-item"] },
+  { label: "Equipment", types: ["equipment"] }, { label: "Conditions", types: ["condition"] },
+  { label: "Backgrounds", types: ["background"] }, { label: "Feats", types: ["feat"] }, { label: "Rules", types: ["rule"] },
+  { label: "Species", types: ["species", "subspecies", "trait"] },
+  { label: "Classes", types: ["class", "subclass", "class-feature"] },
 ];
 
 export type ReferenceSource = () => Promise<ReferenceData>;
@@ -46,18 +61,21 @@ export function loadReference(): Promise<ReferenceData> { return (cache ??= sour
 export function setReferenceSource(s: ReferenceSource | null) { source = s ?? bundled; cache = null; }
 
 export async function loadSearchData(): Promise<SearchData> {
-  const [monsters, ref] = await Promise.all([loadMonsters(), loadReference()]);
-  return { monsters, ...ref };
+  const [monsters, ref, character] = await Promise.all([loadMonsters(), loadReference(), loadCharacterData()]);
+  return { monsters, ...ref, ...character };
 }
 
 export async function getReferenceEntry(type: RefType, id: string): Promise<RefHit | undefined> {
   const data = await loadSearchData();
-  const list: { id: string }[] = { monster: data.monsters, spell: data.spells, "magic-item": data.magicItems, equipment: data.equipment, condition: data.conditions }[type];
+  const list: { id: string }[] = { monster: data.monsters, spell: data.spells, "magic-item": data.magicItems, equipment: data.equipment, condition: data.conditions,
+    feat: data.feats, background: data.backgrounds, rule: data.rules,
+    species: data.species, subspecies: data.subspecies, trait: data.traits,
+    class: data.classes, subclass: data.subclasses, "class-feature": data.classFeatures }[type];
   const entry = list.find((x) => x.id === id);
   return entry && ({ type, entry } as RefHit);
 }
 
-export interface SearchOptions { type?: RefType; cr?: number; creatureType?: string; limit?: number }
+export interface SearchOptions { type?: RefType | RefType[]; cr?: number; creatureType?: string; limit?: number }
 
 const indexes = new WeakMap<object[], SearchIndex<{ name: string }>>();
 function indexOf<T extends { name: string }>(list: T[]): SearchIndex<T> {
@@ -66,12 +84,12 @@ function indexOf<T extends { name: string }>(list: T[]): SearchIndex<T> {
   return i as SearchIndex<T>;
 }
 
-/** Search all types (or one). Results are grouped by type in REF_TYPES order, best match first within a type.
+/** Search all types (or the given ones). Results are grouped by type in REF_TYPES order, best match first within a type.
  *  CR and creature-type filters apply to monsters only; with one of them set, an empty query lists every match. */
 export function searchReference(data: SearchData, query: string, opts: SearchOptions = {}): RefHit[] {
   const { type, cr, creatureType } = opts;
   const out: RefHit[] = [];
-  const want = (t: RefType) => !type || type === t;
+  const want = (t: RefType) => !type || [type].flat().includes(t);
   const group = <T extends { name: string }>(t: RefType, list: T[], limit: number, hit: (e: T) => RefHit) => {
     if (!want(t)) return;
     for (const e of search(indexOf(list), query, limit)) out.push(hit(e));
@@ -88,6 +106,15 @@ export function searchReference(data: SearchData, query: string, opts: SearchOpt
   group("magic-item", data.magicItems, limit, (entry) => ({ type: "magic-item", entry }));
   group("equipment", data.equipment, limit, (entry) => ({ type: "equipment", entry }));
   group("condition", data.conditions, limit, (entry) => ({ type: "condition", entry }));
+  group("background", data.backgrounds, limit, (entry) => ({ type: "background", entry }));
+  group("feat", data.feats, limit, (entry) => ({ type: "feat", entry }));
+  group("rule", data.rules, limit, (entry) => ({ type: "rule", entry }));
+  group("species", data.species, limit, (entry) => ({ type: "species", entry }));
+  group("subspecies", data.subspecies, limit, (entry) => ({ type: "subspecies", entry }));
+  group("trait", data.traits, limit, (entry) => ({ type: "trait", entry }));
+  group("class", data.classes, limit, (entry) => ({ type: "class", entry }));
+  group("subclass", data.subclasses, limit, (entry) => ({ type: "subclass", entry }));
+  group("class-feature", data.classFeatures, limit, (entry) => ({ type: "class-feature", entry }));
   return out;
 }
 

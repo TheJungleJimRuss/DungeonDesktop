@@ -3,7 +3,7 @@ import { loadMonsters } from "../srd/monsters";
 import { monsterFromEntry, useCustomEntries } from "../storage/customEntries";
 import { requestRoll } from "../dice/roller";
 import {
-  applyDamage, applyHealing, isBloodied, isDefeated, maxHpOf, setDefeatMode, setMaxHp, setTempHp, tempHpOf,
+  applyDamage, applyHealing, isBloodied, isDefeated, isDying, isStable, maxHpOf, recordDeathSave, setDefeatMode, setMaxHp, setTempHp, tempHpOf,
   type Combatant, type Encounter,
 } from "../combat/rules";
 
@@ -24,7 +24,25 @@ export function useHpRolls(campaignId: string): Record<string, string> {
   return rolls;
 }
 
-export const rowStateClass = (c: Combatant) => (isDefeated(c) ? " defeated" : isBloodied(c) ? " bloodied" : "");
+export const rowStateClass = (c: Combatant) =>
+  isDefeated(c) ? " defeated" : isDying(c) ? " dying" : isBloodied(c) ? " bloodied" : "";
+
+/** Death save tally and buttons for a party member at 0 HP. */
+function DeathSaves({ c, update }: { c: Combatant; update: Update }) {
+  const s = c.deathSaves ?? { successes: 0, failures: 0 };
+  if (isStable(c)) return <span className="hp-flag stable-flag">Stable</span>;
+  if (!isDying(c)) return null;
+  const record = (r: "success" | "failure") => update((e) => recordDeathSave(e, c.id, r));
+  return (
+    <span className="death-saves row" role="group" aria-label={`Death saves ${c.name}`}>
+      <span className="hp-flag dying-flag">Dying</span>
+      <span aria-label={`Death save successes ${c.name}`}>✓ {s.successes}/3</span>
+      <span aria-label={`Death save failures ${c.name}`}>✗ {s.failures}/3</span>
+      <button aria-label={`Death save success ${c.name}`} onClick={() => record("success")}>Success</button>
+      <button aria-label={`Death save failure ${c.name}`} onClick={() => record("failure")}>Failure</button>
+    </span>
+  );
+}
 
 export function DefeatModeToggle({ enc, update }: { enc: Encounter; update: Update }) {
   return (
@@ -68,9 +86,10 @@ export function HpControls({ c, update, hpRoll }: { c: Combatant; update: Update
       <span className="hp" aria-label={`HP ${c.name}`}>
         HP {c.hp}/{maxHpOf(c)}{temp > 0 && ` (+${temp} temp)`}
       </span>
-      {isDefeated(c) && <span className="hp-flag defeated-flag">Defeated</span>}
+      {isDefeated(c) && <span className="hp-flag defeated-flag">{c.kind === "party" ? "Dead" : "Defeated"}</span>}
+      <DeathSaves c={c} update={update} />
       {isBloodied(c) && <span className="hp-flag bloodied-flag">Bloodied</span>}
-      <input className="init-input" type="number" min={1} placeholder="Amt" aria-label={`Amount ${c.name}`} value={amount}
+      <input id={`amt-${c.id}`} className="init-input" type="number" min={1} placeholder="Amt" aria-label={`Amount ${c.name}`} value={amount}
         onChange={(e) => setAmount(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); entered(applyDamage); } }} />
       <button disabled={!valid} onClick={() => entered(applyDamage)} aria-label={`Damage ${c.name}`}>Damage</button>

@@ -147,3 +147,169 @@ export const convertSpells = (rs) => rs.map(convertSpell).sort(byName);
 export const convertMagicItems = (rs) => rs.map(convertMagicItem).sort(byName);
 export const convertEquipments = (rs) => rs.map(convertEquipment).sort(byName);
 export const convertConditions = (rs) => rs.map(convertCondition).sort(byName);
+
+// ---- Character data: feats, backgrounds, rules. Upstream references are flattened to display strings and plain ids. ----
+
+const ABILITY_NAMES = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
+const abilityName = (a) => ABILITY_NAMES[nameOf(a)] ?? nameOf(a);
+const FEAT_CATEGORIES = { origin: "Origin", general: "General", "fighting-style": "Fighting Style", "epic-boon": "Epic Boon" };
+
+export function convertFeat(r) {
+  const p = r.prerequisites ?? {};
+  const prereq = [
+    p.minimum_level ? `Level ${p.minimum_level}+` : "",
+    r.prerequisite_options?.desc ?? "",
+    p.feature_named ? `${p.feature_named} feature` : "",
+  ].filter(Boolean).join(", ");
+  const f = { id: r.index, name: r.name, category: FEAT_CATEGORIES[r.type] ?? r.type, description: r.description };
+  if (prereq) f.prerequisite = prereq;
+  if (r.repeatable) f.repeatable = r.repeatable;
+  return f;
+}
+
+const profName = (p) => nameOf(p).replace(/^(Skill|Tool): /, "");
+
+export function convertBackground(r) {
+  const b = {
+    id: r.index,
+    name: r.name,
+    abilityScores: (r.ability_scores ?? []).map(abilityName),
+    feat: { id: r.feat.index, name: r.feat.name + (r.feat.note ? ` (${r.feat.note})` : "") },
+    skills: (r.proficiencies ?? []).filter((p) => nameOf(p).startsWith("Skill: ")).map(profName),
+    tools: (r.proficiencies ?? []).filter((p) => nameOf(p).startsWith("Tool: ")).map(profName),
+    equipment: (r.equipment_options ?? []).map((o) => o.desc),
+  };
+  const choices = (r.proficiency_choices ?? []).map((o) => o.desc);
+  if (choices.length) b.proficiencyChoices = choices;
+  return b;
+}
+
+const RULE_KINDS = { skill: "skill", language: "language", "damage-type": "damage-type", "weapon-property": "weapon-property", "weapon-mastery": "weapon-mastery", alignment: "alignment", "ability-score": "ability-score" };
+
+export function convertRule(kind, r) {
+  if (!RULE_KINDS[kind]) throw new Error(`unknown rule kind ${kind}`);
+  const e = { id: r.index, kind, name: r.name, desc: r.description ?? "" };
+  if (kind === "skill") e.ability = abilityName(r.ability_score);
+  if (kind === "language") { e.rare = !!r.is_rare; if (r.note) e.note = r.note; }
+  if (kind === "alignment") e.abbreviation = r.abbreviation;
+  if (kind === "ability-score") { e.name = r.full_name; e.abbreviation = r.name; e.skills = (r.skills ?? []).map(nameOf); }
+  return e;
+}
+
+export const convertFeats = (rs) => rs.map(convertFeat).sort(byName);
+export const convertBackgrounds = (rs) => rs.map(convertBackground).sort(byName);
+/** One converter per rules file; rules.json is the concatenation of all seven (see build-srd.mjs `join`). */
+export const convertRules = (kind) => (rs) => rs.map((r) => convertRule(kind, r)).sort(byName);
+
+// ---- Species, subspecies and traits. Cross references are flattened to { id, name } pairs. ----
+
+const refOf = (r) => ({ id: r.index, name: r.name });
+
+export function convertSpeciesEntry(r) {
+  const size = r.size ?? (r.size_options?.from?.options ?? []).map((o) => o.size).join(" or ");
+  return {
+    id: r.index, name: r.name, type: r.type, size, speed: r.speed,
+    traits: (r.traits ?? []).map(refOf), subspecies: (r.subspecies ?? []).map(refOf),
+  };
+}
+
+export function convertSubspecies(r) {
+  const s = { id: r.index, name: r.name, species: refOf(r.species) };
+  if (r.damage_type) s.damageType = r.damage_type.name;
+  s.traits = (r.traits ?? []).map(refOf);
+  return s;
+}
+
+export function convertTrait(r) {
+  const t = { id: r.index, name: r.name, description: r.description ?? "", species: (r.species ?? []).map(refOf) };
+  if (r.subspecies?.length) t.subspecies = r.subspecies.map(refOf);
+  return t;
+}
+
+export const convertSpecies = (rs) => rs.map(convertSpeciesEntry).sort(byName);
+export const convertSubspeciesList = (rs) => rs.map(convertSubspecies).sort(byName);
+export const convertTraits = (rs) => rs.map(convertTrait).sort(byName);
+
+// ---- Classes, subclasses, features and level tables. Class rows and subclass rows share Levels.json. ----
+
+const fixText = (s) => (s ?? "").replaceAll("â€™", "’");
+const countOf = (o) => (o.choose === 1 ? "1" : String(o.choose));
+const levelNumber = (ref) => Number(/(\d+)$/.exec(ref.index)[1]);
+const ORDINALS = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
+const nth = (n) => ORDINALS[n - 1];
+
+function multiclassText(m) {
+  const need = m.prerequisite_options
+    ? m.prerequisite_options.from.options.map((o) => `${abilityName(o.ability_score)} ${o.minimum_score}`).join(" or ")
+    : (m.prerequisites ?? []).map((p) => `${abilityName(p.ability_score)} ${p.minimum_score}`).join(" and ");
+  const gains = [...(m.proficiencies ?? []).map(nameOf), ...(m.proficiency_choices ?? []).map((o) => `${countOf(o)} ${o.desc}`)];
+  return [need && `Prerequisite: ${need}.`, gains.length && `Proficiencies gained: ${gains.join(", ")}.`].filter(Boolean).join(" ");
+}
+
+export function convertClass(r) {
+  return {
+    id: r.index, name: r.name, hitDie: r.hit_die, primaryAbility: r.primary_ability.desc,
+    savingThrows: r.saving_throws.map(abilityName),
+    proficiencies: r.proficiencies.map(nameOf).filter((p) => !p.startsWith("Saving Throw: ")),
+    skillChoices: (r.proficiency_choices ?? []).map((o) => fixText(o.desc)).join("; "),
+    startingEquipment: (r.starting_equipment_options ?? []).map((o) => fixText(o.desc)).join(" "),
+    multiclass: multiclassText(r.multi_classing),
+    subclasses: (r.subclasses ?? []).map(refOf),
+  };
+}
+
+// class_specific keys -> table column label and value formatter (unknown keys fall back to a title-cased key).
+const dieText = (n) => `d${n}`;
+const COLUMNS = {
+  rage_count: ["Rages"], rage_damage_bonus: ["Rage Damage", (n) => `+${n}`], weapon_mastery: ["Weapon Mastery"],
+  bardic_inspiration_die: ["Bardic Inspiration", dieText], channel_divinity_charges: ["Channel Divinity"], wild_shape_uses: ["Wild Shape"],
+  second_wind_uses: ["Second Wind"], martial_arts_die: ["Martial Arts", dieText], focus_points: ["Focus Points"],
+  unarmored_movement_bonus: ["Unarmored Movement", (n) => `+${n} ft.`], favored_enemies: ["Favored Enemies"],
+  sneak_attack: ["Sneak Attack", (o) => `${o.dice_count}d${o.dice_value}`], sorcery_points: ["Sorcery Points"], eldritch_invocations: ["Eldritch Invocations"],
+};
+const titleKey = (k) => k.split("_").map(cap).join(" ");
+
+/** Level rows of one class as table rows. Columns that are empty or 0 at every level are dropped; a 0 elsewhere shows as an en dash. */
+function levelRows(rows) {
+  const cells = rows.map((r) => {
+    const c = new Map();
+    for (const [k, v] of Object.entries(r.class_specific ?? {})) {
+      const [label, fmt] = COLUMNS[k] ?? [titleKey(k)];
+      c.set(label, { raw: typeof v === "object" ? v : v, text: fmt ? fmt(v) : v });
+    }
+    const sc = r.spellcasting ?? {};
+    if ("cantrips_known" in sc) c.set("Cantrips", { raw: sc.cantrips_known, text: sc.cantrips_known });
+    if ("prepared_spells" in sc) c.set("Prepared Spells", { raw: sc.prepared_spells, text: sc.prepared_spells });
+    for (let n = 1; n <= 9; n++) if (`spell_slots_level_${n}` in sc) c.set(nth(n), { raw: sc[`spell_slots_level_${n}`], text: sc[`spell_slots_level_${n}`] });
+    return c;
+  });
+  const labels = [...new Set(cells.flatMap((c) => [...c.keys()]))].filter((l) => cells.some((c) => c.get(l) && c.get(l).raw !== 0));
+  return rows.map((r, i) => {
+    const columns = {};
+    for (const l of labels) { const v = cells[i].get(l); columns[l] = !v || v.raw === 0 ? "—" : v.text; }
+    return { level: r.level, profBonus: r.prof_bonus, columns, featureIds: r.features.map((f) => f.index) };
+  });
+}
+
+/** One entry per class: { id, levels }. Subclass rows are skipped (a subclass's features come from the features list). */
+export function convertClassLevels(rs) {
+  const byClass = new Map();
+  for (const r of rs) if (!r.subclass) byClass.set(r.class.index, [...(byClass.get(r.class.index) ?? []), r]);
+  return [...byClass].map(([id, rows]) => ({ id, levels: levelRows(rows.sort((a, b) => a.level - b.level)) })).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export function convertSubclass(r) {
+  return { id: r.index, name: r.name, class: refOf(r.class), summary: r.summary, description: fixText(r.description) };
+}
+
+export function convertClassFeature(r) {
+  const f = { id: r.index, name: r.name, class: refOf(r.class) };
+  if (r.subclass) f.subclass = refOf(r.subclass);
+  f.level = levelNumber(r.level);
+  f.description = fixText(r.description);
+  return f;
+}
+
+export const convertClasses = (rs) => rs.map(convertClass).sort(byName);
+export const convertSubclasses = (rs) => rs.map(convertSubclass).sort(byName);
+export const convertClassFeatures = (rs) => rs.map(convertClassFeature).sort(byName);

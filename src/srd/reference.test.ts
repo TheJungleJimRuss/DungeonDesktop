@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { convertCondition, convertEquipment, convertMagicItem, convertSpell } from "../../scripts/srd-convert.mjs";
 import { buildIndex, search } from "./search";
-import { FIXTURE_MONSTERS, FIXTURE_REFERENCE } from "./fixtures";
+import { FIXTURE_CHARACTER, FIXTURE_MONSTERS, FIXTURE_REFERENCE } from "./fixtures";
 import { loadReference, searchReference, monsterFilterOptions, type Spell, type MagicItem, type EquipmentItem, type Condition } from "./reference";
 
 describe("conversion of the other SRD types", () => {
@@ -63,7 +63,7 @@ describe("bundled SRD reference data", () => {
 });
 
 describe("searchReference", () => {
-  const ref = { monsters: FIXTURE_MONSTERS, ...FIXTURE_REFERENCE };
+  const ref = { monsters: FIXTURE_MONSTERS, ...FIXTURE_REFERENCE, ...FIXTURE_CHARACTER };
   const hits = (q: string, o = {}) => searchReference(ref, q, o).map((h) => `${h.type}:${h.entry.name}`);
   it("finds entries of every type, with typos and partial words", () => {
     expect(hits("fireb")[0]).toBe("spell:Fireball Test");

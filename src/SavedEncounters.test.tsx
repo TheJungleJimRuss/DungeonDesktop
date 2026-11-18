@@ -50,6 +50,7 @@ describe("saved encounters", () => {
     await user.click(screen.getByRole("button", { name: /save encounter/i }));
     expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
 
     const saved = await screen.findByRole("list", { name: /saved encounters/i });
     const item = within(saved).getByRole("listitem", { name: "Goblin ambush" });
@@ -66,6 +67,7 @@ describe("saved encounters", () => {
     expect(screen.getByLabelText("Initiative Goblin Warrior 1")).toHaveValue(null);
 
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     await user.click(within(await screen.findByRole("listitem", { name: "Ambush" })).getByRole("button", { name: /delete/i }));
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Ambush" })).not.toBeInTheDocument());
     expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(0);

@@ -5,12 +5,13 @@ import {
 } from "../storage/locations";
 import { selectNpc, useNpcs } from "../storage/npcs";
 import { Loading } from "../ui/PanelStates";
+import { GUARD } from "../ui/unsaved";
 
 function LocationForm({ loc, onDone }: { loc: Location; onDone: () => void }) {
   const [name, setName] = useState(loc.name);
   const [notes, setNotes] = useState(loc.notes);
   return (
-    <form className="npc-form" onSubmit={(e) => {
+    <form {...GUARD} className="npc-form" onSubmit={(e) => {
       e.preventDefault();
       if (!name.trim()) return;
       void updateLocation(loc.id, { name: name.trim(), notes }).then(onDone);

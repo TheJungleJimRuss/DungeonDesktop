@@ -134,18 +134,19 @@ describe("Battle Map tokens linked to Combatants", () => {
     const goblin2 = await map.findByRole("button", { name: "Token Goblin Warrior 2" });
     await map.findByRole("button", { name: "Token Bandit" });
     goblin2.focus();
-    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}");
-    await waitFor(() => expect(pos(map.getByRole("button", { name: "Token Goblin Warrior 2" }))).toEqual(["4", "1"]));
+    await user.keyboard("{ArrowLeft}{ArrowLeft}{ArrowDown}");
+    await waitFor(() => expect(pos(map.getByRole("button", { name: "Token Goblin Warrior 2" }))).toEqual(["5", "3"]));
 
     await user.type(screen.getByLabelText("Saved encounter name"), "Ambush");
     await user.click(screen.getByRole("button", { name: /save encounter/i }));
     await waitFor(async () => expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
     await user.click(within(await screen.findByRole("listitem", { name: "Ambush" })).getByRole("button", { name: /^load/i }));
 
     // linked tokens exist again, with the new Combatants' ids
     const g2 = await map.findByRole("button", { name: "Token Goblin Warrior 2" });
-    expect(pos(g2)).toEqual(["4", "1"]);
+    expect(pos(g2)).toEqual(["5", "3"]);
     await map.findByRole("button", { name: "Token Aria" });
     const enc = (await exportCampaign(id))!.collections.encounters as unknown as Record<string, any>[];
     const ids = new Set(enc[0].combatants.map((c: any) => c.id));
