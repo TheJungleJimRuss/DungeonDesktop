@@ -1,4 +1,4 @@
-import { abilityMod, proficiencyBonus, saveBonus, skillBonus, SKILLS, spellAttackBonus, spellSaveDc, signed, DEFAULT_ABILITIES, asEquipment, countLabel, toCount, applyHpChange } from "./sheet";
+import { abilityMod, proficiencyBonus, saveBonus, skillBonus, SKILLS, spellAttackBonus, spellSaveDc, signed, DEFAULT_ABILITIES, asEquipment, countLabel, toCount, applyHpChange, adjustCoins } from "./sheet";
 
 const ab = { ...DEFAULT_ABILITIES, dex: 16, wis: 8, int: 18 };
 
@@ -50,5 +50,15 @@ describe("applyHpChange", () => {
     expect(applyHpChange(10, 20, -4)).toBe(6);
     expect(applyHpChange(3, 20, -9)).toBe(0);
     expect(applyHpChange(18, 20, 5)).toBe(20);
+  });
+});
+
+describe("adjustCoins", () => {
+  it("adds and spends one kind of coin", () => {
+    expect(adjustCoins(undefined, "gp", 25)).toEqual({ cp: 0, sp: 0, ep: 0, gp: 25, pp: 0 });
+    expect(adjustCoins({ cp: 0, sp: 3, ep: 0, gp: 25, pp: 0 }, "gp", -5)?.gp).toBe(20);
+  });
+  it("refuses to spend more than the purse holds", () => {
+    expect(adjustCoins({ cp: 0, sp: 0, ep: 0, gp: 4, pp: 0 }, "gp", -5)).toBeNull();
   });
 });

@@ -4,8 +4,9 @@ import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
 import { addPartyMember, asLanguages, asList, currentHpOf, listParty, removePartyMember, updatePartyMember, type PartyMember, type PartyMemberInput } from "../storage/party";
 import CharacterForm from "./CharacterForm";
+import CoinPurse from "./CoinPurse";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, asAttacks, asEquipment, countLabel, isPack, type EquipmentEntry, attackDamageText, attackLabel, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, asAttacks, asEquipment, isPack, toCount, type EquipmentEntry, attackDamageText, attackLabel, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS,
   abilityMod, applyHpChange, proficiencyBonus, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc,
 } from "../party/sheet";
 import { EmptyState } from "../ui/PanelStates";
@@ -38,21 +39,37 @@ function RemoveBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return <button type="button" className="x" aria-label={`Remove ${label}`} title="Remove" onClick={() => setAsking(true)}>×</button>;
 }
 
+/** Inline − count + for an item; the count saves on blur or Enter and never drops below 1. */
+function Qty({ label, value, onChange }: { label: string; value?: number; onChange: (n: number) => void }) {
+  const n = value ?? 1;
+  const set = (next: number) => { const c = toCount(next); if (c !== n) onChange(c); };
+  return (
+    <span className="qty" role="group" aria-label={`${label} count`}>
+      <button type="button" aria-label={`Decrease ${label}`} disabled={n <= 1} onClick={() => set(n - 1)}>−</button>
+      <input type="number" min={1} aria-label={`Quantity of ${label}`} defaultValue={n} key={n}
+        onBlur={(e) => set(e.target.valueAsNumber)}
+        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+      <button type="button" aria-label={`Increase ${label}`} onClick={() => set(n + 1)}>+</button>
+    </span>
+  );
+}
+
 /** A pack on the sheet; its contents fold away behind the pack name. */
-function PackEntry({ pack, onRemove, onAddItem, onRemoveItem }: { pack: EquipmentEntry; onRemove: () => void; onAddItem: (name: string) => void; onRemoveItem: (k: number) => void }) {
+function PackEntry({ pack, onRemove, onAddItem, onRemoveItem, onChange }: { pack: EquipmentEntry; onRemove: () => void; onAddItem: (name: string) => void; onRemoveItem: (k: number) => void; onChange: (pack: EquipmentEntry) => void }) {
   const [open, setOpen] = useState(true);
   const n = pack.contents!.length;
   return (
     <li>
       <button type="button" className="pack-toggle" aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${pack.name}`} onClick={() => setOpen(!open)}>
-        <span aria-hidden="true">{open ? "▾" : "▸"}</span> {countLabel(pack)}
+        <span aria-hidden="true">{open ? "▾" : "▸"}</span> {pack.name}
       </button>
+      <Qty label={pack.name} value={pack.quantity} onChange={(quantity) => onChange({ ...pack, quantity })} />
       <RemoveBtn label={`pack ${pack.name}`} onClick={onRemove} />
       {!open && <span className="muted"> ({n} item{n === 1 ? "" : "s"})</span>}
       {open && (
         <>
           {!n && <span className="muted"> (empty pack)</span>}
-          {n > 0 && <ul aria-label={`${pack.name} contents`}>{pack.contents!.map((c, k) => <li key={k}>{countLabel(c)}<RemoveBtn label={`${c.name} from ${pack.name}`} onClick={() => onRemoveItem(k)} /></li>)}</ul>}
+          {n > 0 && <ul aria-label={`${pack.name} contents`}>{pack.contents!.map((c, k) => <li key={k}>{c.name}<Qty label={`${c.name} in ${pack.name}`} value={c.quantity} onChange={(quantity) => onChange({ ...pack, contents: pack.contents!.map((x, j) => (j === k ? { ...x, quantity } : x)) })} /><RemoveBtn label={`${c.name} from ${pack.name}`} onClick={() => onRemoveItem(k)} /></li>)}</ul>}
           <AddInline label={`item in ${pack.name}`} onAdd={onAddItem} />
         </>
       )}
@@ -92,8 +109,6 @@ function Sheet({ m }: { m: PartyMember }) {
   const attacks = asAttacks(m.attacks);
   const equipment = asEquipment(m.equipment);
   const setPack = (i: number, contents: NonNullable<EquipmentEntry["contents"]>) => patch({ equipment: equipment.map((e, j) => (j === i ? { ...e, contents } : e)) });
-  const coins = m.coins;
-  const hasCoins = coins && CURRENCIES.some((c) => coins[c] > 0);
   const roll = (label: string, bonus: number) => <span className="bonus" aria-label={label}>{signed(bonus)}</span>;
 
   return (
@@ -186,13 +201,14 @@ function Sheet({ m }: { m: PartyMember }) {
             isPack(e)
               ? <PackEntry key={i} pack={e} onRemove={() => patch({ equipment: equipment.filter((_, j) => j !== i) })}
                   onAddItem={(name) => setPack(i, [...e.contents!, { name }])}
-                  onRemoveItem={(k) => setPack(i, e.contents!.filter((_, j) => j !== k))} />
-              : <li key={i}>{countLabel(e)}<RemoveBtn label={e.name} onClick={() => patch({ equipment: equipment.filter((_, j) => j !== i) })} /></li>
+                  onRemoveItem={(k) => setPack(i, e.contents!.filter((_, j) => j !== k))}
+                  onChange={(next) => patch({ equipment: equipment.map((x, j) => (j === i ? next : x)) })} />
+              : <li key={i}>{e.name}<Qty label={e.name} value={e.quantity} onChange={(quantity) => patch({ equipment: equipment.map((x, j) => (j === i ? { ...x, quantity } : x)) })} /><RemoveBtn label={e.name} onClick={() => patch({ equipment: equipment.filter((_, j) => j !== i) })} /></li>
           ))}
         </ul>
         <AddInline label="item" onAdd={(name) => patch({ equipment: [...equipment, { name }] })} extra={{ label: "Add pack", onAdd: (name) => patch({ equipment: [...equipment, { name, contents: [] }] }) }} />
       </section>
-      {hasCoins && <section className="sheet-card sheet-text"><h4>Coin</h4><p>{CURRENCIES.filter((c) => coins![c] > 0).map((c) => `${coins![c]} ${c}`).join(", ")}</p></section>}
+      <section className="sheet-card sheet-text"><h4>Coin</h4><CoinPurse m={m} /></section>
       <Text title="Personality" body={m.personality} />
       <Text title="Backstory" body={m.backstory} />
       <Text title="Notes" body={m.notes} />

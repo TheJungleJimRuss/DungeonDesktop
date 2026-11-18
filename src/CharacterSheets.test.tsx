@@ -65,10 +65,12 @@ describe("Party tab and character sheets", () => {
     expect(s.getByLabelText("Intelligence save")).toHaveTextContent("+7");
     expect(s.getByLabelText("Arcana")).toHaveTextContent("+10");
     expect(s.getByText(/spell save dc 15/i)).toBeInTheDocument();
-    for (const t of ["Spellbook ×2", "Torch ×10", "Arcane Recovery", "Daggers", "Common", "Draconic"]) expect(s.getByText(t).tagName).toBe("LI");
+    expect(s.getByLabelText("Quantity of Spellbook")).toHaveValue(2);
+    expect(s.getByLabelText("Quantity of Torch")).toHaveValue(10);
+    for (const t of ["Arcane Recovery", "Daggers", "Common", "Draconic"]) expect(s.getByText(t).tagName).toBe("LI");
     expect(s.getByText("Fire Bolt ×3 — 2d10+3 fire")).toBeInTheDocument();
     const pack = within(s.getByRole("list", { name: "Scholar's Pack contents" }));
-    expect(pack.getByText("Parchment ×5")).toBeInTheDocument();
+    expect(pack.getByLabelText("Quantity of Parchment in Scholar's Pack")).toHaveValue(5);
     expect(pack.queryByText("Ink")).not.toBeInTheDocument();
     await user.click(s.getByRole("button", { name: "Collapse Scholar's Pack" }));
     expect(s.queryByRole("list", { name: "Scholar's Pack contents" })).not.toBeInTheDocument();
@@ -166,5 +168,38 @@ describe("Coin on the character sheet", () => {
     await user.type(sheet.getByLabelText("sp Bram"), "7{Enter}");
     await waitFor(() => expect(sheet.getByLabelText("sp Bram")).toHaveValue(7));
     expect(sheet.getByLabelText("gp Bram")).toHaveValue(18);
+  });
+});
+
+describe("Item counts on the character sheet", () => {
+  it("changes counts of items and pack contents without opening Edit sheet", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user, "Counts");
+    await user.click(screen.getByRole("button", { name: /^party/i }));
+    const panel = await screen.findByRole("region", { name: /character sheets/i });
+    const p = within(panel);
+    await user.click(p.getByRole("button", { name: /add character/i }));
+    await user.type(p.getByLabelText("Name"), "Bram");
+    await user.click(p.getByRole("button", { name: /save member/i }));
+    const sheet = within(await p.findByRole("article", { name: "Bram character sheet" }));
+
+    await user.type(sheet.getByLabelText("Add item"), "Torch{Enter}");
+    expect(await sheet.findByLabelText("Quantity of Torch")).toHaveValue(1);
+    expect(sheet.getByRole("button", { name: "Decrease Torch" })).toBeDisabled();
+    await user.click(sheet.getByRole("button", { name: "Increase Torch" }));
+    await waitFor(() => expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(2));
+    await user.clear(sheet.getByLabelText("Quantity of Torch"));
+    await user.type(sheet.getByLabelText("Quantity of Torch"), "10{Enter}");
+    await waitFor(() => expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(10));
+    await user.click(sheet.getByRole("button", { name: "Decrease Torch" }));
+    await waitFor(() => expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(9));
+
+    await user.type(sheet.getByLabelText("Add item"), "Explorer's Pack");
+    await user.click(sheet.getByRole("button", { name: "Add pack" }));
+    await user.type(await sheet.findByLabelText("Add item in Explorer's Pack"), "Rations{Enter}");
+    await user.click(await sheet.findByRole("button", { name: "Increase Rations in Explorer's Pack" }));
+    await waitFor(() => expect(sheet.getByLabelText("Quantity of Rations in Explorer's Pack")).toHaveValue(2));
+    expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(9);
   });
 });

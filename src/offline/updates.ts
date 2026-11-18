@@ -38,7 +38,7 @@ export function registerServiceWorker() {
     reloading = true;
     location.reload();
   });
-  sw.register("/sw.js").then((reg) => {
+  sw.register(import.meta.env.BASE_URL + "sw.js").then((reg) => {
     const check = () => {
       if (reg.waiting && sw.controller) setWaitingWorker(reg.waiting);
     };

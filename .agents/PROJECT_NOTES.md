@@ -14,7 +14,7 @@
 
 2026-11-17: Battle Map fits the whole grid by default (height capped to viewport minus chrome); zoom −/+/Fit (ZOOMS in BattleMapPanel.tsx); size and background settings folded into a collapsed "Map settings" details (e2e clicks it first). 278 Vitest, 10 Playwright. Not committed.
 
-2026-11-17: Coin changes without Edit sheet: src/panels/CoinPurse.tsx (editable amounts + Gain/Spend box, `adjustCoins` in party/sheet.ts refuses overspending) on the Character Sheet and Player card. 300 Vitest. Not committed.
+2026-11-17: Coin and item counts change without Edit sheet: src/panels/CoinPurse.tsx (editable amounts + Gain/Spend box, `adjustCoins` in party/sheet.ts refuses overspending) on the Character Sheet and Player card. Equipment and pack items get an inline − count + stepper (`Qty` in CharacterSheetsPanel.tsx, labels "Quantity of X" / "Increase X"). 302 Vitest. Not committed.
 
 2026-11-17: Spec 0004 SRD search expansion done (classes, species, backgrounds, feats, rules in Global Search; details in NOTES_ARCHIVE.md). 301 Vitest, 10 Playwright, build clean. Not committed.
 

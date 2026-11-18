@@ -65,6 +65,14 @@ export type Currency = (typeof CURRENCIES)[number];
 export type Coins = Record<Currency, number>;
 export const NO_COINS: Coins = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
 
+/** Adds (delta > 0) or spends (delta < 0) whole coins of one kind. Returns null when the purse lacks the coins. */
+export function adjustCoins(coins: Partial<Coins> | undefined, currency: Currency, delta: number): Coins | null {
+  const purse = { ...NO_COINS, ...coins };
+  const next = purse[currency] + Math.trunc(delta);
+  if (next < 0) return null;
+  return { ...purse, [currency]: next };
+}
+
 export const SPELL_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 export const DAMAGE_TYPES = [

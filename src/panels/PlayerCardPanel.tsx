@@ -4,10 +4,11 @@ import { useChangeVersion } from "../sync/changeBus";
 import { asLanguages, currentHpOf, listParty, updatePartyMember, type PartyMember } from "../storage/party";
 import { passivePerceptionOf } from "../party/passive";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
+  ABILITIES, ABILITY_NAMES, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
   attackDamageText, attackLabel, countLabel, isPack, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc, type SkillLevel,
 } from "../party/sheet";
 import { Loading, EmptyState } from "../ui/PanelStates";
+import CoinPurse from "./CoinPurse";
 
 /** 10 + skill modifier; null when the member has no sheet abilities to work from. */
 function passiveSkill(m: PartyMember, key: string): number | null {
@@ -122,7 +123,6 @@ function Skills({ m }: { m: PartyMember }) {
 function Gear({ m }: { m: PartyMember }) {
   const attacks = asAttacks(m.attacks);
   const equipment = asEquipment(m.equipment);
-  const coins = { ...NO_COINS, ...m.coins };
   return (
     <>
       <section><h4>Attacks</h4>
@@ -136,17 +136,7 @@ function Gear({ m }: { m: PartyMember }) {
           ))}</ul>}
       </section>
       <section><h4>Coin</h4>
-        <div className="player-coins">
-          {CURRENCIES.map((c) => (
-            <label key={c}><span className="muted">{c}</span>
-              <input type="number" min={0} aria-label={`${c} ${m.name}`} defaultValue={coins[c]} key={`${c}-${coins[c]}`}
-                onBlur={(e) => {
-                  const n = Math.max(0, Math.floor(Number(e.target.value)) || 0);
-                  if (n !== coins[c]) void updatePartyMember(m.id, { coins: { ...coins, [c]: n } });
-                }} />
-            </label>
-          ))}
-        </div>
+        <CoinPurse m={m} />
       </section>
     </>
   );
