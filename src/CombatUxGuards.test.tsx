@@ -66,7 +66,8 @@ describe("A PC at 0 HP", () => {
     await user.click(screen.getByRole("button", { name: "Death save success Thia" }));
     await user.click(screen.getByRole("button", { name: "Death save success Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByText("Stable")).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Heal Thia by 5" }));
+    await user.type(screen.getByLabelText("Amount Thia"), "5");
+    await user.click(screen.getByRole("button", { name: "Heal Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByLabelText("HP Thia")).toHaveTextContent("HP 5/28"));
     expect(within(row("Thia")).queryByText(/Stable|Dying/)).toBeNull();
   });

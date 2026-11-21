@@ -75,6 +75,7 @@ export function HpControls({ c, update, hpRoll }: { c: Combatant; update: Update
   const valid = amount.trim() !== "" && Number.isFinite(typed) && typed > 0;
   const apply = (fn: (e: Encounter, id: string, n: number) => Encounter, n: number) => update((e) => fn(e, c.id, n));
   const entered = (fn: typeof applyDamage) => { if (valid) { apply(fn, typed); setAmount(""); } };
+  const nudge = (d: number) => setAmount(String(Math.max(0, (Number.isFinite(typed) ? typed : 0) + d)));
   const temp = tempHpOf(c);
   const rollHp = () => {
     if (!hpRoll) return;
@@ -92,15 +93,11 @@ export function HpControls({ c, update, hpRoll }: { c: Combatant; update: Update
       <input id={`amt-${c.id}`} className="init-input" type="number" min={1} placeholder="Amt" aria-label={`Amount ${c.name}`} value={amount}
         onChange={(e) => setAmount(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); entered(applyDamage); } }} />
-      <button disabled={!valid} onClick={() => entered(applyDamage)} aria-label={`Damage ${c.name}`}>Damage</button>
+      <button type="button" aria-label={`Amount minus 5 ${c.name}`} onClick={() => nudge(-5)}>-5</button>
+      <button type="button" aria-label={`Amount plus 5 ${c.name}`} onClick={() => nudge(5)}>+5</button>
+      <button className="danger" disabled={!valid} onClick={() => entered(applyDamage)} aria-label={`Damage ${c.name}`}>Damage</button>
       <button disabled={!valid} onClick={() => entered(applyHealing)} aria-label={`Heal ${c.name}`}>Heal</button>
       <button disabled={!valid} onClick={() => entered(setTempHp)} aria-label={`Set temp HP ${c.name}`}>Temp HP</button>
-      {[1, 5].map((n) => (
-        <span key={n}>
-          <button aria-label={`Damage ${c.name} by ${n}`} onClick={() => apply(applyDamage, n)}>-{n}</button>
-          <button aria-label={`Heal ${c.name} by ${n}`} onClick={() => apply(applyHealing, n)}>+{n}</button>
-        </span>
-      ))}
       <label className="muted">Max <MaxHpInput c={c} onCommit={(n) => apply(setMaxHp, n)} /></label>
       {hpRoll && <button aria-label={`Roll HP ${c.name}`} title={hpRoll} onClick={rollHp}>Roll HP</button>}
     </span>

@@ -48,12 +48,16 @@ describe("HP and defeat", () => {
     await hp("Bandit", "HP 7/10");
     expect(within(row("Bandit")).queryByText("Bloodied")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Damage Bandit by 1" }));
-    await user.click(screen.getByRole("button", { name: "Damage Bandit by 1" }));
+    await user.type(screen.getByLabelText("Amount Bandit"), "2");
+    await user.click(screen.getByRole("button", { name: "Damage Bandit" }));
     await hp("Bandit", "HP 5/10");
     expect(within(row("Bandit")).getByText("Bloodied")).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Amount Bandit"), "50");
+    await user.type(screen.getByLabelText("Amount Bandit"), "40");
+    await user.click(screen.getByRole("button", { name: "Amount plus 5 Bandit" }));
+    await user.click(screen.getByRole("button", { name: "Amount plus 5 Bandit" }));
+    await user.click(screen.getByRole("button", { name: "Amount minus 5 Bandit" }));
+    expect(screen.getByLabelText("Amount Bandit")).toHaveValue(45);
     await user.click(screen.getByRole("button", { name: "Heal Bandit" }));
     await hp("Bandit", "HP 10/10");
 
@@ -76,7 +80,8 @@ describe("HP and defeat", () => {
     await openCombat(user);
     await addAdhoc(user, "Bandit", "3");
     await user.click(screen.getByRole("checkbox", { name: /remove defeated/i }));
-    await user.click(screen.getByRole("button", { name: "Damage Bandit by 5" }));
+    await user.type(screen.getByLabelText("Amount Bandit"), "5");
+    await user.click(screen.getByRole("button", { name: "Damage Bandit" }));
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Bandit" })).toBeNull());
   });
 

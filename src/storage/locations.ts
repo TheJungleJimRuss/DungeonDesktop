@@ -4,12 +4,46 @@ import { onChange } from "../sync/changeBus";
 import type { Edge } from "./edges";
 import { notifyNpcsChanged, type Npc } from "./npcs";
 
+/** How big a place is: its marker radius on the World Map, in map units. Also decides how far
+ *  the map can zoom out before the place turns into a bare point (bigger places hold out longer). */
+export const DEFAULT_LOCATION_SIZE = 14;
+export const MIN_LOCATION_SIZE = 3;
+export const MAX_LOCATION_SIZE = 200;
+const LEGACY_SIZES: Record<string, number> = { tiny: 8, small: 11, medium: 14, large: 19, huge: 25 };
+/** A location's size as a number (older records stored a size word). */
+export function locationSizeOf(l: { size?: number | string }): number {
+  const n = typeof l.size === "number" ? l.size : LEGACY_SIZES[l.size ?? ""] ?? DEFAULT_LOCATION_SIZE;
+  return Math.min(MAX_LOCATION_SIZE, Math.max(MIN_LOCATION_SIZE, n));
+}
+
+/** What kind of place a location is. Each gets its own color on the World Map. */
+export const LOCATION_TYPES = [
+  { id: "city", label: "City", color: "#5b7cff" },
+  { id: "town", label: "Town", color: "#3cc4c4" },
+  { id: "village", label: "Village", color: "#7bd15e" },
+  { id: "wilderness", label: "Wilderness", color: "#d4a64a" },
+  { id: "dungeon", label: "Dungeon", color: "#e0596a" },
+  { id: "landmark", label: "Landmark", color: "#c27bff" },
+  { id: "other", label: "Other", color: "#8a92c0" },
+] as const;
+export type LocationType = (typeof LOCATION_TYPES)[number]["id"];
+export const DEFAULT_LOCATION_TYPE: LocationType = "other";
+
+/** The type entry for a location (old records without a type count as "other"). */
+export function locationTypeOf(l: { type?: string }) {
+  return LOCATION_TYPES.find((t) => t.id === l.type) ?? LOCATION_TYPES[LOCATION_TYPES.length - 1];
+}
+
 /** A World Map node, stored in the `locations` collection. `x`/`y` are its World Map
  *  position (unset until dragged). Edges live in their own `edges` collection (storage/edges.ts).
  *  Scenes link by `locationId`. */
 export interface Location extends CollectionRecord {
   name: string;
   notes: string;
+  type?: LocationType;
+  size?: number;
+  /** Starred locations are marked on the World Map and can be filtered to. */
+  starred?: boolean;
   x?: number;
   y?: number;
   createdAt: number;
@@ -19,6 +53,8 @@ export interface Location extends CollectionRecord {
 export interface LocationDraft {
   name: string;
   notes: string;
+  type?: LocationType;
+  size?: number;
 }
 
 const listeners = new Set<() => void>();
@@ -53,6 +89,16 @@ export async function updateLocation(id: string, patch: Partial<LocationDraft>):
     }
   }
   await tx.done;
+  changed();
+}
+
+/** Stars or unstars a location. */
+export async function setLocationStarred(id: string, starred: boolean): Promise<void> {
+  const db = await getDb();
+  const existing = (await db.get("locations", id)) as Location | undefined;
+  if (!existing) return;
+  const { starred: _old, ...rest } = existing;
+  await db.put("locations", starred ? { ...rest, starred: true } : rest);
   changed();
 }
 

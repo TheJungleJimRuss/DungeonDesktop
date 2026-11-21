@@ -4,7 +4,6 @@ import "../panels/NameGeneratorPanel";
 import "../panels/LocationListPanel";
 import "../panels/WorldMapPanel";
 import "../panels/BattleMapPanel";
-import "../panels/RoutePanel";
 import "../panels/PassivePerceptionPanel";
 import "../panels/PinnedNotesPanel";
 import "../panels/ScratchNotesPanel";

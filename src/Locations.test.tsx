@@ -70,7 +70,7 @@ describe("Locations in Prep mode", () => {
     await addLocation(user, "Phandalin");
     await editLocation(user, "Phandalin", "A frontier town under threat");
     expect(view().getByText("A frontier town under threat")).toBeInTheDocument();
-    expect(locs().getByRole("button", { name: /phandalin/i })).toBeInTheDocument();
+    expect(locs().getByRole("button", { name: /^phandalin/i })).toBeInTheDocument();
   });
 
   it("edits and deletes a location after confirmation", async () => {
@@ -80,7 +80,7 @@ describe("Locations in Prep mode", () => {
     await openPrep(user);
     await addLocation(user, "Phandalin");
     await editLocation(user, "Phandalin Town");
-    expect(locs().getByRole("button", { name: /phandalin town/i })).toBeInTheDocument();
+    expect(locs().getByRole("button", { name: /^phandalin town/i })).toBeInTheDocument();
     await user.click(view().getByRole("button", { name: /delete/i }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: /delete location/i }));
     expect(await locs().findByText(/no locations yet/i)).toBeInTheDocument();
@@ -181,7 +181,7 @@ describe("Locations in Prep mode", () => {
     await user.click(within(screen.getByRole("listitem", { name: "Alpha" })).getByRole("button", { name: /open/i }));
     await modes().findByRole("button", { name: /prep/i });
     await user.click(modes().getByRole("button", { name: /prep/i }));
-    expect(await locs().findByRole("button", { name: /phandalin/i })).toBeInTheDocument();
+    expect(await locs().findByRole("button", { name: /^phandalin/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /all campaigns/i }));
     await user.type(await screen.findByRole("textbox", { name: /new campaign name/i }), "Beta");
@@ -212,5 +212,24 @@ describe("Locations in Prep mode", () => {
     await pickLocation(user, "Phandalin");
     expect(await view().findByText("Frontier town")).toBeInTheDocument();
     expect(view().getByRole("button", { name: "Elda" })).toBeInTheDocument();
+  });
+});
+
+describe("Location types and stars", () => {
+  it("sets a type, stars from the list, and filters", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user, "Alpha");
+    await openPrep(user);
+    await user.selectOptions(locs().getByLabelText("New location type"), "dungeon");
+    await addLocation(user, "Dread Keep");
+    await user.selectOptions(locs().getByLabelText("New location type"), "town");
+    await addLocation(user, "Amber Town");
+    expect(await locs().findByText(/Dungeon · 0 NPCs/)).toBeInTheDocument();
+    await user.click(locs().getByRole("button", { name: "Star Amber Town in list" }));
+    await locs().findByRole("button", { name: "Unstar Amber Town in list" });
+    await user.click(locs().getByRole("button", { name: /starred only/i }));
+    expect(locs().queryByRole("button", { name: /^Dread Keep/ })).toBeNull();
+    expect(locs().getByRole("button", { name: /^Amber Town/ })).toBeInTheDocument();
   });
 });

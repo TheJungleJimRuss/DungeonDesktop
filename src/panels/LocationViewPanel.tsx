@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { PanelProps } from "./registry";
 import {
-  deleteLocation, selectLocation, setNpcLocation, updateLocation, useLocations, useSelectedLocationId, type Location,
+  LOCATION_TYPES, MAX_LOCATION_SIZE, MIN_LOCATION_SIZE, deleteLocation, locationSizeOf, locationTypeOf, selectLocation, setLocationStarred, setNpcLocation, updateLocation,
+  useLocations, useSelectedLocationId, type Location, type LocationType,
 } from "../storage/locations";
 import { selectNpc, useNpcs } from "../storage/npcs";
 import { Loading } from "../ui/PanelStates";
@@ -10,13 +11,23 @@ import { GUARD } from "../ui/unsaved";
 function LocationForm({ loc, onDone }: { loc: Location; onDone: () => void }) {
   const [name, setName] = useState(loc.name);
   const [notes, setNotes] = useState(loc.notes);
+  const [size, setSize] = useState(String(locationSizeOf(loc)));
+  const [type, setType] = useState<LocationType>(locationTypeOf(loc).id);
   return (
     <form {...GUARD} className="npc-form" onSubmit={(e) => {
       e.preventDefault();
       if (!name.trim()) return;
-      void updateLocation(loc.id, { name: name.trim(), notes }).then(onDone);
+      void updateLocation(loc.id, { name: name.trim(), notes, type, size: Number(size) || locationSizeOf(loc) }).then(onDone);
     }}>
       <label><span className="muted">Name</span><input value={name} onChange={(e) => setName(e.target.value)} /></label>
+      <label><span className="muted">Type</span>
+        <select value={type} onChange={(e) => setType(e.target.value as LocationType)}>
+          {LOCATION_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </label>
+      <label><span className="muted">Size</span>
+        <input type="number" min={MIN_LOCATION_SIZE} max={MAX_LOCATION_SIZE} step="1" value={size} onChange={(e) => setSize(e.target.value)} />
+      </label>
       <label><span className="muted">Notes</span><textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
       <div className="row end">
         <button type="button" onClick={onDone}>Cancel</button>
@@ -45,6 +56,9 @@ export function LocationView({ campaign }: PanelProps) {
     <article className="npc-view location-view">
       <div className="row">
         <h3 className="grow">{loc.name}</h3>
+        <span className="muted">{locationTypeOf(loc).label}, size {locationSizeOf(loc)}</span>
+        <button aria-pressed={!!loc.starred} aria-label={`${loc.starred ? "Unstar" : "Star"} ${loc.name}`}
+          onClick={() => void setLocationStarred(loc.id, !loc.starred)}>{loc.starred ? "★ Starred" : "☆ Star"}</button>
         <button onClick={() => setEditing(loc.id)}>Edit</button>
         <button className="danger" onClick={() => setConfirming(true)}>Delete</button>
       </div>

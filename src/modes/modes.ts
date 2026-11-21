@@ -41,7 +41,7 @@ export const MODES: ModeDefinition[] = [
   { id: "combat", label: "Combat", shortcut: "Alt+1",
     layout: [p("battle-map", 1, 6, 1, 2), p("initiative-tracker", 7, 6, 1), p("combatant-stat-block", 7, 3, 2), p("dice-roller", 10, 3, 2)] },
   { id: "exploration", label: "Explore", shortcut: "Alt+2",
-    layout: [p("world-map", 1, 8, 1, 2), p("player-card", 9, 4, 1), p("passive-perception", 9, 4, 2), p("route", 1, 12, 3)] },
+    layout: [p("world-map", 1, 8, 1, 2), p("player-card", 9, 4, 1), p("passive-perception", 9, 4, 2), p("locations", 1, 12, 3)] },
   { id: "social", label: "Roleplay", shortcut: "Alt+3",
     layout: [p("social-npc-list", 1, 4, 1, 3), p("scenes", 5, 4, 1, 2), p("scratch-notes", 5, 4, 3), p("player-card", 9, 4, 1), p("pinned-notes", 9, 4, 2, 2)] },
   { id: "prep", label: "Prep", shortcut: "Alt+4", layout: PREP_ALL },

@@ -55,6 +55,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
   const [draft, setDraft] = useState("");
   const [draftCount, setDraftCount] = useState(1);
   const [packDrafts, setPackDrafts] = useState<Record<number, string>>({});
+  const [packCounts, setPackCounts] = useState<Record<number, number>>({});
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const toggle = (i: number) => setCollapsed((s) => { const n = new Set(s); if (!n.delete(i)) n.add(i); return n; });
   const remove = (i: number) => {
@@ -71,8 +72,9 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
   const patch = (i: number, e: EquipmentEntry) => onChange(items.map((x, j) => (j === i ? e : x)));
   const addToPack = (i: number) => {
     const t = (packDrafts[i] ?? "").trim();
-    if (t) patch(i, { ...items[i], contents: [...(items[i].contents ?? []), { name: t }] });
+    if (t) patch(i, { ...items[i], contents: [...(items[i].contents ?? []), withCount({ name: t }, toCount(packCounts[i] ?? 1))] });
     setPackDrafts({ ...packDrafts, [i]: "" });
+    setPackCounts({ ...packCounts, [i]: 1 });
   };
   return (
     <div className="wide list-editor" role="group" aria-label="Equipment">
@@ -104,6 +106,11 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
                   <input aria-label={`New item in ${e.name}`} value={packDrafts[i] ?? ""}
                     onChange={(ev) => setPackDrafts({ ...packDrafts, [i]: ev.target.value })}
                     onKeyDown={(ev) => { if (ev.key === "Enter") { ev.preventDefault(); addToPack(i); } }} />
+                  <span className="qty"><span aria-hidden="true">Count</span>
+                    <input type="number" min={1} aria-label={`Count for new item in ${e.name}`} value={Number.isNaN(packCounts[i]) ? "" : (packCounts[i] ?? 1)}
+                      onChange={(ev) => setPackCounts({ ...packCounts, [i]: ev.target.valueAsNumber })}
+                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.preventDefault(); addToPack(i); } }} />
+                  </span>
                   <button type="button" aria-label={`Add to ${e.name}`} onClick={() => addToPack(i)}>Add</button>
                 </div>
               </div>
@@ -175,6 +182,16 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
   );
 }
 
+/** Collapsible form section; starts open when it already holds data (or `open` is forced). */
+function Section({ title, open, className, children }: { title: string; open: boolean; className?: string; children: React.ReactNode }) {
+  return (
+    <details className="sheet-section" open={open}>
+      <summary>{title}</summary>
+      <div className={`sheet-section-body${className ? ` ${className}` : ""}`}>{children}</div>
+    </details>
+  );
+}
+
 const n = (x: number | undefined, fallback: number) => (x === undefined || Number.isNaN(x) ? fallback : x);
 
 /** Full character-sheet editor. Labels of the basic fields match the quick Party form. */
@@ -243,56 +260,58 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         {text("speed", "Speed")}{text("hitDice", "Hit Dice")}
         <label className="check"><input type="checkbox" checked={!!v.inspiration} onChange={(e) => set("inspiration", e.target.checked)} />Heroic Inspiration</label>
       </fieldset>
-      <fieldset><legend>Ability scores</legend>
+      <fieldset className="abilities"><legend>Ability scores and saving throws</legend>
         {ABILITIES.map((a) => (
-          <label key={a}>{a.toUpperCase()} score
-            <input type="number" min={1} max={30} value={Number.isNaN(abilities[a]) ? "" : abilities[a]}
-              onChange={(e) => set("abilities", { ...abilities, [a]: e.target.valueAsNumber })} />
-          </label>
+          <div key={a} className="ability-col">
+            <label>{a.toUpperCase()} score
+              <input type="number" min={1} max={30} value={Number.isNaN(abilities[a]) ? "" : abilities[a]}
+                onChange={(e) => set("abilities", { ...abilities, [a]: e.target.valueAsNumber })} />
+            </label>
+            <label className="check"><input type="checkbox" checked={(v.saveProficiencies ?? []).includes(a)} onChange={() => toggleSave(a)} />{ABILITY_NAMES[a]} save</label>
+          </div>
         ))}
       </fieldset>
-      <fieldset><legend>Saving throw proficiencies</legend>
-        {ABILITIES.map((a) => (
-          <label key={a} className="check"><input type="checkbox" checked={(v.saveProficiencies ?? []).includes(a)} onChange={() => toggleSave(a)} />{ABILITY_NAMES[a]} save</label>
-        ))}
-      </fieldset>
-      <fieldset><legend>Skills</legend>
+      <Section title="Skills" open={Object.keys(v.skills ?? {}).length > 0} className="skills-grid">
         {SKILLS.map((s) => (
-          <label key={s.key}>{s.label} ({s.ability.toUpperCase()})
+          <label key={s.key} className="inline">{s.label} ({s.ability.toUpperCase()})
             <select value={v.skills?.[s.key] ?? ""} onChange={(e) => setSkill(s.key, e.target.value as SkillLevel | "")}>
               <option value="">—</option><option value="proficient">Proficient</option><option value="expertise">Expertise</option>
             </select>
           </label>
         ))}
-      </fieldset>
-      <fieldset><legend>Spellcasting</legend>
-        <label>Spellcasting ability
+      </Section>
+      <Section title="Spellcasting" open={!!v.spellcastingAbility || slotsMax.some((x) => x > 0) || !!v.spells}>
+        <label className="wide inline">Spellcasting ability
           <select value={v.spellcastingAbility ?? ""} onChange={(e) => set("spellcastingAbility", (e.target.value || undefined) as AbilityKey | undefined)}>
             <option value="">None</option>
             {ABILITIES.map((a) => <option key={a} value={a}>{ABILITY_NAMES[a]}</option>)}
           </select>
         </label>
-        {SPELL_LEVELS.map((l) => (
-          <label key={l}>Level {l} slots
-            <input type="number" min={0} value={slotsMax[l - 1] ?? 0} onChange={(e) => setSlots(l - 1, e.target.valueAsNumber)} />
-          </label>
-        ))}
+        <div className="wide slot-row">
+          {SPELL_LEVELS.map((l) => (
+            <label key={l}>Level {l} slots
+              <input type="number" min={0} value={slotsMax[l - 1] ?? 0} onChange={(e) => setSlots(l - 1, e.target.valueAsNumber)} />
+            </label>
+          ))}
+        </div>
         {area("spells", "Spells known / prepared")}
-      </fieldset>
-      <fieldset><legend>Equipment and coin</legend>
-        {CURRENCIES.map((c) => (
-          <label key={c}>{c.toUpperCase()}
-            <input type="number" min={0} value={Number.isNaN(coins[c]) ? "" : coins[c]} onChange={(e) => set("coins", { ...coins, [c]: e.target.valueAsNumber })} />
-          </label>
-        ))}
+      </Section>
+      <Section title="Equipment and coin" open={!!(v.attacks?.length || v.equipment?.length || CURRENCIES.some((c) => (coins[c] ?? 0) > 0))}>
+        <div className="wide coin-row">
+          {CURRENCIES.map((c) => (
+            <label key={c}>{c.toUpperCase()}
+              <input type="number" min={0} value={Number.isNaN(coins[c]) ? "" : coins[c]} onChange={(e) => set("coins", { ...coins, [c]: e.target.valueAsNumber })} />
+            </label>
+          ))}
+        </div>
         <AttackEditor items={asAttacks(v.attacks)} onChange={(items) => set("attacks", items)} /><EquipmentEditor items={asEquipment(v.equipment)} onChange={(items) => set("equipment", items)} />
-      </fieldset>
-      <fieldset><legend>Features and proficiencies</legend>
+      </Section>
+      <Section title="Features and proficiencies" open={asList(v.features).length + asList(v.proficiencies).length + asLanguages(v.languages).length > 0}>
         {list("features", "Features and traits", "trait")}{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
-      </fieldset>
-      <fieldset><legend>Story</legend>
+      </Section>
+      <Section title="Story" open={!!(v.personality || v.backstory || v.notes)}>
         {area("personality", "Personality, ideals, bonds, flaws")}{area("backstory", "Backstory")}{area("notes", "Notes")}
-      </fieldset>
+      </Section>
       <div className="row">
         <button type="submit" className="primary">Save member</button>
         <button type="button" onClick={onCancel}>Cancel</button>

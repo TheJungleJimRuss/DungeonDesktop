@@ -11,13 +11,15 @@ import {
 } from "../party/sheet";
 import { EmptyState } from "../ui/PanelStates";
 
-/** Small one-line adder shown at the foot of a sheet section. */
-function AddInline({ label, onAdd, extra }: { label: string; onAdd: (text: string) => void; extra?: { label: string; onAdd: (text: string) => void } }) {
+/** Small one-line adder shown at the foot of a sheet section; `counted` adds a count field. */
+function AddInline({ label, onAdd, extra, counted }: { label: string; onAdd: (text: string, count: number) => void; extra?: { label: string; onAdd: (text: string, count: number) => void }; counted?: boolean }) {
   const [text, setText] = useState("");
-  const take = (fn: (t: string) => void) => { const t = text.trim(); if (!t) return; fn(t); setText(""); };
+  const [count, setCount] = useState(1);
+  const take = (fn: (t: string, n: number) => void) => { const t = text.trim(); if (!t) return; fn(t, toCount(count)); setText(""); setCount(1); };
   return (
     <form className="add-inline" onSubmit={(e) => { e.preventDefault(); take(onAdd); }}>
       <input value={text} placeholder={`Add ${label}…`} aria-label={`Add ${label}`} onChange={(e) => setText(e.target.value)} />
+      {counted && <input type="number" min={1} className="count-input" aria-label={`Count for new ${label}`} value={Number.isNaN(count) ? "" : count} onChange={(e) => setCount(e.target.valueAsNumber)} />}
       <button type="submit" aria-label={`Add ${label} to list`}>Add</button>
       {extra && <button type="button" onClick={() => take(extra.onAdd)}>{extra.label}</button>}
     </form>
@@ -55,7 +57,7 @@ function Qty({ label, value, onChange }: { label: string; value?: number; onChan
 }
 
 /** A pack on the sheet; its contents fold away behind the pack name. */
-function PackEntry({ pack, onRemove, onAddItem, onRemoveItem, onChange }: { pack: EquipmentEntry; onRemove: () => void; onAddItem: (name: string) => void; onRemoveItem: (k: number) => void; onChange: (pack: EquipmentEntry) => void }) {
+function PackEntry({ pack, onRemove, onAddItem, onRemoveItem, onChange }: { pack: EquipmentEntry; onRemove: () => void; onAddItem: (name: string, count: number) => void; onRemoveItem: (k: number) => void; onChange: (pack: EquipmentEntry) => void }) {
   const [open, setOpen] = useState(true);
   const n = pack.contents!.length;
   return (
@@ -70,7 +72,7 @@ function PackEntry({ pack, onRemove, onAddItem, onRemoveItem, onChange }: { pack
         <>
           {!n && <span className="muted"> (empty pack)</span>}
           {n > 0 && <ul aria-label={`${pack.name} contents`}>{pack.contents!.map((c, k) => <li key={k}>{c.name}<Qty label={`${c.name} in ${pack.name}`} value={c.quantity} onChange={(quantity) => onChange({ ...pack, contents: pack.contents!.map((x, j) => (j === k ? { ...x, quantity } : x)) })} /><RemoveBtn label={`${c.name} from ${pack.name}`} onClick={() => onRemoveItem(k)} /></li>)}</ul>}
-          <AddInline label={`item in ${pack.name}`} onAdd={onAddItem} />
+          <AddInline counted label={`item in ${pack.name}`} onAdd={onAddItem} />
         </>
       )}
     </li>
@@ -200,13 +202,13 @@ function Sheet({ m }: { m: PartyMember }) {
           {equipment.map((e, i) => (
             isPack(e)
               ? <PackEntry key={i} pack={e} onRemove={() => patch({ equipment: equipment.filter((_, j) => j !== i) })}
-                  onAddItem={(name) => setPack(i, [...e.contents!, { name }])}
+                  onAddItem={(name, n) => setPack(i, [...e.contents!, n > 1 ? { name, quantity: n } : { name }])}
                   onRemoveItem={(k) => setPack(i, e.contents!.filter((_, j) => j !== k))}
                   onChange={(next) => patch({ equipment: equipment.map((x, j) => (j === i ? next : x)) })} />
               : <li key={i}>{e.name}<Qty label={e.name} value={e.quantity} onChange={(quantity) => patch({ equipment: equipment.map((x, j) => (j === i ? { ...x, quantity } : x)) })} /><RemoveBtn label={e.name} onClick={() => patch({ equipment: equipment.filter((_, j) => j !== i) })} /></li>
           ))}
         </ul>
-        <AddInline label="item" onAdd={(name) => patch({ equipment: [...equipment, { name }] })} extra={{ label: "Add pack", onAdd: (name) => patch({ equipment: [...equipment, { name, contents: [] }] }) }} />
+        <AddInline counted label="item" onAdd={(name, n) => patch({ equipment: [...equipment, n > 1 ? { name, quantity: n } : { name }] })} extra={{ label: "Add pack", onAdd: (name, n) => patch({ equipment: [...equipment, n > 1 ? { name, contents: [], quantity: n } : { name, contents: [] }] }) }} />
       </section>
       <section className="sheet-card sheet-text"><h4>Coin</h4><CoinPurse m={m} /></section>
       <Text title="Personality" body={m.personality} />
