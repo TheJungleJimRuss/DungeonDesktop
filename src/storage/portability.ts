@@ -135,3 +135,40 @@ export async function importCampaign(data: CampaignExport): Promise<CampaignReco
   await tx.done;
   return data.campaign;
 }
+
+export interface UpdateSummary {
+  updated: string[];
+  /** Existing campaigns whose file was not newer than the stored campaign. */
+  upToDate: string[];
+  /** Files with no matching campaign, or that could not be read: "file name: reason". */
+  skipped: string[];
+}
+
+/**
+ * Updates existing Campaigns from exported JSON files. A file replaces the Campaign with the same id only
+ * when it was exported after the Campaign was last updated; files with no matching Campaign are skipped.
+ */
+export async function updateCampaignsFromFiles(files: { name: string; text: string }[]): Promise<UpdateSummary> {
+  const summary: UpdateSummary = { updated: [], upToDate: [], skipped: [] };
+  for (const file of files) {
+    const parsed = parseCampaignFile(file.text);
+    if (!parsed.ok) {
+      summary.skipped.push(`${file.name}: ${parsed.error}`);
+      continue;
+    }
+    const existing = await (await getDb()).get("campaigns", parsed.data.campaign.id);
+    if (!existing) {
+      summary.skipped.push(`${file.name}: no campaign with this id exists here`);
+    } else if (parsed.data.exportedAt <= existing.updatedAt) {
+      summary.upToDate.push(existing.name);
+    } else {
+      try {
+        const saved = await importCampaign(parsed.data);
+        summary.updated.push(saved.name);
+      } catch (e) {
+        summary.skipped.push(`${file.name}: ${e instanceof Error ? e.message : "update failed"}`);
+      }
+    }
+  }
+  return summary;
+}

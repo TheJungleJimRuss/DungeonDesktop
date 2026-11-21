@@ -99,3 +99,48 @@ export function ImportCampaign({ onImported }: { onImported: () => void }) {
     </div>
   );
 }
+
+export function UpdateCampaigns({ onUpdated }: { onUpdated: () => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState<repo.UpdateSummary | null>(null);
+
+  return (
+    <div className="import">
+      <button disabled={busy} onClick={() => input.current?.click()}>Update campaigns from files</button>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        accept=".json,application/json"
+        aria-label="Update campaign files"
+        hidden
+        onChange={async (e) => {
+          const picked = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          if (!picked.length) return;
+          setBusy(true);
+          setSummary(null);
+          try {
+            const files = await Promise.all(picked.map(async (f) => ({ name: f.name, text: await f.text() })));
+            setSummary(await repo.updateCampaignsFromFiles(files));
+            onUpdated();
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      {summary && (
+        <div role="status" className="muted">
+          <p>
+            Updated {summary.updated.length}
+            {summary.updated.length > 0 && `: ${summary.updated.join(", ")}`}. Already up to date: {summary.upToDate.length}.
+          </p>
+          {summary.skipped.length > 0 && (
+            <ul>{summary.skipped.map((s) => <li key={s}>Skipped {s}</li>)}</ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

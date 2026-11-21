@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as repo from "../storage";
 import type { Campaign } from "../storage";
-import { ExportButton, ImportCampaign } from "./CampaignPortability";
+import { ExportButton, ImportCampaign, UpdateCampaigns } from "./CampaignPortability";
 import { getMode } from "../modes/modes";
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
@@ -65,6 +65,7 @@ export default function CampaignPicker({ onOpen }: { onOpen: (c: Campaign) => vo
       {nameError && <p role="alert" className="import-error">Enter a campaign name first.</p>}
 
       <ImportCampaign onImported={() => void refresh()} />
+      <UpdateCampaigns onUpdated={() => void refresh()} />
       {exportError && <p role="alert" className="import-error">{exportError}</p>}
 
       {campaigns === null ? null : campaigns.length === 0 ? (
