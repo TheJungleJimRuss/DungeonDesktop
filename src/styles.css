@@ -563,3 +563,141 @@ button.danger:not(.ghost) { background:color-mix(in srgb, #ff3b5c 14%, var(--pan
 .campaign-list li::before { background:linear-gradient(var(--accent), var(--blue)); }
 .picker-brand { background:linear-gradient(90deg, var(--accent), var(--blue)); -webkit-background-clip:text; background-clip:text; color:transparent; }
 .update-prompt { background:color-mix(in srgb, var(--blue) 14%, var(--panel)); border-color:var(--blue-edge); }
+
+/* ---- Design system: crisp tactile dark desktop (tonal steps, hairlines, no glow). Last in file so it wins. ---- */
+:root {
+  --bg:#0c0e22; --panel:#12152f; --panel-2:#1a1e42; --line:rgba(140,155,255,.12); --line-strong:rgba(150,165,255,.28);
+  --text:#c9cef0; --text-strong:#f0f2ff; --muted:#8a92c0;
+  --accent:#a48bfa; --blue:#5b7cff; --accent-blue:#5b7cff; --blue-text:#b4c1ff;
+  --blue-fill:rgba(140,155,255,.07); --blue-fill-strong:rgba(130,150,255,.16); --blue-edge:rgba(150,165,255,.28);
+  --danger:#e8697b; --shadow:none;
+  --hover:rgba(140,155,255,.07); --active:rgba(130,150,255,.15);
+  --keycap:inset 0 1px 0 rgba(190,200,255,.08);
+  --r-outer:12px; --r-inner:8px; --r-small:6px; --radius:12px;
+}
+body { background:var(--bg); background-attachment:scroll; color:var(--text-strong); font:13px/1.45 system-ui,-apple-system,"Inter",sans-serif; }
+h1 { font-size:18px; font-weight:600; } h2 { font-size:15px; font-weight:600; } h3 { font-size:14px; font-weight:600; }
+a { color:var(--text-strong); text-decoration-color:var(--line-strong); }
+::selection { background:rgba(120,140,255,.35); }
+.muted, .panel-title, kbd { color:var(--muted); }
+
+/* Controls: transparent-ish fill, hairline, keycap edge */
+button, input, select, textarea { font-size:13px; color:var(--text-strong); background:var(--panel-2); border:1px solid var(--line); border-radius:var(--r-inner); box-shadow:var(--keycap); transition:background-color .12s ease, border-color .12s ease, color .12s ease; }
+button { min-height:28px; padding:4px 10px; color:var(--muted); }
+input, select, textarea { min-height:28px; padding:4px 10px; }
+button:where(:not(.primary):not(.ghost):not(.danger)) { background:rgba(140,155,255,.04); border-color:var(--line); color:var(--muted); }
+button:hover:not(:disabled), button:where(:not(.primary):not(.ghost):not(.danger)):hover:not(:disabled) { background:var(--hover); border-color:var(--line); color:var(--text); }
+input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color:var(--line-strong); }
+button:active:not(:disabled) { transform:none; background:var(--active); }
+button.primary, .skip-link { background:var(--active); border-color:var(--line-strong); color:var(--text-strong); font-weight:500; text-shadow:none; box-shadow:var(--keycap); }
+button.primary:hover:not(:disabled) { background:rgba(130,150,255,.22); border-color:var(--line-strong); box-shadow:var(--keycap); color:var(--text-strong); }
+button.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--muted); }
+button.ghost:hover:not(:disabled) { background:var(--hover); border-color:transparent; color:var(--text); }
+button.danger, button.danger:not(.ghost) { background:transparent; border-color:rgba(229,100,111,.35); color:var(--danger); }
+button.danger:hover:not(:disabled), button.danger:not(.ghost):hover:not(:disabled), button.ghost.danger:hover:not(:disabled) { background:rgba(229,100,111,.1); border-color:rgba(229,100,111,.5); color:var(--danger); }
+button.ghost.danger { color:var(--muted); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible, input:focus { outline:none; border-color:var(--line-strong); background-color:var(--active); }
+button:focus-visible { color:var(--text-strong); }
+input[aria-invalid="true"] { border-color:rgba(229,100,111,.6); }
+.panel-ctl { font-size:11px; min-height:22px; padding:1px 6px; }
+.x { box-shadow:none; background:none; border-color:transparent; } .x:hover { color:var(--danger); border-color:transparent; background:rgba(229,100,111,.1); }
+.init-row button, .init-row select, .init-row input { min-height:24px; }
+.init-row .name-toggle, .skill-toggle, .pack-toggle, .roster-pick { background:none; border:0; box-shadow:none; }
+.init-row .name-toggle:hover, .pack-toggle:hover { background:none; color:var(--text-strong); }
+.link, .init-missing .link, .ref-card .link { background:none; border:0; box-shadow:none; color:var(--text-strong); }
+
+/* Selected / pressed / active: crisp text, tonal fill, brighter hairline */
+.topbar [aria-current="page"], .topbar .stat-toggle[aria-pressed="true"],
+.npc-item[aria-pressed="true"], .player-picker button[aria-pressed="true"], .player-tabs button[aria-pressed="true"],
+.search-results button.active, .search-filters button.active, .quick-add-kinds [aria-checked="true"], .roster-hp-controls button[aria-pressed="true"] {
+  background:var(--active); border-color:var(--line-strong); color:var(--text-strong); font-weight:500; box-shadow:var(--keycap);
+}
+.search-results button:hover, .search-results button:focus-visible { background:var(--hover); }
+.search-results button { border-color:transparent; box-shadow:none; background:transparent; color:var(--text); border-radius:var(--r-small); }
+.search-results button.active { color:var(--text-strong); }
+
+/* Surfaces: canvas -> elevated, hairline edges, no shadows */
+.topbar { background:var(--bg); border-bottom:1px solid var(--line); box-shadow:none; padding:6px 12px; gap:6px; }
+.topbar .campaign-name { color:var(--text-strong); border-left-color:var(--line); font-weight:500; }
+.mode-nav { gap:2px; padding:3px; background:var(--panel); border:1px solid var(--line); border-radius:var(--r-inner); }
+.mode-nav button { border-color:transparent; background:transparent; box-shadow:none; border-radius:var(--r-small); min-height:26px; }
+.mode-nav button:hover:not(:disabled) { background:var(--hover); color:var(--text); }
+.mode-nav button[aria-current="page"] { background:var(--active); border-color:var(--line-strong); box-shadow:var(--keycap); color:var(--text-strong); }
+kbd { background:transparent; border:1px solid var(--line); border-radius:4px; }
+.panel, .dialog, .sheet-card, .campaign-list li, .picker-create, .empty-state { background:var(--panel); border:1px solid var(--line); border-radius:var(--r-outer); box-shadow:none; }
+.panel { padding:10px 12px; } .panel:hover, .mode-grid .panel:hover, .dashboard-grid:not(.customizing) .panel:hover { border-color:rgba(150,165,255,.2); }
+.dashboard-grid.customizing .panel { border-color:var(--line-strong); }
+.dashboard-grid .react-grid-item.react-grid-placeholder { background:rgba(130,150,255,.15); opacity:1; border-radius:var(--r-outer); }
+.dashboard-grid .react-grid-item > .react-resizable-handle::after { border-color:var(--muted); }
+.panel-head { border-bottom:1px solid var(--line); }
+.panel-title { color:var(--muted); font-weight:500; letter-spacing:.06em; }
+.panel-title::before { display:none; }
+.backdrop, .search-backdrop { background:rgba(6,7,20,.65); backdrop-filter:none; }
+.dialog, .search-dialog, .stat-drawer, .update-prompt { box-shadow:none; border:1px solid var(--line-strong); }
+.stat-drawer { background:var(--bg); border-radius:var(--r-outer); }
+.update-prompt { background:var(--panel-2); color:var(--text-strong); border-radius:var(--r-outer); }
+.campaign-list li { border-radius:var(--r-outer); padding:10px 10px 10px 14px; }
+.campaign-list li:hover { background:#171b3a; border-color:rgba(150,165,255,.2); }
+.campaign-list li::before { display:none; }
+.campaign-info .name { font-size:14px; color:var(--text-strong); font-weight:500; }
+.campaign-actions .primary { margin-left:6px; padding-inline:12px; }
+.picker-brand { background:none; -webkit-background-clip:border-box; background-clip:border-box; color:var(--muted); font-weight:500; letter-spacing:.12em; }
+.picker-head h1 { font-size:22px; }
+.picker-create { padding:4px; border-radius:var(--r-outer); } .picker-create input { background:transparent; border-color:transparent; box-shadow:none; }
+.picker-create:focus-within { border-color:var(--line-strong); }
+.picker .import > button { background:transparent; border:1px dashed var(--line-strong); box-shadow:none; }
+
+/* Nested content: inner radii, hairlines */
+.party-member, .scene, .sheet-vitals div, .ability, .roster-card, .init-row, .list-editor li, .name-suggestions, .npc-form fieldset, .condition-notices { border-color:var(--line); border-radius:var(--r-inner); background:rgba(140,155,255,.04); }
+.roster-card { border-left-width:1px; box-shadow:none; }
+.roster-card.ok { border-left-color:var(--line); } .roster-card.bloodied { border-left-color:var(--line); } .roster-card.down { border-left-color:var(--line); }
+.roster-card.selected { border-color:var(--line-strong); box-shadow:none; background:var(--active); }
+.roster-add { border-color:var(--line-strong); border-radius:var(--r-inner); }
+.init-row.active { background:var(--active); border-color:var(--line-strong); border-left-width:1px; }
+.init-row.selected { outline:1px solid var(--line-strong); outline-offset:0; }
+.init-row.bloodied { border-color:rgba(229,100,111,.35); }
+.init-turn { background:var(--text-strong); color:var(--bg); border-radius:var(--r-small); font-weight:600; }
+.init-kind, .hp-flag, .condition-chip { border-radius:var(--r-small); }
+.sb-abilities th, .sb-abilities td, .ref-table th, .ref-table td, .level-table th, .level-table td { border-color:var(--line); }
+.stat-block .sb-name, .stat-block .sb-section h3, .search-custom, .revealed { color:var(--text-strong); }
+.stat-block .sb-section h3 { border-bottom-color:var(--line); }
+.hp-bar { background:rgba(130,150,255,.15); }
+.map-canvas, .battle-scroll { border-radius:var(--r-inner); border-color:var(--line); }
+.skeleton-line { background:linear-gradient(90deg, var(--panel-2) 0%, #262b58 50%, var(--panel-2) 100%); background-size:200% 100%; }
+.skip-link { color:var(--text-strong); }
+.shortcut-list > div, .dice-history li, .pinned-notes .note-list li { border-bottom-color:var(--line); }
+html { scrollbar-color:rgba(150,165,255,.28) transparent; }
+
+/* Site accents: violet primary, blue for links and small highlights */
+button.primary, .skip-link { background:rgba(139,92,255,.24); border-color:rgba(164,139,250,.5); color:#fff; }
+button.primary:hover:not(:disabled) { background:rgba(139,92,255,.34); border-color:rgba(164,139,250,.65); }
+a, .stat-block .sb-name, .stat-block .sb-section h3, .search-custom, .revealed, .link, .init-missing .link, .ref-card .link { color:var(--blue-text); }
+.stat-block .sb-section h3 { border-bottom-color:var(--blue-edge); }
+.picker-brand { color:var(--accent); }
+.init-turn { background:var(--blue); color:#fff; }
+.init-row.active, .roster-card.selected, .mode-nav button[aria-current="page"], .topbar .stat-toggle[aria-pressed="true"] { border-color:var(--blue-edge); }
+.panel-head { border-bottom-color:var(--line); }
+.dashboard-grid.customizing .panel { border-color:var(--blue-edge); }
+.panel-title::before { display:inline-block; width:2px; height:.9em; margin-right:7px; vertical-align:-1px; border-radius:2px; background:var(--accent); opacity:.8; }
+.player-hp.ok, .roster-card.ok .hp-bar { color:#5cc08a; } .roster-card.bloodied .hp-bar { color:#d9a13b; } .roster-card.down .hp-bar { color:#e8697b; }
+.picker-create input:focus-visible, .picker-create input:focus { background:transparent; border-color:transparent; }
+
+/* Subtle glow on bright elements (soft, low-alpha; keeps the keycap top edge) */
+:root { --glow-violet:0 0 14px rgba(139,92,255,.28); --glow-blue:0 0 12px rgba(91,124,255,.26); }
+button.primary, .skip-link { box-shadow:var(--keycap), var(--glow-violet); }
+button.primary:hover:not(:disabled) { box-shadow:var(--keycap), 0 0 18px rgba(139,92,255,.4); }
+.mode-nav button[aria-current="page"], .topbar .stat-toggle[aria-pressed="true"], .topbar > button[aria-current="page"],
+.npc-item[aria-pressed="true"], .player-picker button[aria-pressed="true"], .player-tabs button[aria-pressed="true"],
+.search-filters button.active, .quick-add-kinds [aria-checked="true"], .roster-hp-controls button[aria-pressed="true"] { box-shadow:var(--keycap), var(--glow-blue); }
+.search-results button.active { box-shadow:var(--keycap), 0 0 10px rgba(91,124,255,.2); }
+.init-turn { box-shadow:0 0 10px rgba(91,124,255,.55); }
+.init-row.active, .roster-card.selected { box-shadow:0 0 14px rgba(91,124,255,.18); }
+.picker-brand { text-shadow:0 0 12px rgba(164,139,250,.45); }
+.stat-block .sb-name { text-shadow:0 0 12px rgba(180,193,255,.3); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, input:focus { box-shadow:var(--keycap), 0 0 0 3px rgba(91,124,255,.14), var(--glow-blue); }
+.picker-create:focus-within { box-shadow:0 0 14px rgba(91,124,255,.2); }
+.picker-create input:focus-visible, .picker-create input:focus { box-shadow:none; }
+.dashboard-grid.customizing .panel { box-shadow:0 0 14px rgba(91,124,255,.14); }
+.player-hp.ok, .roster-card.ok .hp-bar { filter:drop-shadow(0 0 3px rgba(92,192,138,.5)); }
+.roster-card.down .hp-bar, .dying-flag { filter:drop-shadow(0 0 3px rgba(232,105,123,.5)); }
+.update-prompt { box-shadow:0 0 16px rgba(91,124,255,.2); }

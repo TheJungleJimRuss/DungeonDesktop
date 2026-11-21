@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "e2e": "playwright test",
-    "build:srd": "node scripts/build-srd.mjs"
+    "build:srd": "node scripts/build-srd.mjs",
+    "deploy:pages": "sh scripts/deploy-pages.sh"
   },
   "dependencies": {
     "idb": "^8.0.4",

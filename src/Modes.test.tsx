@@ -22,7 +22,7 @@ describe("Dashboard and Mode switcher", () => {
     render(<App />);
     await openCampaign(user, "Alpha");
     expect(screen.getByRole("region", { name: /session summary/i })).toBeInTheDocument();
-    for (const m of [/combat/i, /exploration/i, /social/i, /prep/i, /party/i]) {
+    for (const m of [/combat/i, /explore/i, /roleplay/i, /prep/i, /party/i]) {
       expect(modeButton(m)).toBeInTheDocument();
     }
   });
@@ -47,9 +47,9 @@ describe("Dashboard and Mode switcher", () => {
     await user.keyboard("{Alt>}1{/Alt}");
     expect(await screen.findByRole("heading", { name: /^combat$/i })).toBeInTheDocument();
     await user.keyboard("{Alt>}2{/Alt}");
-    expect(await screen.findByRole("heading", { name: /^exploration/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^explore/i })).toBeInTheDocument();
     await user.keyboard("{Alt>}3{/Alt}");
-    expect(await screen.findByRole("heading", { name: /^social/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^roleplay/i })).toBeInTheDocument();
     await user.keyboard("{Alt>}4{/Alt}");
     expect(await screen.findByRole("heading", { name: /^prep$/i })).toBeInTheDocument();
     await user.keyboard("{Escape}");
@@ -85,7 +85,7 @@ describe("Dashboard and Mode switcher", () => {
     const user = userEvent.setup();
     render(<App />);
     await openCampaign(user, "Alpha");
-    await user.click(modeButton(/social/i));
+    await user.click(modeButton(/roleplay/i));
     await user.click(screen.getByRole("button", { name: /^dashboard/i }));
     expect(await screen.findByRole("heading", { name: /^dashboard$/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /all campaigns/i }));
