@@ -68,7 +68,12 @@ describe("Party tab and character sheets", () => {
     expect(s.getByLabelText("Quantity of Spellbook")).toHaveValue(2);
     expect(s.getByLabelText("Quantity of Torch")).toHaveValue(10);
     for (const t of ["Arcane Recovery", "Daggers", "Common", "Draconic"]) expect(s.getByText(t).tagName).toBe("LI");
-    expect(s.getByText("Fire Bolt ×3 — 2d10+3 fire")).toBeInTheDocument();
+    expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(3);
+    expect(s.getByText(/— 2d10\+3 fire/)).toBeInTheDocument();
+    await user.clear(s.getByLabelText("Attack bonus of Fire Bolt")); await user.type(s.getByLabelText("Attack bonus of Fire Bolt"), "5{Enter}");
+    await user.click(s.getByLabelText("Increase Fire Bolt"));
+    await waitFor(() => expect(s.getByText(/\+5 to hit, 2d10\+3 fire/)).toBeInTheDocument());
+    expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(4);
     const pack = within(s.getByRole("list", { name: "Scholar's Pack contents" }));
     expect(pack.getByLabelText("Quantity of Parchment in Scholar's Pack")).toHaveValue(5);
     expect(pack.queryByText("Ink")).not.toBeInTheDocument();

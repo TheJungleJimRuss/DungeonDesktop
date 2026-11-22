@@ -30,7 +30,8 @@ export interface PartyMember {
   /** Max slots per spell level; index 0 = level 1. */
   spellSlotsMax?: number[];
   spellSlotsUsed?: number[];
-  spells?: string;
+  /** Older records hold one text block; read through asList(). */
+  spells?: string[] | string;
   /** Older records may hold strings; read through asAttacks(). */
   attacks?: Attack[];
   features?: string[];

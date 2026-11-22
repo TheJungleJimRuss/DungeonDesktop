@@ -49,14 +49,15 @@ export function readDashboard(stored: unknown): DashboardEntry[] {
   return normalizeDashboard(stored, hasPanel)?.panels ?? DASHBOARD_DEFAULT;
 }
 
-/** Saves the Dashboard arrangement; `null` removes it so the Campaign follows the default again. Does not bump updatedAt. */
+/** Saves the Dashboard arrangement; `null` removes it so the Campaign follows the default again. Bumps updatedAt so "Update campaigns from files" never overwrites a newer layout with an older export. */
 export async function setDashboard(id: string, entries: DashboardEntry[] | null): Promise<void> {
   const db = await getDb();
   const tx = db.transaction("campaigns", "readwrite");
   const existing = await tx.store.get(id);
   if (existing) {
     const { dashboard: _old, ...rest } = existing;
-    await tx.store.put(entries ? { ...rest, dashboard: { grid: "fine", panels: entries } } : rest);
+    const updatedAt = Date.now();
+    await tx.store.put(entries ? { ...rest, updatedAt, dashboard: { grid: "fine", panels: entries } } : { ...rest, updatedAt });
   }
   await tx.done;
 }

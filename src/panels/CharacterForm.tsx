@@ -4,11 +4,11 @@ import { useState, type FormEvent } from "react";
 import { asLanguages, asList, type PartyMemberInput } from "../storage/party";
 import { GUARD } from "../ui/unsaved";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, asEquipment, attackLabel, isPack, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, attackToHitText, asEquipment, attackLabel, isPack, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
 } from "../party/sheet";
 
-type ListKey = "features" | "proficiencies";
+type ListKey = "features" | "proficiencies" | "spells";
 
 /** Add/remove editor for a list of single-item entries. */
 function ListEditor({ label, noun, items, onChange }: { label: string; noun: string; items: string[]; onChange: (items: string[]) => void }) {
@@ -132,7 +132,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
   );
 }
 
-const BLANK_ATTACK: Attack = { name: "", quantity: 1, count: 1, die: 8, bonus: 0, type: "slashing" };
+const BLANK_ATTACK: Attack = { name: "", quantity: 1, attackBonus: 0, count: 1, die: 8, bonus: 0, type: "slashing" };
 
 /** Structured attack entries: name, dice count, die, damage bonus and damage type. */
 function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: Attack[]) => void }) {
@@ -140,7 +140,7 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
   const int = (x: number) => (Number.isNaN(x) ? 0 : x);
   const add = () => {
     if (!d.name.trim()) return;
-    onChange([...items, { ...d, name: d.name.trim(), quantity: Math.max(1, int(d.quantity ?? 1)), count: Math.max(0, int(d.count)), bonus: int(d.bonus) }]);
+    onChange([...items, { ...d, name: d.name.trim(), quantity: Math.max(1, int(d.quantity ?? 1)), attackBonus: int(d.attackBonus ?? 0), count: Math.max(0, int(d.count)), bonus: int(d.bonus) }]);
     setD(BLANK_ATTACK);
   };
   return (
@@ -149,10 +149,14 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
       <ul>
         {items.map((a, i) => (
           <li key={i}>
-            <span>{attackLabel(a)} — {attackDamageText(a)}</span>
+            <span>{attackLabel(a)}{a.attackBonus ? ` ${attackToHitText(a)}` : ""} — {attackDamageText(a)}</span>
             <label className="qty">Quantity of {a.name}
               <input type="number" min={1} value={a.quantity ?? 1}
                 onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, quantity: Math.max(1, e.target.valueAsNumber || 1) } : x)))} />
+            </label>
+            <label className="qty">Attack bonus of {a.name}
+              <input type="number" value={a.attackBonus ?? 0}
+                onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, attackBonus: e.target.valueAsNumber || 0 } : x)))} />
             </label>
             <button type="button" aria-label={`Remove attack ${a.name}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>Remove</button>
           </li>
@@ -162,6 +166,7 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
         <label>Attack name<input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
         <label>Quantity<input type="number" min={1} value={Number.isNaN(d.quantity ?? 1) ? "" : (d.quantity ?? 1)} onChange={(e) => setD({ ...d, quantity: e.target.valueAsNumber })} /></label>
+        <label>Attack bonus<input type="number" value={Number.isNaN(d.attackBonus ?? 0) ? "" : (d.attackBonus ?? 0)} onChange={(e) => setD({ ...d, attackBonus: e.target.valueAsNumber })} /></label>
         <label>Dice count<input type="number" min={0} value={Number.isNaN(d.count) ? "" : d.count} onChange={(e) => setD({ ...d, count: e.target.valueAsNumber })} /></label>
         <label>Dice
           <select value={d.die} onChange={(e) => setD({ ...d, die: Number(e.target.value) })}>
@@ -256,7 +261,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         {text("background", "Background")}{text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}
       </fieldset>
       <fieldset><legend>Combat</legend>
-        {num("ac", "AC")}{num("maxHp", "Max HP")}{num("currentHp", "Current HP")}<label>Passive Perception<input readOnly value={passivePerceptionOf({ ...v, abilities, level: n(v.level, 1) || 1 } as PartyMember)} /></label>
+        {num("ac", "AC")}{num("maxHp", "Max HP")}{num("currentHp", "Current HP")}
         {text("speed", "Speed")}{text("hitDice", "Hit Dice")}
         <label className="check"><input type="checkbox" checked={!!v.inspiration} onChange={(e) => set("inspiration", e.target.checked)} />Heroic Inspiration</label>
       </fieldset>
@@ -280,7 +285,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
           </label>
         ))}
       </Section>
-      <Section title="Spellcasting" open={!!v.spellcastingAbility || slotsMax.some((x) => x > 0) || !!v.spells}>
+      <Section title="Spellcasting" open={!!v.spellcastingAbility || slotsMax.some((x) => x > 0) || asList(v.spells).length > 0}>
         <label className="wide inline">Spellcasting ability
           <select value={v.spellcastingAbility ?? ""} onChange={(e) => set("spellcastingAbility", (e.target.value || undefined) as AbilityKey | undefined)}>
             <option value="">None</option>
@@ -294,7 +299,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
             </label>
           ))}
         </div>
-        {area("spells", "Spells known / prepared")}
+        {list("spells", "Spells known / prepared", "spell")}
       </Section>
       <Section title="Equipment and coin" open={!!(v.attacks?.length || v.equipment?.length || CURRENCIES.some((c) => (coins[c] ?? 0) > 0))}>
         <div className="wide coin-row">

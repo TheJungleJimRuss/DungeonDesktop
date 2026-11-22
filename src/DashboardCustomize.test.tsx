@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import App from "./App";
 import { getDb } from "./storage/db";
 import { DASHBOARD_DEFAULT } from "./modes/modes";
-import { normalizeDashboard } from "./storage/dashboard";
+import { normalizeDashboard, setDashboard } from "./storage/dashboard";
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -217,6 +217,22 @@ describe("Customizable Dashboard", () => {
     await openCampaign(user, "Alpha");
     await customize(user);
     expect(within(screen.getByLabelText("Add panel")).queryByRole("option", { name: "Stat Blocks" })).toBeNull();
+  });
+});
+
+describe("Dashboard saves count as updates", () => {
+  it("bumps the Campaign updatedAt when the layout is saved or reset", async () => {
+    const db = await getDb();
+    await db.put("campaigns", { id: "u", name: "U", createdAt: 1, updatedAt: 5 });
+    await setDashboard("u", [{ panelId: "party-sheet", x: 0, y: 0, w: 60, h: 48 }]);
+    const saved = await db.get("campaigns", "u");
+    expect(saved!.updatedAt).toBeGreaterThan(5);
+    expect(saved!.dashboard).toBeDefined();
+    await db.put("campaigns", { ...saved!, updatedAt: 5 });
+    await setDashboard("u", null);
+    const reset = await db.get("campaigns", "u");
+    expect(reset!.updatedAt).toBeGreaterThan(5);
+    expect(reset!.dashboard).toBeUndefined();
   });
 });
 

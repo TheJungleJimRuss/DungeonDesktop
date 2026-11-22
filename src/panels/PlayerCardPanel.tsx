@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
-import { asLanguages, currentHpOf, listParty, updatePartyMember, type PartyMember } from "../storage/party";
+import { asLanguages, asList, currentHpOf, listParty, updatePartyMember, type PartyMember } from "../storage/party";
 import { passivePerceptionOf } from "../party/passive";
 import {
   ABILITIES, ABILITY_NAMES, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
@@ -36,6 +36,22 @@ function EditableText({ label, value, onSave }: { label: string; value?: string;
       <textarea rows={3} value={text} aria-label={label} onChange={(e) => setText(e.target.value)}
         onBlur={() => { if (text !== (value ?? "")) onSave(text); }} />
     </label>
+  );
+}
+
+/** Spells as individual items with add and remove. */
+function SpellList({ spells, onChange }: { spells: string[]; onChange: (next: string[]) => void }) {
+  const [text, setText] = useState("");
+  const add = () => { const t = text.trim(); if (!t) return; onChange([...spells, t]); setText(""); };
+  return (
+    <div className="player-text"><span className="muted">Spells</span>
+      <ul className="sheet-items">{spells.map((s, i) => (
+        <li key={i}>{s}<button aria-label={`Remove ${s}`} onClick={() => onChange(spells.filter((_, j) => j !== i))}>×</button></li>
+      ))}</ul>
+      <input value={text} placeholder="Add spell…" aria-label="Add spell" onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+      <button onClick={add}>Add</button>
+    </div>
   );
 }
 
@@ -152,7 +168,7 @@ function Spells({ m }: { m: PartyMember }) {
     next[i] = Math.max(0, Math.min(slotsMax[i] ?? 0, used));
     void updatePartyMember(m.id, { spellSlotsUsed: next });
   };
-  if (!casting && !m.spells?.trim()) return <p className="muted">Not a spellcaster.</p>;
+  if (!casting && !asList(m.spells).length) return <p className="muted">Not a spellcaster.</p>;
   return (
     <>
       {casting && <p>{ABILITY_NAMES[casting]} · Spell save DC {spellSaveDc(ab, casting, m.level)} · Spell attack {signed(spellAttackBonus(ab, casting, m.level))}</p>}
@@ -168,7 +184,7 @@ function Spells({ m }: { m: PartyMember }) {
           );
         })}
       </ul>
-      <EditableText label="Spells" value={m.spells} onSave={(spells) => void updatePartyMember(m.id, { spells })} />
+      <SpellList spells={asList(m.spells)} onChange={(spells) => void updatePartyMember(m.id, { spells })} />
     </>
   );
 }

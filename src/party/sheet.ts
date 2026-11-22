@@ -85,6 +85,8 @@ export interface Attack {
   name: string;
   /** How many of this weapon the character carries; absent = 1. */
   quantity?: number;
+  /** To-hit bonus added to the attack roll (may be negative); absent = none. */
+  attackBonus?: number;
   /** Number of damage dice. */
   count: number;
   /** Sides on each die; 0 = no dice (flat damage only). */
@@ -103,6 +105,9 @@ export function attackExpression(a: Attack): string | null {
 
 /** "Dagger" or "Dagger ×3". */
 export const attackLabel = (a: Attack) => countLabel(a);
+
+/** "+5 to hit", or "" when the attack has no to-hit bonus. */
+export const attackToHitText = (a: Attack) => (a.attackBonus ? `${signed(a.attackBonus)} to hit` : "");
 
 /** "2d6+3 slashing", or "—" with no damage. */
 export function attackDamageText(a: Attack): string {

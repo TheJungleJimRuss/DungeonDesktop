@@ -6,7 +6,7 @@ import { addPartyMember, asLanguages, asList, currentHpOf, listParty, removePart
 import CharacterForm from "./CharacterForm";
 import CoinPurse from "./CoinPurse";
 import {
-  ABILITIES, ABILITY_NAMES, asAttacks, asEquipment, isPack, toCount, type EquipmentEntry, attackDamageText, attackLabel, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, asAttacks, asEquipment, isPack, toCount, type EquipmentEntry, attackDamageText, attackToHitText, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS,
   abilityMod, applyHpChange, proficiencyBonus, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc,
 } from "../party/sheet";
 import { EmptyState } from "../ui/PanelStates";
@@ -185,7 +185,14 @@ function Sheet({ m }: { m: PartyMember }) {
       <section className="sheet-card sheet-text"><h4>Attacks</h4>
         <ul className="sheet-items">
           {attacks.map((a, i) => (
-            <li key={i}>{attackLabel(a)} — {attackDamageText(a)}
+            <li key={i}>{a.name}
+              <Qty label={a.name} value={a.quantity} onChange={(quantity) => patch({ attacks: attacks.map((x, j) => (j === i ? { ...x, quantity } : x)) })} />
+              <label className="qty">Attack bonus of {a.name}
+                <input type="number" defaultValue={a.attackBonus ?? 0} key={a.attackBonus ?? 0} aria-label={`Attack bonus of ${a.name}`}
+                  onBlur={(e) => { const v = e.target.valueAsNumber || 0; if (v !== (a.attackBonus ?? 0)) patch({ attacks: attacks.map((x, j) => (j === i ? { ...x, attackBonus: v } : x)) }); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+              </label>
+              {" "}— {attackToHitText(a) && `${attackToHitText(a)}, `}{attackDamageText(a)}
               <RemoveBtn label={`attack ${a.name}`} onClick={() => patch({ attacks: attacks.filter((_, j) => j !== i) })} />
             </li>
           ))}
@@ -193,7 +200,7 @@ function Sheet({ m }: { m: PartyMember }) {
         <AddInline label="attack" onAdd={(t) => patch({ attacks: [...attacks, { name: t, count: 0, die: 0, bonus: 0, type: "" }] })} />
         <p className="muted hint">Set damage dice with Edit sheet.</p>
       </section>
-      <Text title="Spells" body={m.spells} />
+      <Items title="Spells" noun="spell" items={m.spells} onChange={(spells) => patch({ spells })} />
       <Items title="Features and traits" noun="trait" items={m.features} onChange={(features) => patch({ features })} />
       <Items title="Proficiencies" noun="proficiency" items={m.proficiencies} onChange={(proficiencies) => patch({ proficiencies })} />
       <Items title="Languages" noun="language" items={asLanguages(m.languages)} onChange={(languages) => patch({ languages })} />
