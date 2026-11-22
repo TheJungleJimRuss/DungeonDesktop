@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getDb, type CollectionRecord } from "./db";
 import { useChangeVersion } from "../sync/changeBus";
-import type { Monster } from "../srd/monsters";
+import { normalizeMonster, type Monster } from "../srd/monsters";
 
 /** Custom monsters, spells and items, stored per Campaign in the `customEntries` collection.
  *  A custom monster keeps the SRD Monster shape (minus id and name), so the Stat Block treats both alike. */
@@ -36,7 +36,7 @@ export const emptyData = (kind: CustomKind): CustomData =>
   kind === "monster" ? emptyMonsterData() : kind === "spell" ? emptySpellData() : emptyItemData();
 
 export function monsterFromEntry(e: CustomEntry): Monster {
-  return { ...(e.data as MonsterData), id: customSelectionId(e.id), name: e.name };
+  return normalizeMonster({ ...(e.data as MonsterData), id: customSelectionId(e.id), name: e.name });
 }
 
 export async function listCustomEntries(campaignId: string): Promise<CustomEntry[]> {

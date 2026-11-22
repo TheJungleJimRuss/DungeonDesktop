@@ -17,6 +17,7 @@ import "../panels/CombatantStatBlockPanel";
 import "../panels/CustomEntriesPanel";
 import "../panels/DiceRollerPanel";
 import "../panels/InitiativeTrackerPanel";
+import PanelErrorBoundary from "./PanelErrorBoundary";
 import { getPanel } from "../panels/registry";
 import type { PanelPlacement } from "../modes/modes";
 import type { Campaign } from "../storage";
@@ -42,7 +43,7 @@ export function PanelFrame({ panelId, campaign, placement, controls }: { panelId
         <h2 id={titleId} className="panel-title">{def.title}</h2>
         {controls}
       </div>
-      <div className="panel-body"><Body campaign={campaign} /></div>
+      <div className="panel-body"><PanelErrorBoundary label={def.title}><Body campaign={campaign} /></PanelErrorBoundary></div>
     </section>
   );
 }

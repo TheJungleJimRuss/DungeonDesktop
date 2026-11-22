@@ -158,7 +158,8 @@ select, textarea { font:inherit; color:inherit; background:var(--panel); border:
 .init-row.active { border-color:var(--accent); border-left-width:3px; background:color-mix(in srgb, var(--accent) 15%, transparent); }
 .init-row button, .init-row select, .init-row input { padding:1px 6px; font-size:12px; min-height:0; }
 .init-top { display:flex; align-items:center; flex-wrap:wrap; gap:4px 6px; }
-.init-top .init-input { width:40px; text-align:center; font-weight:700; }
+.init-top .init-input { width:52px; flex:none; text-align:center; font-weight:700; padding-inline:4px; appearance:textfield; -moz-appearance:textfield; }
+.init-top .init-input::-webkit-inner-spin-button, .init-top .init-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .init-top .name { flex:1; min-width:70px; font-weight:600; overflow-wrap:anywhere; }
 .init-meta { display:contents; }
 .init-spacer { display:none; }

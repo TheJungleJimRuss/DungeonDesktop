@@ -1,5 +1,5 @@
 import type { Entry, Monster } from "./monsters";
-import { crLabel } from "./monsters";
+import { crLabel, normalizeMonster } from "./monsters";
 import { RollableText } from "./Rollable";
 
 const ABILITIES = [["str", "STR"], ["dex", "DEX"], ["con", "CON"], ["int", "INT"], ["wis", "WIS"], ["cha", "CHA"]] as const;
@@ -12,7 +12,7 @@ function Section({ title, items, note, rollable }: { title: string; items: Entry
     <section className="sb-section" aria-label={title}>
       <h3>{title}</h3>
       {note && <p className="muted"><em>{note}</em></p>}
-      {items.map((e) => <p key={e.name}><strong><em>{e.name}.</em></strong> {rollable ? <RollableText text={e.desc} /> : e.desc}</p>)}
+      {items.map((e, i) => <p key={e.name + i}><strong><em>{e.name}.</em></strong> {rollable ? <RollableText text={e.desc} /> : e.desc}</p>)}
     </section>
   );
 }
@@ -22,7 +22,8 @@ function Line({ label, value }: { label: string; value?: string }) {
 }
 
 /** A creature's Stat Block in the familiar layout. Used for SRD and (later) custom entries alike. */
-export default function StatBlock({ monster: m, rollable }: { monster: Monster; rollable?: boolean }) {
+export default function StatBlock({ monster: raw, rollable }: { monster: Monster; rollable?: boolean }) {
+  const m = normalizeMonster(raw);
   const xp = m.xpInLair ? `XP ${m.xp.toLocaleString("en-US")}, or ${m.xpInLair.toLocaleString("en-US")} in lair` : `XP ${m.xp.toLocaleString("en-US")}`;
   return (
     <article className="stat-block" aria-label={`${m.name} Stat Block`}>
