@@ -73,6 +73,16 @@ describe("computeAuto / applyAuto", () => {
     expect(m.autoProficiencies).toEqual(["Calligrapher's Supplies"]);
   });
 
+  it("species traits that start at a character level appear only from that level", () => {
+    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 4 }, srd).autoFeatures).toEqual(["Darksight Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 5 }, srd).autoFeatures).toEqual(["Darksight Test", "Wings Test"]);
+  });
+
+  it("a picked species type adds its traits; a type from another species is ignored", () => {
+    expect(applyAuto({ ...base, speciesId: "test-drake", subspeciesId: "test-drake-red" }, srd).autoFeatures).toEqual(["Scales Test", "Darksight Test", "Flame Breath Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-sprite", subspeciesId: "test-drake-red" }, srd).autoFeatures).toEqual(["Darksight Test"]);
+  });
+
   it("a manual field is kept, others still follow", () => {
     const m = applyAuto({ ...base, class: "Mage Test", classId: "test-mage", level: 2, maxHp: 99, manual: { maxHp: true } }, srd);
     expect(m.maxHp).toBe(99);

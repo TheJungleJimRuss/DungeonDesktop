@@ -22,6 +22,10 @@ export interface PartyMember {
   /** SRD ids for class, species and background; absent = custom (the text fields hold the display name). */
   classId?: string;
   speciesId?: string;
+  /** SRD subspecies (the species' type, e.g. a Draconic Ancestor or Elven Lineage); only meaningful with speciesId. */
+  subspeciesId?: string;
+  /** Its SRD name, e.g. "Draconic Ancestor: Red", kept so cards need no SRD load. */
+  subspecies?: string;
   backgroundId?: string;
   alignment?: string;
   xp?: number;
@@ -54,6 +58,13 @@ export interface PartyMember {
   personality?: string;
   backstory?: string;
 }
+
+/** "Draconic Ancestor: Red" → "Red". */
+export const subspeciesShortName = (name: string) => name.replace(/^[^:]*:\s*/, "");
+
+/** Species as shown on cards: "Dragonborn (Red)" when a type is picked. */
+export const speciesLabel = (m: Pick<PartyMember, "race" | "subspecies">) =>
+  m.race && m.subspecies ? `${m.race} (${subspeciesShortName(m.subspecies)})` : m.race;
 
 export const currentHpOf = (m: Pick<PartyMember, "maxHp" | "currentHp">) => m.currentHp ?? m.maxHp;
 

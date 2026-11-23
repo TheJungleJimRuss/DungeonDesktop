@@ -2,7 +2,7 @@ import { passivePerceptionOf } from "../party/passive";
 import { useSrdEquipment } from "../ui/useSrdEquipment";
 import type { PartyMember } from "../storage/party";
 import { useEffect, useState, type FormEvent } from "react";
-import { asLanguages, asList, type PartyMemberInput } from "../storage/party";
+import { asLanguages, asList, subspeciesShortName, type PartyMemberInput } from "../storage/party";
 import { GUARD } from "../ui/unsaved";
 import SrdSelect from "../ui/SrdSelect";
 import { loadCharacterData, type CharacterData } from "../srd/character";
@@ -367,6 +367,10 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     set("spellSlotsUsed", (v.spellSlotsUsed ?? []).map((u, j) => (j === i ? Math.min(u, max[i]) : u)));
   };
 
+  // The species' types (Draconic Ancestor, Elven Lineage, …); the label is the shared prefix of their names.
+  const subOptions = (v.speciesId && srd?.subspecies.filter((x) => x.species.id === v.speciesId)) || [];
+  const subLabel = subOptions[0]?.name.includes(":") ? subOptions[0].name.split(":")[0].trim() : "Type";
+
   /** Names that match an SRD entry (older records, typed text) are saved with its canonical name and id. */
   const resolveSrd = (text: string | undefined, id: string | undefined, entries: { id: string; name: string }[] | undefined) => {
     const hit = entries && (id ? entries.find((e) => e.id === id) : matchSrd(text, entries));
@@ -380,7 +384,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     const sp = resolveSrd(v.race, v.speciesId, srd?.species);
     // An older record that only now matches an SRD entry keeps the numbers it already holds.
     const fresh = (!v.classId && cls.id) || (!v.speciesId && sp.id) || (!v.backgroundId && bg.id);
-    const picked = { ...v, class: cls.text, classId: cls.id, background: bg.text, backgroundId: bg.id, race: sp.text, speciesId: sp.id, ...(fresh ? { manual: protectExisting(v) } : {}) };
+    const picked = { ...v, class: cls.text, classId: cls.id, background: bg.text, backgroundId: bg.id, race: sp.text, speciesId: sp.id, ...(sp.id ? {} : { subspeciesId: undefined, subspecies: undefined }), ...(fresh ? { manual: protectExisting(v) } : {}) };
     const a = srd ? applyAuto({ ...picked, abilities: { ...DEFAULT_ABILITIES, ...picked.abilities } }, srd) : picked;
     const maxHp = n(a.maxHp, 0);
     onSave({
@@ -399,7 +403,19 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         {text("name", "Name")}
         <SrdSelect label="Class" entries={srd?.classes} text={v.class} id={v.classId} onChange={(t, id) => setV((x) => ({ ...x, class: t, classId: id }))} />
         {num("level", "Level", "level")}
-        <SrdSelect label="Species" entries={srd?.species} text={v.race ?? ""} id={v.speciesId} onChange={(t, id) => setV((x) => ({ ...x, race: t, speciesId: id }))} />
+        <SrdSelect label="Species" entries={srd?.species} text={v.race ?? ""} id={v.speciesId}
+          onChange={(t, id) => setV((x) => ({ ...x, race: t, speciesId: id, ...(id === x.speciesId ? {} : { subspeciesId: undefined, subspecies: undefined }) }))} />
+        {subOptions.length > 0 && (
+          <label>{subLabel}
+            <select value={v.subspeciesId ?? ""} onChange={(e) => {
+              const pick = subOptions.find((x) => x.id === e.target.value);
+              setV((x) => ({ ...x, subspeciesId: pick?.id, subspecies: pick?.name }));
+            }}>
+              <option value="">—</option>
+              {subOptions.map((o) => <option key={o.id} value={o.id}>{subspeciesShortName(o.name)}{o.damageType ? ` (${o.damageType})` : ""}</option>)}
+            </select>
+          </label>
+        )}
         <SrdSelect label="Background" entries={srd?.backgrounds} text={v.background ?? ""} id={v.backgroundId} onChange={(t, id) => setV((x) => ({ ...x, background: t, backgroundId: id }))} />
         {text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}
       </fieldset>

@@ -57,7 +57,7 @@ export const FIXTURE_CHARACTER: CharacterData = {
   species: [
     { id: "test-drake", name: "Drakeling Test", type: "Humanoid", size: "Medium", speed: 30,
       traits: [{ id: "test-scales", name: "Scales Test" }, { id: "test-sight", name: "Darksight Test" }], subspecies: [{ id: "test-drake-red", name: "Ancestor Test: Red" }] },
-    { id: "test-sprite", name: "Spritekin Test", type: "Fey", size: "Small", speed: 25, traits: [{ id: "test-sight", name: "Darksight Test" }], subspecies: [] },
+    { id: "test-sprite", name: "Spritekin Test", type: "Fey", size: "Small", speed: 25, traits: [{ id: "test-sight", name: "Darksight Test" }, { id: "test-wings", name: "Wings Test" }], subspecies: [] },
   ],
   subspecies: [
     { id: "test-drake-red", name: "Ancestor Test: Red", species: { id: "test-drake", name: "Drakeling Test" }, damageType: "Fire", traits: [{ id: "test-flame", name: "Flame Breath Test" }] },
@@ -65,6 +65,7 @@ export const FIXTURE_CHARACTER: CharacterData = {
   traits: [
     { id: "test-scales", name: "Scales Test", description: "Your skin is **armored** with scales.", species: [{ id: "test-drake", name: "Drakeling Test" }] },
     { id: "test-sight", name: "Darksight Test", description: "You can see in the dark.", species: [{ id: "test-drake", name: "Drakeling Test" }, { id: "test-sprite", name: "Spritekin Test" }] },
+    { id: "test-wings", name: "Wings Test", description: "When you reach character level 5, you can sprout wings.", species: [{ id: "test-sprite", name: "Spritekin Test" }] },
     { id: "test-flame", name: "Flame Breath Test", description: "You exhale fire.", species: [], subspecies: [{ id: "test-drake-red", name: "Ancestor Test: Red" }] },
   ],
   classes: [

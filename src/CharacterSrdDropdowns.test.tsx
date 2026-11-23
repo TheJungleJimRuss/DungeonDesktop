@@ -73,4 +73,22 @@ describe("Class, Background and Species dropdowns", () => {
     expect(await p.findByRole("combobox", { name: "Class" })).toHaveValue("__custom");
     expect(p.getByLabelText("Custom class")).toHaveValue("Hexblade Knight");
   });
+
+  it("a species with types offers them; picking one saves it and shows on the card", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const id = await open(user, "Srd4");
+    const p = await goParty(user, "Srd4");
+    await user.click(p.getByRole("button", { name: /add character/i }));
+    await user.type(p.getByLabelText("Name"), "Kava");
+    await user.selectOptions(await p.findByRole("combobox", { name: "Species" }), "Spritekin Test");
+    expect(p.queryByRole("combobox", { name: "Ancestor Test" })).not.toBeInTheDocument();
+    await user.selectOptions(p.getByLabelText("Species"), "Drakeling Test");
+    await user.selectOptions(p.getByRole("combobox", { name: "Ancestor Test" }), "Red (Fire)");
+    await user.click(p.getByRole("button", { name: /save member/i }));
+    expect(await p.findByRole("article", { name: /kava character sheet/i })).toHaveTextContent("Drakeling Test (Red)");
+    const [m] = await listParty(id);
+    expect(m).toMatchObject({ speciesId: "test-drake", subspeciesId: "test-drake-red", subspecies: "Ancestor Test: Red" });
+    expect(m.autoFeatures).toContain("Flame Breath Test");
+  });
 });

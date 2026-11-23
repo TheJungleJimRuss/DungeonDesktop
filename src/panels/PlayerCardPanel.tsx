@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
-import { asLanguages, asList, currentHpOf, listParty, updatePartyMember, type PartyMember } from "../storage/party";
+import { asLanguages, asList, currentHpOf, listParty, speciesLabel, updatePartyMember, type PartyMember } from "../storage/party";
 import { passivePerceptionOf } from "../party/passive";
 import {
   ABILITIES, ABILITY_NAMES, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
@@ -220,7 +220,7 @@ function PlayerCard({ m }: { m: PartyMember }) {
     <article className="player-card npc-view" aria-label={`${m.name} player card`}>
       <h3>{firstName(m.name)}</h3>
       <p className="muted">
-        {[m.race, `${m.class || "Adventurer"} ${m.level}`, m.background].filter(Boolean).join(" · ")}
+        {[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`, m.background].filter(Boolean).join(" · ")}
         {m.playerName ? ` · played by ${firstName(m.playerName)}` : ""}
       </p>
       <div className="player-tabs" role="group" aria-label="Player card sections">

@@ -2,7 +2,7 @@ import { passivePerceptionOf } from "../party/passive";
 import { useCallback, useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
-import { addPartyMember, asLanguages, asList, currentHpOf, listParty, removePartyMember, updatePartyMember, type PartyMember, type PartyMemberInput } from "../storage/party";
+import { addPartyMember, asLanguages, asList, currentHpOf, listParty, speciesLabel, removePartyMember, updatePartyMember, type PartyMember, type PartyMemberInput } from "../storage/party";
 import CharacterForm from "./CharacterForm";
 import CoinPurse from "./CoinPurse";
 import XpAward from "./XpAward";
@@ -121,7 +121,7 @@ function Sheet({ m }: { m: PartyMember }) {
       <header>
         <h3>{m.name}</h3>
         <p className="muted">
-          {[m.race, `${m.class || "Adventurer"} ${m.level}`, m.background, m.alignment].filter(Boolean).join(" · ")}
+          {[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`, m.background, m.alignment].filter(Boolean).join(" · ")}
           {m.playerName ? ` · played by ${m.playerName}` : ""}
         </p>
         <XpAward m={m} editableTotal />
@@ -255,7 +255,7 @@ function RosterCard({ m, selected, onSelect, onDelete }: { m: PartyMember; selec
       <span className="roster-delete"><RemoveBtn label={m.name} onClick={onDelete} /></span>
       <button type="button" className="roster-pick" aria-pressed={selected} onClick={onSelect}>
         <span className="name">{m.name}</span>
-        <span className="muted">{[m.race, `${m.class || "Adventurer"} ${m.level}`].filter(Boolean).join(" · ")}</span>
+        <span className="muted">{[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`].filter(Boolean).join(" · ")}</span>
       </button>
       <div className="roster-vitals">
         <span title="Armor Class">AC <strong>{m.ac}</strong></span>

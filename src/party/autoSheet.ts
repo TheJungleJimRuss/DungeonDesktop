@@ -36,6 +36,12 @@ export function autoMaxHp(hitDie: number, level: number, con: number): number {
 const rowAt = (cls: Class, level: number) =>
   [...cls.levels].filter((r) => r.level <= level).sort((a, b) => b.level - a.level)[0];
 
+/** The character level a species trait starts at, read from SRD wording ("When you reach character level 5", "Starting at character level 5"); 1 otherwise. */
+export function traitMinLevel(description: string | undefined): number {
+  const m = description?.match(/(?:reach|starting at|at) character level (\d+)/i);
+  return m ? Number(m[1]) : 1;
+}
+
 const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))];
 
 /**
@@ -50,6 +56,7 @@ export function computeAuto(member: PartyMemberInput, srd: CharacterData): Parti
   if (fromXp) out.level = level;
   const cls = classOf(member, srd);
   const species = member.speciesId ? srd.species.find((s) => s.id === member.speciesId) : undefined;
+  const sub = species && member.subspeciesId ? srd.subspecies.find((s) => s.id === member.subspeciesId && s.species.id === species.id) : undefined;
   const bg = member.backgroundId ? srd.backgrounds.find((b) => b.id === member.backgroundId) : undefined;
   const feat = (id: string) => srd.classFeatures.find((f) => f.id === id)?.name;
 
@@ -66,7 +73,9 @@ export function computeAuto(member: PartyMemberInput, srd: CharacterData): Parti
 
   const features = [
     ...(cls?.levels.filter((r) => r.level <= level).flatMap((r) => r.featureIds.map(feat)) ?? []),
-    bg?.feat.name, ...(species?.traits.map((t) => t.name) ?? []),
+    bg?.feat.name, ...[...(species?.traits ?? []), ...(sub?.traits ?? [])]
+      .filter((t) => traitMinLevel(srd.traits.find((x) => x.id === t.id)?.description) <= level)
+      .map((t) => t.name),
   ].filter((x): x is string => !!x);
   out.autoFeatures = uniq(features);
   out.autoProficiencies = uniq([...(cls?.proficiencies ?? []), ...(bg?.tools ?? [])]);
