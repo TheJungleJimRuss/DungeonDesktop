@@ -87,7 +87,7 @@ export interface Attack {
   name: string;
   /** Ability the attack uses; absent = legacy attack that keeps its typed attackBonus and bonus. */
   ability?: AttackAbility;
-  /** Add proficiency bonus to hit and damage; absent = true when ability is set. */
+  /** Add proficiency bonus to hit; absent = true when ability is set. */
   proficient?: boolean;
   /** Magic bonus added to both to-hit and damage. */
   magic?: number;
@@ -99,7 +99,7 @@ export interface Attack {
   count: number;
   /** Sides on each die; 0 = no dice (flat damage only). */
   die: number;
-  /** Flat damage bonus (may be negative); new attacks leave it 0, proficiency covers extra damage. */
+  /** Flat damage bonus (may be negative). */
   bonus: number;
   type: string;
 }
@@ -123,7 +123,7 @@ export function attackAbilityMod(ctx: AttackContext, a: Attack): number {
   return mod(a.ability);
 }
 
-/** Proficiency bonus an attack adds (to hit and to damage); 0 for legacy attacks and when not proficient. */
+/** Proficiency bonus an attack adds to hit; 0 for legacy attacks and when not proficient. */
 export const attackProficiency = (ctx: AttackContext, a: Attack) =>
   a.ability && a.proficient !== false ? proficiencyBonus(ctx.level) : 0;
 
@@ -133,11 +133,11 @@ export function attackToHit(ctx: AttackContext, a: Attack): number | null {
   return attackAbilityMod(ctx, a) + attackProficiency(ctx, a) + (a.magic ?? 0);
 }
 
-/** Damage added on top of the dice: ability mod + proficiency (if proficient) + magic + flat bonus. Legacy attacks: flat bonus only. */
+/** Damage added on top of the dice: ability mod + magic + flat bonus (no proficiency). Legacy attacks: flat bonus only. */
 export const attackDamageBonus = (a: Attack, ctx?: AttackContext) =>
-  a.bonus + (ctx && a.ability ? attackAbilityMod(ctx, a) + attackProficiency(ctx, a) + (a.magic ?? 0) : 0);
+  a.bonus + (ctx && a.ability ? attackAbilityMod(ctx, a) + (a.magic ?? 0) : 0);
 
-/** Dice expression for the roller, e.g. "2d6+3"; null when the attack has no damage. Pass ctx to include ability mod, proficiency and magic. */
+/** Dice expression for the roller, e.g. "2d6+3"; null when the attack has no damage. Pass ctx to include ability mod and magic. */
 export function attackExpression(a: Attack, ctx?: AttackContext): string | null {
   const bonus = attackDamageBonus(a, ctx);
   const dice = a.count > 0 && a.die > 0 ? `${a.count}d${a.die}` : "";

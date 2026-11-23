@@ -151,9 +151,9 @@ function attackBreakdown(a: Attack, ctx: AttackContext): string {
   if (!a.ability) return "Typed numbers (older attack)";
   const ab = a.ability === "spell" ? (ctx.spellcastingAbility?.toUpperCase() ?? "Spell") : a.ability === "finesse" ? "Finesse" : a.ability.toUpperCase();
   const parts = [`${ab} ${signed(attackAbilityMod(ctx, a))}`];
-  if (a.proficient !== false) parts.push(`Prof ${signed(attackProficiency(ctx, a))}`);
+  if (a.proficient !== false) parts.push(`Prof ${signed(attackProficiency(ctx, a))} to hit`);
   if (num(a.magic)) parts.push(`Magic ${signed(num(a.magic))}`);
-  if (num(a.bonus)) parts.push(`Other ${signed(num(a.bonus))}`);
+  if (num(a.bonus)) parts.push(`Extra ${signed(num(a.bonus))} dmg`);
   return parts.join(" · ");
 }
 
@@ -180,9 +180,9 @@ function AttackFields({ a, set, ctx, of }: { a: Attack; set: (patch: Partial<Att
                 {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
               </select>
             </label>
-            <label className="attack-check" title="Adds the proficiency bonus to both to-hit and damage">
+            <label className="attack-check" title="Adds the proficiency bonus to the attack roll">
               <input type="checkbox" aria-label={L("Proficient", "with")} checked={a.proficient !== false} onChange={(e) => set({ proficient: e.target.checked })} />
-              Proficient <span className="muted">({signed(pb)} hit &amp; dmg)</span>
+              Proficient <span className="muted">({signed(pb)} to hit)</span>
             </label>
             <label>Magic bonus<input aria-label={L("Magic bonus")} type="number" value={numValue(a.magic ?? 0)} onChange={(e) => set({ magic: e.target.valueAsNumber })} /></label>
           </>
@@ -205,10 +205,7 @@ function AttackFields({ a, set, ctx, of }: { a: Attack; set: (patch: Partial<Att
             {DAMAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
-        {/* Older attacks kept a typed damage bonus; new ones get extra damage from proficiency. */}
-        {(!a.ability || num(a.bonus) !== 0) && (
-          <label>Extra damage<input aria-label={L("Extra damage")} type="number" value={numValue(a.bonus)} onChange={(e) => set({ bonus: e.target.valueAsNumber })} /></label>
-        )}
+        <label>Extra damage<input aria-label={L("Extra damage")} type="number" value={numValue(a.bonus)} onChange={(e) => set({ bonus: e.target.valueAsNumber })} /></label>
       </div>
     </>
   );

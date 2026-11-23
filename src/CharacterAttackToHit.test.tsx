@@ -27,14 +27,14 @@ describe("automatic attack to-hit", () => {
     await user.selectOptions(p.getByLabelText("Ability"), "dex");
     expect(p.getByLabelText("Proficient")).toBeChecked();
     await user.click(p.getByRole("button", { name: "Add attack" }));
-    expect(await p.findByText(/\+5 to hit — 1d8\+5 slashing/)).toBeInTheDocument();
-    // Edit opens the full fields; dropping proficiency drops it from to-hit and damage.
+    expect(await p.findByText(/\+5 to hit — 1d8\+3 slashing/)).toBeInTheDocument();
+    // Edit opens the full fields; dropping proficiency lowers to-hit only.
     await user.click(p.getByRole("button", { name: "Edit attack Rapier" }));
     await user.click(p.getByLabelText("Proficient with Rapier"));
     expect(await p.findByText(/\+3 to hit — 1d8\+3 slashing/)).toBeInTheDocument();
     await user.click(p.getByLabelText("Proficient with Rapier"));
     await user.selectOptions(p.getByLabelText("Dice of Rapier"), "6");
-    expect(await p.findByText(/\+5 to hit — 1d6\+5 slashing/)).toBeInTheDocument();
+    expect(await p.findByText(/\+5 to hit — 1d6\+3 slashing/)).toBeInTheDocument();
     await user.click(p.getByRole("button", { name: /save member/i }));
     await p.findByRole("article", { name: /rook character sheet/i });
 
@@ -42,10 +42,10 @@ describe("automatic attack to-hit", () => {
     await screen.findByRole("heading", { name: /^combat$/i });
     const card = within(screen.getByRole("region", { name: /player card/i }));
     await user.click(await card.findByRole("button", { name: "Gear" }));
-    expect(await card.findByText(/\+5 to hit — 1d6\+5 slashing/)).toBeInTheDocument();
+    expect(await card.findByText(/\+5 to hit — 1d6\+3 slashing/)).toBeInTheDocument();
 
     const [m] = await listParty(id);
     await updatePartyMember(m.id, { level: 5 });
-    expect(await card.findByText(/\+6 to hit — 1d6\+6 slashing/)).toBeInTheDocument();
+    expect(await card.findByText(/\+6 to hit — 1d6\+3 slashing/)).toBeInTheDocument();
   });
 });

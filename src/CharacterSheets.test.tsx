@@ -35,7 +35,7 @@ describe("Party tab and character sheets", () => {
     await user.clear(p.getByLabelText("Quantity")); await user.type(p.getByLabelText("Quantity"), "3");
     await user.clear(p.getByLabelText("Dice count")); await user.type(p.getByLabelText("Dice count"), "2");
     await user.selectOptions(p.getByLabelText("Dice"), "10");
-    expect(p.queryByLabelText("Extra damage")).not.toBeInTheDocument();
+    await user.clear(p.getByLabelText("Extra damage")); await user.type(p.getByLabelText("Extra damage"), "3");
     await user.selectOptions(p.getByLabelText("Damage type"), "fire");
     await user.click(p.getByRole("button", { name: "Add attack" }));
     await user.click(p.getByRole("button", { name: "Remove attack Dagger" }));
