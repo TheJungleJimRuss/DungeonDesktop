@@ -81,7 +81,8 @@ export const DAMAGE_TYPES = [
 ] as const;
 export const DAMAGE_DICE = [4, 6, 8, 10, 12] as const;
 
-export type AttackAbility = "str" | "dex" | "finesse" | "spell";
+/** "none" = no ability modifier (to-hit is proficiency + magic only). */
+export type AttackAbility = "str" | "dex" | "finesse" | "spell" | "none";
 
 export interface Attack {
   name: string;
@@ -111,11 +112,11 @@ export interface AttackContext {
   spellcastingAbility?: AbilityKey;
 }
 
-export const ATTACK_ABILITY_LABELS: Record<AttackAbility, string> = { str: "STR", dex: "DEX", finesse: "Finesse (STR or DEX)", spell: "Spell" };
+export const ATTACK_ABILITY_LABELS: Record<AttackAbility, string> = { str: "STR", dex: "DEX", finesse: "Finesse (STR or DEX)", spell: "Spell", none: "None" };
 
-/** Ability modifier an attack uses; 0 for legacy attacks, and for Spell with no spellcasting ability. */
+/** Ability modifier an attack uses; 0 for legacy attacks, "none", and Spell with no spellcasting ability. */
 export function attackAbilityMod(ctx: AttackContext, a: Attack): number {
-  if (!a.ability) return 0;
+  if (!a.ability || a.ability === "none") return 0;
   const ab = { ...DEFAULT_ABILITIES, ...ctx.abilities };
   const mod = (k: AbilityKey) => abilityMod(ab[k]);
   if (a.ability === "finesse") return Math.max(mod("str"), mod("dex"));

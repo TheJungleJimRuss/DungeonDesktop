@@ -86,6 +86,12 @@ describe("automatic attack to-hit and damage", () => {
     expect(attackToHit(c, { ...base, ability: "spell" })).toBe(6);
     expect(attackToHit(ctx({ abilities: { ...DEFAULT_ABILITIES } }), { ...base, ability: "spell" })).toBe(2);
   });
+  it("None uses no ability modifier", () => {
+    const a: Attack = { ...base, ability: "none", magic: 1 };
+    expect(attackToHit(ctx(), a)).toBe(3);
+    expect(attackExpression(a, ctx())).toBe("1d8+1");
+    expect(attackToHit(ctx(), { ...a, proficient: false, magic: 0 })).toBe(0);
+  });
   it("not proficient drops the proficiency bonus from to-hit; damage is unchanged", () => {
     expect(attackToHit(ctx(), { ...base, ability: "str", proficient: false })).toBe(3);
     expect(attackExpression({ ...base, ability: "str", proficient: false }, ctx())).toBe("1d8+3");

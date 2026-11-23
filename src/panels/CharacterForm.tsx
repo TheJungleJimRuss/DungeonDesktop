@@ -139,7 +139,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
   );
 }
 
-const ATTACK_ABILITIES: AttackAbility[] = ["str", "dex", "finesse", "spell"];
+const ATTACK_ABILITIES: AttackAbility[] = ["str", "dex", "finesse", "spell", "none"];
 
 const BLANK_ATTACK: Attack = { name: "", quantity: 1, ability: "str", proficient: true, magic: 0, count: 1, die: 8, bonus: 0, type: "slashing" };
 
@@ -150,7 +150,7 @@ const numValue = (x: number | undefined) => (x === undefined || Number.isNaN(x) 
 function attackBreakdown(a: Attack, ctx: AttackContext): string {
   if (!a.ability) return "Typed numbers (older attack)";
   const ab = a.ability === "spell" ? (ctx.spellcastingAbility?.toUpperCase() ?? "Spell") : a.ability === "finesse" ? "Finesse" : a.ability.toUpperCase();
-  const parts = [`${ab} ${signed(attackAbilityMod(ctx, a))}`];
+  const parts = a.ability === "none" ? ["No ability"] : [`${ab} ${signed(attackAbilityMod(ctx, a))}`];
   if (a.proficient !== false) parts.push(`Prof ${signed(attackProficiency(ctx, a))} to hit`);
   if (num(a.magic)) parts.push(`Magic ${signed(num(a.magic))}`);
   if (num(a.bonus)) parts.push(`Extra ${signed(num(a.bonus))} dmg`);
