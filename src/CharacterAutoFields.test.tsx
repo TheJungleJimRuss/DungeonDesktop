@@ -67,7 +67,7 @@ describe("Auto fields with manual override", () => {
     const [m] = await listParty(id);
     expect(m).toMatchObject({ maxHp: 50, hitDice: "3d6", classId: "test-mage", manual: { maxHp: true }, saveProficiencies: ["int", "wis"] });
     expect(m.spellSlotsMax?.slice(0, 3)).toEqual([4, 2, 0]);
-    expect(m.autoFeatures).toEqual(["Casting Test", "Recovery Test"]);
+    expect(m.features).toEqual(["Casting Test", "Recovery Test"]);
   });
 
   it("editing a saving throw marks saves manual; switching class keeps it", async () => {
@@ -103,11 +103,11 @@ describe("Auto fields with manual override", () => {
   });
 });
 
-describe("Generated features and the Player card", () => {
+describe("Generated features (legacy records fold into the normal lists) and the Player card", () => {
   const MIRA = { name: "Mira", class: "Mage Test", classId: "test-mage", level: 5, ac: 12, maxHp: 22, passivePerception: 10, notes: "",
     features: ["Lucky"], autoFeatures: ["Casting Test", "Recovery Test"], proficiencies: ["Lute"], autoProficiencies: ["Daggers"] };
 
-  it("Character Sheet lists both; only hand-added entries are removable", async () => {
+  it("Character Sheet lists both as ordinary, removable entries", async () => {
     const user = userEvent.setup();
     render(<App />);
     const id = await open(user, "Auto4");
@@ -117,8 +117,8 @@ describe("Generated features and the Player card", () => {
     const sheet = within(await p.findByRole("article", { name: /mira character sheet/i }, T));
     for (const t of ["Casting Test", "Recovery Test", "Lucky", "Daggers", "Lute"]) expect(sheet.getByText(t)).toBeInTheDocument();
     expect(sheet.getByRole("button", { name: /^remove lucky$/i })).toBeInTheDocument();
-    expect(sheet.queryByRole("button", { name: /^remove casting test$/i })).not.toBeInTheDocument();
-    expect(sheet.queryByRole("button", { name: /^remove daggers$/i })).not.toBeInTheDocument();
+    expect(sheet.getByRole("button", { name: /^remove casting test$/i })).toBeInTheDocument();
+    expect(sheet.getByRole("button", { name: /^remove daggers$/i })).toBeInTheDocument();
   });
 
   it("Player card shows proficiency bonus and the combined features and proficiencies", async () => {

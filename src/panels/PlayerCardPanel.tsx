@@ -202,8 +202,8 @@ function Story({ m }: { m: PartyMember }) {
   const save = (p: Partial<PartyMember>) => void updatePartyMember(m.id, p);
   return (
     <>
-      <Listing title="Features and traits" items={[...(m.autoFeatures ?? []), ...asList(m.features)]} />
-      <Listing title="Proficiencies" items={[...(m.autoProficiencies ?? []), ...asList(m.proficiencies)]} />
+      <Listing title="Features and traits" items={asList(m.features)} />
+      <Listing title="Proficiencies" items={asList(m.proficiencies)} />
       <EditableText label="Personality" value={m.personality} onSave={(personality) => save({ personality })} />
       <EditableText label="Backstory" value={m.backstory} onSave={(backstory) => save({ backstory })} />
       <EditableText label="Notes" value={m.notes} onSave={(notes) => save({ notes })} />

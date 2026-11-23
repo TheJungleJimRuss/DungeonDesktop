@@ -88,11 +88,11 @@ function Text({ title, body }: { title: string; body?: string }) {
   return <section className="sheet-card sheet-text"><h4>{title}</h4><p>{body}</p></section>;
 }
 
-function Items({ title, items, noun, onChange, generated }: { title: string; items?: string[] | string; noun: string; onChange: (next: string[]) => void; generated?: string[] }) {
+function Items({ title, items, noun, onChange }: { title: string; items?: string[] | string; noun: string; onChange: (next: string[]) => void }) {
   const list = asList(items);
   return (
     <section className="sheet-card sheet-text"><h4>{title}</h4>
-      <ul className="sheet-items">{(generated ?? []).map((x, i) => <li key={`auto${i}`} className="generated">{x} <span className="auto-tag">auto</span></li>)}{list.map((x, i) => <li key={i}>{x}<RemoveBtn label={x} onClick={() => onChange(list.filter((_, j) => j !== i))} /></li>)}</ul>
+      <ul className="sheet-items">{list.map((x, i) => <li key={i}>{x}<RemoveBtn label={x} onClick={() => onChange(list.filter((_, j) => j !== i))} /></li>)}</ul>
       <AddInline label={noun} onAdd={(t) => onChange([...list, t])} />
     </section>
   );
@@ -213,8 +213,8 @@ function Sheet({ m }: { m: PartyMember }) {
         <p className="muted hint">Set damage dice with Edit sheet.</p>
       </section>
       <Items title="Spells" noun="spell" items={m.spells} onChange={(spells) => patch({ spells })} />
-      <Items title="Features and traits" noun="trait" items={m.features} generated={m.autoFeatures} onChange={(features) => patch({ features })} />
-      <Items title="Proficiencies" noun="proficiency" items={m.proficiencies} generated={m.autoProficiencies} onChange={(proficiencies) => patch({ proficiencies })} />
+      <Items title="Features and traits" noun="trait" items={m.features} onChange={(features) => patch({ features })} />
+      <Items title="Proficiencies" noun="proficiency" items={m.proficiencies} onChange={(proficiencies) => patch({ proficiencies })} />
       <Items title="Languages" noun="language" items={asLanguages(m.languages)} onChange={(languages) => patch({ languages })} />
       <section className="sheet-card sheet-text"><h4>Equipment</h4>
         <ul className="sheet-items">

@@ -36,13 +36,14 @@ Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (s
 - Combat: party members at 0 HP are Dying (death saves on Combatant.deathSaves), not Defeated; only 3 failures = dead. Damage at 0 HP adds a failure, healing clears saves. advanceTurn/rewindTurn skip isDefeated combatants unless all are. End encounter is a two-step inline confirm ("Yes, end it").
 
 - Auto sheet: auto values are written into the PartyMember record on save (computeAuto/applyAuto in src/party/autoSheet.ts, applyAutoAndSave/awardXp in src/party/recompute.ts); `manual` marks hand-edited fields. Readers keep reading plain fields. Legacy records keep their numbers as manual.
+- Auto list items (class/species/background features, proficiencies, background skills, option-A kit and gold) go into the ordinary features/proficiencies/skills/equipment/coins, fully editable (user request 2026-11-23). mergeAutoLists tracks `autoAdded`: idempotent, never re-adds what the DM removed or edited, swaps out untouched entries when class/species/background/level change. The form runs it in an effect keyed on those ids + level. Legacy autoFeatures/autoProficiencies fold in via migrateAutoLists (listParty and applyAuto).
 - Species type (subspecies: Draconic Ancestor, Elven Lineage, …): a second dropdown, shown only when the SRD species has types, labelled with the shared name prefix. Saved as subspeciesId + subspecies (name, so cards need no SRD load; speciesLabel() shows "Dragonborn (Red)"). Its traits join autoFeatures; changing species clears it.
 - Attacks: Proficient adds PB to to-hit only, not damage (briefly added to damage 2026-11-23, reverted same day at the user's request). Damage = dice + ability mod + magic + Extra damage box. Attack editor (CharacterForm AttackFields) is shared by the New attack fieldset and each attack's Edit toggle; edit-mode inputs carry "<Field> of <name>" aria-labels.
 - Ending an Encounter with Party combatants opens the "Award XP to party" dialog (src/panels/AwardXpStep.tsx); tests click "End without XP" after "Yes, end it".
 - Player card in Combat duplicates Damage/Heal buttons: scope tracker queries with within(region).
 
 ## Next steps
-- Spec 0005 limits: background skills re-added on save even if un-ticked; XP from monsters already removed ("Remove defeated") isn't counted; speed ring ignores fly/swim, used movement and speed-0 conditions.
+- Spec 0005 limits: XP from monsters already removed ("Remove defeated") isn't counted; speed ring ignores fly/swim, used movement and speed-0 conditions.
 - Remaining playtest UX findings 11-14 (low) from the 2026-11-17 mock session: create-and-open campaign, CR shown as 0.25 vs 1/4, scene checkbox label, missing mode tools (Name Generator, Social dice, add location from World Map, "Edge" jargon).
 - Open questions: Battle Map only exists during an Encounter; ruler has no keyboard path; Social location filter replaces party scoping rather than narrowing.
 - Background image is stored as {type, ArrayBuffer} on the map record, not a Blob (fake-indexeddb can't clone jsdom Blobs).

@@ -280,6 +280,8 @@ select, textarea { font:inherit; color:inherit; background:var(--panel); border:
 .list-editor { display:flex; flex-direction:column; gap:4px; }
 .sheet-form .list-editor > .muted { font-size:12px; }
 .list-editor .row input { flex:1; }
+.list-editor li > input { flex:1; min-width:0; background:transparent; border-color:transparent; }
+.list-editor li > input:hover, .list-editor li > input:focus { border-color:var(--line); }
 .attack-new { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px,1fr)); gap:6px; align-items:end; }
 .list-editor li .qty { display:flex; font-size:12px; color:var(--muted); flex-direction:row; align-items:center; gap:4px; margin-left:auto; }
 .list-editor li .qty input, .list-editor .row .qty input { width:56px; }

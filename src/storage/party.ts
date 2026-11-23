@@ -45,7 +45,10 @@ export interface PartyMember {
   attacks?: Attack[];
   /** Auto fields the DM has overridden by hand; absent = the sheet computes them. */
   manual?: Partial<Record<AutoField, true>>;
-  /** Generated from class, background and species; regenerated on level change, kept apart from the DM's own lists. */
+  /** What the sheet itself put into the normal lists (from class, species and background), so a later change can swap
+   *  those out without re-adding anything the DM deleted. See mergeAutoLists in src/party/autoSheet.ts. */
+  autoAdded?: AutoAdded;
+  /** Legacy (before 2026-11-23): generated entries kept apart from the DM's lists. migrateAutoLists() folds them in. */
   autoFeatures?: string[];
   autoProficiencies?: string[];
   features?: string[];
@@ -57,6 +60,19 @@ export interface PartyMember {
   coins?: Coins;
   personality?: string;
   backstory?: string;
+}
+
+/** Names the sheet added last time. Skills, equipment and gold are absent on migrated legacy records, meaning
+ *  "whatever the background gives now was already applied". */
+export interface AutoAdded { features: string[]; proficiencies: string[]; skills?: string[]; equipment?: string[]; gp?: number }
+
+/** Folds a legacy record's separate generated lists into its normal lists (no SRD needed). */
+export function migrateAutoLists<T extends Partial<PartyMemberInput>>(m: T): T {
+  if (m.autoFeatures === undefined && m.autoProficiencies === undefined) return m;
+  const { autoFeatures = [], autoProficiencies = [], ...rest } = m;
+  const front = (auto: string[], own: string[] | string | undefined) => { const list = asList(own); return [...auto.filter((x) => !list.includes(x)), ...list]; };
+  return { ...rest, features: front(autoFeatures, m.features), proficiencies: front(autoProficiencies, m.proficiencies),
+    autoAdded: m.autoAdded ?? { features: autoFeatures, proficiencies: autoProficiencies } } as T;
 }
 
 /** "Draconic Ancestor: Red" → "Red". */
@@ -72,7 +88,7 @@ export type PartyMemberInput = Omit<PartyMember, "id" | "campaignId">;
 
 export async function listParty(campaignId: string): Promise<PartyMember[]> {
   const rows = (await (await getDb()).getAllFromIndex("party", "byCampaign", campaignId)) as unknown as (PartyMember & { createdAt?: number })[];
-  return rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  return rows.map(migrateAutoLists).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
 }
 
 /** Strictly increasing, so members added in the same millisecond keep their insertion order. */

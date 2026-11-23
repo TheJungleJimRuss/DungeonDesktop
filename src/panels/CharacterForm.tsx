@@ -7,7 +7,7 @@ import { GUARD } from "../ui/unsaved";
 import SrdSelect from "../ui/SrdSelect";
 import { loadCharacterData, type CharacterData } from "../srd/character";
 import { matchSrd } from "../srd/match";
-import { activeAutoFields, applyAuto, protectExisting, type AutoField } from "../party/autoSheet";
+import { activeAutoFields, applyAuto, mergeAutoLists, protectExisting, type AutoField } from "../party/autoSheet";
 import {
   ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackAbilityMod, attackProficiency, proficiencyBonus, signed, attackDamageText, attackToHitText, ATTACK_ABILITY_LABELS, type AttackAbility, type AttackContext, asEquipment, attackLabel, isPack, newEquipmentEntry, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
@@ -29,7 +29,9 @@ function ListEditor({ label, noun, items, onChange }: { label: string; noun: str
       <ul>
         {items.map((it, i) => (
           <li key={i}>
-            <span>{it}</span>
+            <input aria-label={`${noun[0].toUpperCase()}${noun.slice(1)} ${i + 1}`} value={it}
+              onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))}
+              onBlur={() => { if (!it.trim()) onChange(items.filter((_, j) => j !== i)); }} />
             <button type="button" aria-label={`Remove ${noun} ${it}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>Remove</button>
           </li>
         ))}
@@ -294,17 +296,6 @@ function AutoMark({ active, manual, label, onReset }: { active: boolean; manual:
     : <span className="auto-tag" title={`${label} follows class, level, species and abilities`}>auto</span>;
 }
 
-/** Generated entries (from class, background, species): shown read-only above the DM's own list. */
-function GeneratedList({ label, items }: { label: string; items: string[] }) {
-  if (!items.length) return null;
-  return (
-    <div className="wide generated-list" role="group" aria-label={label}>
-      <span className="muted">{label} <span className="auto-tag">auto</span></span>
-      <ul>{items.map((it, i) => <li key={i}>{it}</li>)}</ul>
-    </div>
-  );
-}
-
 const n = (x: number | undefined, fallback: number) => (x === undefined || Number.isNaN(x) ? fallback : x);
 
 /** Full character-sheet editor. Labels of the basic fields match the quick Party form. */
@@ -315,6 +306,9 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
   useEffect(() => { let live = true; void loadCharacterData().then((d) => { if (live) setSrd(d); }, () => {}); return () => { live = false; }; }, []);
   // `v` holds what the DM typed; `w` is what the sheet shows: v with every non-manual auto field recomputed.
   const w: PartyMemberInput = srd ? applyAuto(v, srd) : v;
+  // Class, species, background or level changed: put what they give into the ordinary, editable lists.
+  const autoKey = JSON.stringify([!!srd, v.classId, v.speciesId, v.subspeciesId, v.backgroundId, w.level]);
+  useEffect(() => { if (srd) setV((x) => mergeAutoLists(x, srd)); }, [autoKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const autoOn = srd ? activeAutoFields(v, srd) : [];
   const isAuto = (f: AutoField) => autoOn.includes(f);
   const isManual = (f: AutoField) => !!v.manual?.[f];
@@ -474,8 +468,8 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         </div>
         <AttackEditor ctx={{ abilities, level: n(w.level, 1) || 1, spellcastingAbility: w.spellcastingAbility }} items={asAttacks(v.attacks)} onChange={(items) => set("attacks", items)} /><EquipmentEditor items={asEquipment(v.equipment)} onChange={(items) => set("equipment", items)} />
       </Section>
-      <Section title="Features and proficiencies" open={(w.autoFeatures?.length ?? 0) + (w.autoProficiencies?.length ?? 0) + asList(v.features).length + asList(v.proficiencies).length + asLanguages(v.languages).length > 0}>
-        <GeneratedList label="Generated features" items={w.autoFeatures ?? []} />{list("features", "Features and traits", "trait")}<GeneratedList label="Generated proficiencies" items={w.autoProficiencies ?? []} />{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
+      <Section title="Features and proficiencies" open={asList(v.features).length + asList(v.proficiencies).length + asLanguages(v.languages).length > 0}>
+        {list("features", "Features and traits", "trait")}{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
       </Section>
       <Section title="Story" open={!!(v.personality || v.backstory || v.notes)}>
         {area("personality", "Personality, ideals, bonds, flaws")}{area("backstory", "Backstory")}{area("notes", "Notes")}

@@ -1,4 +1,4 @@
-import { applyAuto, autoMaxHp, computeAuto } from "./autoSheet";
+import { applyAuto, autoMaxHp, backgroundKit, computeAuto } from "./autoSheet";
 import { FIXTURE_CHARACTER } from "../srd/fixtures";
 import type { CharacterData, Class } from "../srd/character";
 import type { PartyMember } from "../storage/party";
@@ -40,8 +40,8 @@ describe("computeAuto / applyAuto", () => {
     expect(m.maxHp).toBe(6 + 2 + 4 * (4 + 2));
     expect(m.spellcastingAbility).toBe("int");
     expect(m.spellSlotsMax).toEqual([4, 3, 2, 0, 0, 0, 0, 0, 0]);
-    expect(m.autoFeatures).toEqual(["Casting Test", "Recovery Test", "Mage Fire Test"]);
-    expect(m.autoProficiencies).toEqual(["Daggers"]);
+    expect(m.features).toEqual(["Casting Test", "Recovery Test", "Mage Fire Test"]);
+    expect(m.proficiencies).toEqual(["Daggers"]);
   });
 
   it("Fighter at level 1: martial, no slots and no spellcasting ability", () => {
@@ -51,7 +51,7 @@ describe("computeAuto / applyAuto", () => {
     expect(m.saveProficiencies).toEqual(["str", "con"]);
     expect(m.spellcastingAbility).toBeUndefined();
     expect(m.spellSlotsMax).toEqual([]);
-    expect(m.autoFeatures).toEqual(["Second Wind"]);
+    expect(m.features).toEqual(["Second Wind"]);
   });
 
   it("Warlock 3: pact slots come from the level table, ability is CHA by name", () => {
@@ -69,18 +69,18 @@ describe("computeAuto / applyAuto", () => {
   it("species supplies speed and traits; background supplies feat and tool", () => {
     const m = applyAuto({ ...base, speciesId: "test-sprite", backgroundId: "test-acolyte" }, srd);
     expect(m.speed).toBe("25 ft.");
-    expect(m.autoFeatures).toEqual(["Alert Test (Cleric)", "Darksight Test"]);
-    expect(m.autoProficiencies).toEqual(["Calligrapher's Supplies"]);
+    expect(m.features).toEqual(["Alert Test (Cleric)", "Darksight Test"]);
+    expect(m.proficiencies).toEqual(["Calligrapher's Supplies"]);
   });
 
   it("species traits that start at a character level appear only from that level", () => {
-    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 4 }, srd).autoFeatures).toEqual(["Darksight Test"]);
-    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 5 }, srd).autoFeatures).toEqual(["Darksight Test", "Wings Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 4 }, srd).features).toEqual(["Darksight Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-sprite", level: 5 }, srd).features).toEqual(["Darksight Test", "Wings Test"]);
   });
 
   it("a picked species type adds its traits; a type from another species is ignored", () => {
-    expect(applyAuto({ ...base, speciesId: "test-drake", subspeciesId: "test-drake-red" }, srd).autoFeatures).toEqual(["Scales Test", "Darksight Test", "Flame Breath Test"]);
-    expect(applyAuto({ ...base, speciesId: "test-sprite", subspeciesId: "test-drake-red" }, srd).autoFeatures).toEqual(["Darksight Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-drake", subspeciesId: "test-drake-red" }, srd).features).toEqual(["Scales Test", "Darksight Test", "Flame Breath Test"]);
+    expect(applyAuto({ ...base, speciesId: "test-sprite", subspeciesId: "test-drake-red" }, srd).features).toEqual(["Darksight Test"]);
   });
 
   it("a manual field is kept, others still follow", () => {
@@ -95,13 +95,45 @@ describe("computeAuto / applyAuto", () => {
     expect(m.skills).toEqual({ insight: "expertise", stealth: "proficient", religion: "proficient" });
   });
 
-  it("hand-added features and proficiencies survive a level change; generated ones regenerate", () => {
+  it("generated entries go into the normal lists; the DM's own entries, edits and removals stick across level changes", () => {
     const l1 = applyAuto({ ...base, class: "Mage Test", classId: "test-mage", features: ["Lucky"], proficiencies: ["Lute"] }, srd);
-    expect(l1.autoFeatures).toEqual(["Casting Test"]);
-    const l5 = applyAuto({ ...l1, level: 5 }, srd);
-    expect(l5.autoFeatures).toEqual(["Casting Test", "Recovery Test", "Mage Fire Test"]);
-    expect(l5.features).toEqual(["Lucky"]);
+    expect(l1.features).toEqual(["Lucky", "Casting Test"]);
+    expect(l1.proficiencies).toEqual(["Lute", "Daggers"]);
+    expect(applyAuto(l1, srd)).toEqual(l1); // idempotent
+    const edited = { ...l1, features: ["Lucky", "Casting Test (INT)"], proficiencies: ["Lute"] };
+    const l5 = applyAuto({ ...edited, level: 5 }, srd);
+    expect(l5.features).toEqual(["Lucky", "Casting Test (INT)", "Recovery Test", "Mage Fire Test"]);
     expect(l5.proficiencies).toEqual(["Lute"]);
+  });
+
+  it("changing background swaps its untouched feat, tool, skills, kit and gold; a deleted skill is not re-added", () => {
+    const a = applyAuto({ ...base, backgroundId: "test-acolyte", coins: { cp: 0, sp: 0, ep: 0, gp: 5, pp: 0 } }, srd);
+    expect(a.skills).toEqual({ insight: "proficient", religion: "proficient" });
+    expect(a.equipment).toEqual([{ name: "Holy Symbol" }]);
+    expect(a.coins?.gp).toBe(13);
+    const unticked = applyAuto({ ...a, skills: { insight: "proficient" } }, srd);
+    expect(unticked.skills).toEqual({ insight: "proficient" });
+    const none = applyAuto({ ...a, backgroundId: undefined }, srd);
+    expect(none.features).toEqual([]);
+    expect(none.proficiencies).toEqual([]);
+    expect(none.skills).toEqual({});
+    expect(none.coins?.gp).toBe(5);
+    expect(none.equipment).toEqual([]);
+  });
+
+  it("background kit: option A parsed into items with counts, gold separate", () => {
+    expect(backgroundKit(["Choose A or B: (A) 2 Daggers, Thieves' Tools, Oil (3 flasks), 2 Pouches, 20 Arrows, 16 GP; or (B) 50 GP"])).toEqual({
+      items: [{ name: "Dagger", quantity: 2 }, { name: "Thieves' Tools" }, { name: "Oil (3 flasks)" }, { name: "Pouch", quantity: 2 }, { name: "Arrow", quantity: 20 }], gp: 16,
+    });
+  });
+
+  it("legacy generated lists fold into the normal lists without adding kit or gold", () => {
+    const m = applyAuto({ ...base, backgroundId: "test-acolyte", features: ["Lucky"], autoFeatures: ["Alert Test (Cleric)"], autoProficiencies: ["Calligrapher's Supplies"], skills: { religion: "proficient" } }, srd);
+    expect(m.features).toEqual(["Alert Test (Cleric)", "Lucky"]);
+    expect(m.proficiencies).toEqual(["Calligrapher's Supplies"]);
+    expect(m.skills).toEqual({ religion: "proficient" });
+    expect(m.equipment).toBeUndefined();
+    expect(m).not.toHaveProperty("autoFeatures");
   });
 
   it("level up adds the HP gained to current HP; slots used are capped", () => {

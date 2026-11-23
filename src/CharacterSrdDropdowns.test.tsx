@@ -89,6 +89,6 @@ describe("Class, Background and Species dropdowns", () => {
     expect(await p.findByRole("article", { name: /kava character sheet/i })).toHaveTextContent("Drakeling Test (Red)");
     const [m] = await listParty(id);
     expect(m).toMatchObject({ speciesId: "test-drake", subspeciesId: "test-drake-red", subspecies: "Ancestor Test: Red" });
-    expect(m.autoFeatures).toContain("Flame Breath Test");
+    expect(m.features).toContain("Flame Breath Test");
   });
 });

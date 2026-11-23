@@ -1,8 +1,8 @@
 /** Pure auto-fill of a character sheet from SRD class, species and background. No storage or UI here. */
-import type { PartyMember, PartyMemberInput } from "../storage/party";
+import { asList, migrateAutoLists, type AutoAdded, type PartyMember, type PartyMemberInput } from "../storage/party";
 import type { CharacterData, Class } from "../srd/character";
 import { levelForXp } from "./xp";
-import { ABILITIES, ABILITY_NAMES, SKILLS, abilityMod, type AbilityKey, type SkillProficiencies } from "./sheet";
+import { ABILITIES, ABILITY_NAMES, NO_COINS, SKILLS, abilityMod, asEquipment, type AbilityKey, type EquipmentEntry, type SkillProficiencies } from "./sheet";
 
 /** Fields the sheet can fill itself. A field named in `member.manual` is left as the DM typed it. */
 export type AutoField = "saves" | "hitDice" | "maxHp" | "spellcastingAbility" | "spellSlots" | "speed" | "level";
@@ -82,31 +82,80 @@ export function computeAuto(member: PartyMemberInput, srd: CharacterData): Parti
   return out;
 }
 
-/** Background skills marked proficient; an existing proficient/expertise is never downgraded. */
-function withBackgroundSkills(skills: SkillProficiencies | undefined, names: string[]): SkillProficiencies | undefined {
-  if (!names.length) return skills;
-  const next = { ...skills };
-  for (const name of names) {
-    const def = SKILLS.find((s) => s.label.toLowerCase() === name.toLowerCase());
-    if (def && !next[def.key]) next[def.key] = "proficient";
+/** A background's option A kit: "(A) 2 Daggers, Thieves' Tools, …, 16 GP; or (B) 50 GP" → items and gold. */
+export function backgroundKit(equipment: string[]): { items: EquipmentEntry[]; gp: number } {
+  const a = equipment.join(" ").match(/\(A\)\s*(.*?)\s*;\s*or\s*\(B\)/i)?.[1];
+  const items: EquipmentEntry[] = [];
+  let gp = 0;
+  for (const part of (a ?? "").split(/,\s*/).map((x) => x.trim()).filter(Boolean)) {
+    const coin = part.match(/^(\d+)\s*GP$/i);
+    if (coin) { gp += Number(coin[1]); continue; }
+    const qty = part.match(/^(\d+)\s+(.+)$/);
+    if (!qty) { items.push({ name: part }); continue; }
+    const n = Number(qty[1]);
+    const name = n > 1 ? qty[2].replace(/(ch|sh|x)es$/, "$1").replace(/([^s])s$/, "$1") : qty[2];
+    items.push(n > 1 ? { name, quantity: n } : { name });
   }
-  return next;
+  return { items, gp };
+}
+
+/** What class, species and background put into the normal lists right now. */
+function generatedLists(member: PartyMemberInput, srd: CharacterData) {
+  const auto = computeAuto(member, srd);
+  const bg = member.backgroundId ? srd.backgrounds.find((b) => b.id === member.backgroundId) : undefined;
+  const kit = backgroundKit(bg?.equipment ?? []);
+  return { features: auto.autoFeatures ?? [], proficiencies: auto.autoProficiencies ?? [], skills: bg?.skills ?? [], equipment: kit.items, gp: kit.gp };
+}
+
+/** Drops entries added last time that are no longer generated, then appends new ones (never one the DM already removed). */
+const mergeList = (list: string[], before: string[], now: string[]) => {
+  const keep = list.filter((x) => !(before.includes(x) && !now.includes(x)));
+  return [...keep, ...now.filter((x) => !before.includes(x) && !keep.includes(x))];
+};
+const skillKey = (name: string) => SKILLS.find((s) => s.label.toLowerCase() === name.toLowerCase())?.key;
+
+/**
+ * Writes the generated features, proficiencies, background skills, kit and gold into the member's ordinary lists,
+ * where the DM can edit or remove them like anything else. `autoAdded` remembers what was added, so this is idempotent,
+ * never re-adds what the DM deleted, and swaps out untouched entries when the class, species, background or level changes.
+ */
+export function mergeAutoLists<T extends PartyMemberInput>(member: T, srd: CharacterData): T {
+  const m = migrateAutoLists(member);
+  const now = generatedLists(m, srd);
+  const prev: AutoAdded = m.autoAdded ?? { features: [], proficiencies: [], skills: [], equipment: [], gp: 0 };
+  const prevSkills = prev.skills ?? now.skills;
+  const prevEquipment = prev.equipment ?? now.equipment.map((e) => e.name);
+  const prevGp = prev.gp ?? now.gp;
+  const out: T = { ...m };
+
+  out.features = mergeList(asList(m.features), prev.features, now.features);
+  out.proficiencies = mergeList(asList(m.proficiencies), prev.proficiencies, now.proficiencies);
+
+  const skills: SkillProficiencies = { ...m.skills };
+  for (const name of prevSkills) { const k = skillKey(name); if (k && !now.skills.includes(name) && skills[k] === "proficient") delete skills[k]; }
+  for (const name of now.skills) { const k = skillKey(name); if (k && !prevSkills.includes(name) && !skills[k]) skills[k] = "proficient"; }
+  if (Object.keys(skills).length || m.skills) out.skills = skills;
+
+  const names = now.equipment.map((e) => e.name);
+  const equipment = asEquipment(m.equipment).filter((e) => !(prevEquipment.includes(e.name) && !names.includes(e.name)));
+  for (const e of now.equipment) if (!prevEquipment.includes(e.name) && !equipment.some((x) => x.name === e.name)) equipment.push(e);
+  if (equipment.length || m.equipment) out.equipment = equipment;
+
+  if (now.gp !== prevGp) { const purse = { ...NO_COINS, ...m.coins }; out.coins = { ...purse, gp: Math.max(0, purse.gp + now.gp - prevGp) }; }
+
+  out.autoAdded = { features: now.features, proficiencies: now.proficiencies, skills: now.skills, equipment: names, gp: now.gp };
+  return out;
 }
 
 /** The member with every auto field the DM has not overridden brought up to date. */
 export function applyAuto<T extends PartyMemberInput>(member: T, srd: CharacterData): T {
   const auto = computeAuto(member, srd);
   const manual = member.manual ?? {};
-  const out: T = { ...member };
+  const out: T = mergeAutoLists(member, srd);
   for (const field of Object.keys(AUTO_FIELD_KEYS) as AutoField[]) {
     if (manual[field]) continue;
     for (const key of AUTO_FIELD_KEYS[field]) if (key in auto) (out as unknown as Record<string, unknown>)[key] = auto[key];
   }
-  const bg = member.backgroundId ? srd.backgrounds.find((b) => b.id === member.backgroundId) : undefined;
-  out.skills = withBackgroundSkills(member.skills, bg?.skills ?? []);
-  if (!out.skills) delete out.skills;
-  if (auto.autoFeatures?.length || member.autoFeatures) out.autoFeatures = auto.autoFeatures;
-  if (auto.autoProficiencies?.length || member.autoProficiencies) out.autoProficiencies = auto.autoProficiencies;
   // Level-ups add HP; a smaller maximum caps current HP. Absent currentHp keeps meaning "full".
   if (member.currentHp !== undefined && out.maxHp !== member.maxHp) {
     out.currentHp = Math.max(0, Math.min(out.maxHp, member.currentHp + Math.max(0, out.maxHp - member.maxHp)));
