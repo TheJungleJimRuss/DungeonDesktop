@@ -9,7 +9,7 @@ import { loadCharacterData, type CharacterData } from "../srd/character";
 import { matchSrd } from "../srd/match";
 import { activeAutoFields, applyAuto, protectExisting, type AutoField } from "../party/autoSheet";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, attackToHitText, ATTACK_ABILITY_LABELS, type AttackAbility, type AttackContext, asEquipment, attackLabel, isPack, newEquipmentEntry, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackAbilityMod, attackProficiency, proficiencyBonus, signed, attackDamageText, attackToHitText, ATTACK_ABILITY_LABELS, type AttackAbility, type AttackContext, asEquipment, attackLabel, isPack, newEquipmentEntry, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
 } from "../party/sheet";
 
@@ -143,77 +143,138 @@ const ATTACK_ABILITIES: AttackAbility[] = ["str", "dex", "finesse", "spell"];
 
 const BLANK_ATTACK: Attack = { name: "", quantity: 1, ability: "str", proficient: true, magic: 0, count: 1, die: 8, bonus: 0, type: "slashing" };
 
-/** Structured attack entries: name, dice count, die, damage bonus and damage type. */
-function AttackEditor({ items, onChange, ctx }: { items: Attack[]; onChange: (items: Attack[]) => void; ctx: AttackContext }) {
-  const [d, setD] = useState<Attack>(BLANK_ATTACK);
-  const int = (x: number) => (Number.isNaN(x) ? 0 : x);
-  const change = (i: number, patch: Partial<Attack>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  const add = () => {
-    if (!d.name.trim()) return;
-    onChange([...items, { ...d, name: d.name.trim(), quantity: Math.max(1, int(d.quantity ?? 1)), magic: int(d.magic ?? 0), count: Math.max(0, int(d.count)), bonus: int(d.bonus) }]);
-    setD(BLANK_ATTACK);
-  };
+const num = (x: number | undefined, fallback = 0) => (x === undefined || Number.isNaN(x) ? fallback : x);
+const numValue = (x: number | undefined) => (x === undefined || Number.isNaN(x) ? "" : x);
+
+/** "DEX +3 · Prof +2 · Magic +1" — where an attack's numbers come from. */
+function attackBreakdown(a: Attack, ctx: AttackContext): string {
+  if (!a.ability) return "Typed numbers (older attack)";
+  const ab = a.ability === "spell" ? (ctx.spellcastingAbility?.toUpperCase() ?? "Spell") : a.ability === "finesse" ? "Finesse" : a.ability.toUpperCase();
+  const parts = [`${ab} ${signed(attackAbilityMod(ctx, a))}`];
+  if (a.proficient !== false) parts.push(`Prof ${signed(attackProficiency(ctx, a))}`);
+  if (num(a.magic)) parts.push(`Magic ${signed(num(a.magic))}`);
+  if (num(a.bonus)) parts.push(`Other ${signed(num(a.bonus))}`);
+  return parts.join(" · ");
+}
+
+/** Clean up a draft before it is stored. */
+const tidyAttack = (a: Attack): Attack => ({
+  ...a, name: a.name.trim(), quantity: Math.max(1, num(a.quantity, 1)), magic: num(a.magic), count: Math.max(0, num(a.count)), bonus: num(a.bonus),
+});
+
+/**
+ * Inputs for one attack, grouped as To hit and Damage. `of` suffixes the labels ("Ability of Rapier")
+ * so an open existing attack never shares a label with the new-attack form.
+ */
+function AttackFields({ a, set, ctx, of }: { a: Attack; set: (patch: Partial<Attack>) => void; ctx: AttackContext; of?: string }) {
+  const L = (base: string, joiner = "of") => (of ? `${base} ${joiner} ${of}` : base);
+  const pb = proficiencyBonus(ctx.level);
   return (
-    <div className="wide list-editor" role="group" aria-label="Attacks">
-      <span className="muted">Attacks</span>
-      <ul>
-        {items.map((a, i) => (
-          <li key={i}>
-            <span>{attackLabel(a)} {attackToHitText(a, ctx) ? `${attackToHitText(a, ctx)} — ` : "— "}{attackDamageText(a, ctx)}</span>
-            <label className="qty">Quantity of {a.name}
-              <input type="number" min={1} value={a.quantity ?? 1}
-                onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, quantity: Math.max(1, e.target.valueAsNumber || 1) } : x)))} />
+    <>
+      <div className="attack-row">
+        <span className="attack-row-label">To hit</span>
+        {a.ability ? (
+          <>
+            <label>Ability
+              <select aria-label={L("Ability")} value={a.ability} onChange={(e) => set({ ability: e.target.value as AttackAbility })}>
+                {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
+              </select>
             </label>
-            {a.ability ? (
-              <>
-                <label className="qty">Ability of {a.name}
-                  <select value={a.ability} onChange={(e) => change(i, { ability: e.target.value as AttackAbility })}>
-                    {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
-                  </select>
-                </label>
-                <label className="qty">Proficient with {a.name}
-                  <input type="checkbox" checked={a.proficient !== false} onChange={(e) => change(i, { proficient: e.target.checked })} />
-                </label>
-                <label className="qty">Magic bonus of {a.name}
-                  <input type="number" value={a.magic ?? 0} onChange={(e) => change(i, { magic: e.target.valueAsNumber || 0 })} />
-                </label>
-              </>
-            ) : (
-              <label className="qty">Attack bonus of {a.name}
-                <input type="number" value={a.attackBonus ?? 0} onChange={(e) => change(i, { attackBonus: e.target.valueAsNumber || 0 })} />
-              </label>
-            )}
-            <button type="button" aria-label={`Remove attack ${a.name}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>Remove</button>
-          </li>
-        ))}
-      </ul>
-      <div className="attack-new">
-        <label>Attack name<input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
-        <label>Quantity<input type="number" min={1} value={Number.isNaN(d.quantity ?? 1) ? "" : (d.quantity ?? 1)} onChange={(e) => setD({ ...d, quantity: e.target.valueAsNumber })} /></label>
-        <label>Ability
-          <select value={d.ability} onChange={(e) => setD({ ...d, ability: e.target.value as AttackAbility })}>
-            {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
-          </select>
-        </label>
-        <label>Proficient<input type="checkbox" checked={d.proficient !== false} onChange={(e) => setD({ ...d, proficient: e.target.checked })} /></label>
-        <label>Magic bonus<input type="number" value={Number.isNaN(d.magic ?? 0) ? "" : (d.magic ?? 0)} onChange={(e) => setD({ ...d, magic: e.target.valueAsNumber })} /></label>
-        <label>Dice count<input type="number" min={0} value={Number.isNaN(d.count) ? "" : d.count} onChange={(e) => setD({ ...d, count: e.target.valueAsNumber })} /></label>
+            <label className="attack-check" title="Adds the proficiency bonus to both to-hit and damage">
+              <input type="checkbox" aria-label={L("Proficient", "with")} checked={a.proficient !== false} onChange={(e) => set({ proficient: e.target.checked })} />
+              Proficient <span className="muted">({signed(pb)} hit &amp; dmg)</span>
+            </label>
+            <label>Magic bonus<input aria-label={L("Magic bonus")} type="number" value={numValue(a.magic ?? 0)} onChange={(e) => set({ magic: e.target.valueAsNumber })} /></label>
+          </>
+        ) : (
+          <label>Attack bonus<input aria-label={L("Attack bonus")} type="number" value={numValue(a.attackBonus ?? 0)} onChange={(e) => set({ attackBonus: e.target.valueAsNumber || 0 })} /></label>
+        )}
+      </div>
+      <div className="attack-row">
+        <span className="attack-row-label">Damage</span>
+        <label>Dice count<input aria-label={L("Dice count")} type="number" min={0} value={numValue(a.count)} onChange={(e) => set({ count: e.target.valueAsNumber })} /></label>
         <label>Dice
-          <select value={d.die} onChange={(e) => setD({ ...d, die: Number(e.target.value) })}>
+          <select aria-label={L("Dice")} value={a.die} onChange={(e) => set({ die: Number(e.target.value) })}>
             <option value={0}>None</option>
             {DAMAGE_DICE.map((s) => <option key={s} value={s}>d{s}</option>)}
           </select>
         </label>
-        <label>Extra damage<input type="number" value={Number.isNaN(d.bonus) ? "" : d.bonus} onChange={(e) => setD({ ...d, bonus: e.target.valueAsNumber })} /></label>
         <label>Damage type
-          <select value={d.type} onChange={(e) => setD({ ...d, type: e.target.value })}>
+          <select aria-label={L("Damage type")} value={a.type} onChange={(e) => set({ type: e.target.value })}>
             <option value="">—</option>
             {DAMAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
-        <button type="button" onClick={add} aria-label="Add attack">Add</button>
+        {/* Older attacks kept a typed damage bonus; new ones get extra damage from proficiency. */}
+        {(!a.ability || num(a.bonus) !== 0) && (
+          <label>Extra damage<input aria-label={L("Extra damage")} type="number" value={numValue(a.bonus)} onChange={(e) => set({ bonus: e.target.valueAsNumber })} /></label>
+        )}
       </div>
+    </>
+  );
+}
+
+/** One-line result plus where the numbers come from. */
+function AttackPreview({ a, ctx }: { a: Attack; ctx: AttackContext }) {
+  const t = tidyAttack(a);
+  const hit = attackToHitText(t, ctx);
+  return (
+    <p className="attack-preview" aria-live="polite">
+      <strong>{hit || "No to-hit"}</strong> — <strong>{attackDamageText(t, ctx)}</strong>
+      <span className="muted"> · {attackBreakdown(t, ctx)}</span>
+    </p>
+  );
+}
+
+/** Structured attack entries: each shows its live numbers; Edit opens the same fields as the new-attack form. */
+function AttackEditor({ items, onChange, ctx }: { items: Attack[]; onChange: (items: Attack[]) => void; ctx: AttackContext }) {
+  const [d, setD] = useState<Attack>(BLANK_ATTACK);
+  const [open, setOpen] = useState<number | null>(null);
+  const change = (i: number, patch: Partial<Attack>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const add = () => {
+    if (!d.name.trim()) return;
+    onChange([...items, tidyAttack(d)]);
+    setD({ ...BLANK_ATTACK, ability: d.ability, proficient: d.proficient });
+  };
+  return (
+    <div className="wide list-editor attack-editor" role="group" aria-label="Attacks">
+      <span className="muted">Attacks</span>
+      {items.length > 0 && (
+        <ul>
+          {items.map((a, i) => (
+            <li key={i} className={open === i ? "attack-item open" : "attack-item"}>
+              <div className="attack-head">
+                <span className="attack-name">{attackLabel(a)}</span>
+                <span className="attack-sum">{attackToHitText(a, ctx) ? `${attackToHitText(a, ctx)} — ` : ""}{attackDamageText(a, ctx)}</span>
+                <label className="qty">Quantity of {a.name}
+                  <input type="number" min={1} value={a.quantity ?? 1} onChange={(e) => change(i, { quantity: Math.max(1, e.target.valueAsNumber || 1) })} />
+                </label>
+                <button type="button" aria-expanded={open === i} aria-label={`Edit attack ${a.name}`} onClick={() => setOpen(open === i ? null : i)}>{open === i ? "Done" : "Edit"}</button>
+                <button type="button" aria-label={`Remove attack ${a.name}`} onClick={() => { onChange(items.filter((_, j) => j !== i)); setOpen(null); }}>Remove</button>
+              </div>
+              {open === i && (
+                <div className="attack-body">
+                  <AttackFields a={a} set={(p) => change(i, p)} ctx={ctx} of={a.name} />
+                  <AttackPreview a={a} ctx={ctx} />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <fieldset className="attack-new">
+        <legend>New attack</legend>
+        <div className="attack-row">
+          <label className="attack-name-field">Attack name<input value={d.name} placeholder="e.g. Longsword" onChange={(e) => setD({ ...d, name: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
+          <label>Quantity<input type="number" min={1} value={numValue(d.quantity ?? 1)} onChange={(e) => setD({ ...d, quantity: e.target.valueAsNumber })} /></label>
+        </div>
+        <AttackFields a={d} set={(p) => setD({ ...d, ...p })} ctx={ctx} />
+        <div className="attack-foot">
+          <AttackPreview a={d} ctx={ctx} />
+          <button type="button" onClick={add} disabled={!d.name.trim()} aria-label="Add attack">Add attack</button>
+        </div>
+      </fieldset>
     </div>
   );
 }

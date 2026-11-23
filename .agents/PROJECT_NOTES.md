@@ -35,6 +35,7 @@ Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (s
 - Combat: party members at 0 HP are Dying (death saves on Combatant.deathSaves), not Defeated; only 3 failures = dead. Damage at 0 HP adds a failure, healing clears saves. advanceTurn/rewindTurn skip isDefeated combatants unless all are. End encounter is a two-step inline confirm ("Yes, end it").
 
 - Auto sheet: auto values are written into the PartyMember record on save (computeAuto/applyAuto in src/party/autoSheet.ts, applyAutoAndSave/awardXp in src/party/recompute.ts); `manual` marks hand-edited fields. Readers keep reading plain fields. Legacy records keep their numbers as manual.
+- Attacks: Proficient adds PB to to-hit AND damage (house rule, user choice 2026-11-23; attackProficiency/attackDamageBonus in src/party/sheet.ts). New attacks have no Extra damage box; it only shows for legacy attacks or ones with a non-zero stored bonus. Attack editor (CharacterForm AttackFields) is shared by the New attack fieldset and each attack's Edit toggle; edit-mode inputs carry "<Field> of <name>" aria-labels.
 - Ending an Encounter with Party combatants opens the "Award XP to party" dialog (src/panels/AwardXpStep.tsx); tests click "End without XP" after "Yes, end it".
 - Player card in Combat duplicates Damage/Heal buttons: scope tracker queries with within(region).
 
