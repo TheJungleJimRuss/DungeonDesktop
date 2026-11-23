@@ -142,6 +142,7 @@ describe("Battle Map tokens linked to Combatants", () => {
     await waitFor(async () => expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
+    await user.click(await screen.findByRole("button", { name: /end without xp/i }, { timeout: 4000 }));
     await user.click(within(await screen.findByRole("listitem", { name: "Ambush" })).getByRole("button", { name: /^load/i }));
 
     // linked tokens exist again, with the new Combatants' ids

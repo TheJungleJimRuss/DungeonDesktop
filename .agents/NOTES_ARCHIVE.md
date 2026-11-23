@@ -1,5 +1,25 @@
 # Notes archive
 
+## 2026-11-23: Status log moved from PROJECT_NOTES (2026-11-17 to 2026-11-23)
+2026-11-17: Spec 0002 fully built (slices 2-5). Slice 4 Social (tickets in .agents/issues/dm-site-slice-4) and slice 5 Battle Map (.agents/issues/dm-site-slice-5) done. 224 Vitest, 12 Playwright, build clean. First commit 3ddee86 on main. Per-ticket history in NOTES_ARCHIVE.md.
+2026-11-17: Follow-ups done: per-token "Link to combatant" select, background images downscaled to 2048 px (src/storage/imageResize.ts, injectable resizer; jsdom falls back to the original), several pinned NPCs (JSON id list per Campaign, old single id still read). 232 Vitest, 13 Playwright, build clean. Not committed.
+
+2026-11-17: Spec 0003 Customizable Dashboard built (docs/specs/0003-customizable-dashboard.md): per-Campaign `dashboard` field on the Campaign record, src/storage/dashboard.ts, src/modes/dashboardLayout.ts, src/ui/DashboardCustomizer.tsx. Revision 2: drag and resize via react-grid-layout 2.3.0 (src/ui/DashboardGrid.tsx; grid positions {x,y,w,h}; revision-1 entries migrate on read); drag covered by e2e/dashboard-drag.spec.ts. Not committed.
+
+2026-11-17: UI polish: src/ui/PanelStates.tsx (`Loading` delayed skeleton, `EmptyState` with `goTo` Mode jump via ModeSwitchContext from Dashboard), campaign picker restyle (ghost buttons, meta line), CSS section "UI polish 2". 254 Vitest. Not committed.
+
+2026-11-17: UX fixes from a mock-session playtest (top 4 of 14): unsaved-form guard, End encounter confirm, PC death saves, Next turn skips defeated. 270 Vitest, tsc clean. Not committed.
+
+2026-11-17: Medium playtest findings 5-10 fixed: collapsed initiative rows show HP and expand to a focused damage box; missing PC initiative prompt; party dropdown hides members already in; "How many" for monsters; token labels G1/GW2 (src/battle/tokens.ts), "Add tokens for all" puts party left / others 6 squares right; editor forms autofocus their first field; Prep in 3 columns. 277 Vitest, 10 e2e. Not committed.
+
+2026-11-17: Battle Map fits the whole grid by default (height capped to viewport minus chrome); zoom −/+/Fit (ZOOMS in BattleMapPanel.tsx); size and background settings folded into a collapsed "Map settings" details (e2e clicks it first). 278 Vitest, 10 Playwright. Not committed.
+
+2026-11-17: Coin and item counts change without Edit sheet: src/panels/CoinPurse.tsx (editable amounts + Gain/Spend box, `adjustCoins` in party/sheet.ts refuses overspending) on the Character Sheet and Player card. Equipment and pack items get an inline − count + stepper (`Qty` in CharacterSheetsPanel.tsx, labels "Quantity of X" / "Increase X"). 302 Vitest. Not committed.
+
+2026-11-17: Spec 0004 SRD search expansion done (classes, species, backgrounds, feats, rules in Global Search; details in NOTES_ARCHIVE.md). 301 Vitest, 10 Playwright, build clean. Not committed.
+
+2026-11-23: SRD packs: every equipment "add item" box suggests SRD gear (datalist via src/ui/useSrdEquipment.tsx); an SRD pack name (e.g. Explorer's Pack) is added as a pack with its contents and counts (newEquipmentEntry/parsePackItem in party/sheet.ts). Tests must not use real SRD pack names for hand-built packs (they auto-fill). Not committed.
+
 ## 2026-11-17: Spec 0004 SRD search expansion built (docs/specs/0004-srd-search-expansion.md)
 Tickets in .agents/issues/srd-search-expansion/issues/, all done. 01: ↑/↓ reach Custom rows; group caps 8 under All, 20 with a chip. 02: feats, backgrounds, rules (7 kinds in rules.json) plus the second lazy chunk `loadCharacterData()` (src/srd/character.ts, test hook `setCharacterSource`, fixture in src/srd/fixtures.ts). 03: species, subspecies, traits (src/srd/CharacterCards.tsx). 04: classes, level tables with empty columns dropped, subclasses, 232 features (src/srd/ClassCards.tsx). Also fixed: GlobalSearch starts the highlight on the first exact name match across groups (typing "wizard" + Enter opened the Lizard monster, which is listed first). 05: offline e2e opens the Barbarian card offline; ADR 0001 lists every added upstream file with its SHA-256. 301 Vitest, 10 Playwright, build clean. Not committed.
 

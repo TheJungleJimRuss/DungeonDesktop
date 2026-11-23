@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import type { AutoField } from "../party/autoSheet";
 import type { EquipmentEntry, Attack, Abilities, AbilityKey, Coins, SkillProficiencies } from "../party/sheet";
 
 export interface PartyMember {
@@ -18,6 +19,10 @@ export interface PartyMember {
   playerName?: string;
   race?: string;
   background?: string;
+  /** SRD ids for class, species and background; absent = custom (the text fields hold the display name). */
+  classId?: string;
+  speciesId?: string;
+  backgroundId?: string;
   alignment?: string;
   xp?: number;
   inspiration?: boolean;
@@ -34,6 +39,11 @@ export interface PartyMember {
   spells?: string[] | string;
   /** Older records may hold strings; read through asAttacks(). */
   attacks?: Attack[];
+  /** Auto fields the DM has overridden by hand; absent = the sheet computes them. */
+  manual?: Partial<Record<AutoField, true>>;
+  /** Generated from class, background and species; regenerated on level change, kept apart from the DM's own lists. */
+  autoFeatures?: string[];
+  autoProficiencies?: string[];
   features?: string[];
   proficiencies?: string[];
   /** Older records may hold a comma/newline-separated string; read through asLanguages(). */
@@ -54,8 +64,12 @@ export async function listParty(campaignId: string): Promise<PartyMember[]> {
   return rows.sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
 }
 
+/** Strictly increasing, so members added in the same millisecond keep their insertion order. */
+let lastCreatedAt = 0;
+
 export async function addPartyMember(campaignId: string, input: PartyMemberInput): Promise<PartyMember> {
-  const member = { ...input, id: crypto.randomUUID(), campaignId, createdAt: Date.now() };
+  lastCreatedAt = Math.max(Date.now(), lastCreatedAt + 1);
+  const member = { ...input, id: crypto.randomUUID(), campaignId, createdAt: lastCreatedAt };
   await (await getDb()).add("party", member);
   return member;
 }

@@ -7,10 +7,24 @@ import { isDefeated, type Encounter } from "../combat/rules";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
 import { Loading } from "../ui/PanelStates";
 import { tokenLabel } from "../battle/tokens";
+import { reachArea } from "../battle/speed";
+import { useCombatantSpeed } from "../battle/useCombatantSpeed";
 
 const CELL = 40;
-/** On-screen square sizes (px) for zooming in; the default is to fit the whole map in the panel. */
-const ZOOMS = [24, 32, 44, 60];
+const MAX_LINES = 120; // more grid lines than this across the view: draw every 2nd, 4th, ... so it stays a grid, not a smear
+const MAX_RULER_SQUARES = 4000; // labelled ruler squares are drawn only while this few are in view; the overlay measures the rest
+const ZOOM_STEP = 1.5; // each click multiplies/divides the zoom; there is no upper or lower limit, like the World Map
+
+type View = { zoom: number; centre: { x: number; y: number } };
+const viewKey = (encounterId: string) => `dungeon-desktop:battle-map-view:${encounterId}`;
+/** The saved zoom and centre for an Encounter's map (this device only), or null for the default fit view. */
+function readView(encounterId: string): View | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(viewKey(encounterId)) ?? "null");
+    if ([v?.zoom, v?.x, v?.y].every((n) => typeof n === "number" && Number.isFinite(n)) && v.zoom > 0) return { zoom: v.zoom, centre: { x: v.x, y: v.y } };
+  } catch { /* no saved view */ }
+  return null;
+}
 const KEYS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 const COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12", "#8e44ad", "#7f8c8d"];
 
@@ -33,6 +47,9 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
     if (!c || (isDefeated(c) && enc.defeatMode === "remove")) return [];
     return [{ t, name: c.name, defeated: isDefeated(c), selected: c.id === selectedId }];
   });
+  // Speed ring: only the selected token, drawn from where it stands (it stays put while dragging, so the drop can be judged).
+  const selectedToken = shown.find((s) => s.selected && !s.defeated)?.t;
+  const speedFeet = useCombatantSpeed(campaignId, enc.combatants.find((c) => c.id === selectedToken?.combatantId));
   const select = (t: Token) => { if (t.combatantId) pickCombatant(campaignId, { combatantId: t.combatantId, activeId: enc.activeId }); };
   const bg = map.background;
   const bgUrl = useObjectUrl(bg?.image);
@@ -47,11 +64,27 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
   // Ruler: transient, never saved. `locked` = the end square is chosen.
   const [ruler, setRuler] = useState(false);
   const [rule, setRule] = useState<{ a: Square; b: Square; locked: boolean } | null>(null);
-  // null = fit the whole map; a number = px per square, and the map scrolls.
-  const [zoom, setZoom] = useState<number | null>(null);
-  const cellPx = () => zoom ?? (svg.current?.getBoundingClientRect().width ?? 0) / map.width;
-  const zoomIn = () => setZoom(ZOOMS.find((z) => z > cellPx() + 1) ?? ZOOMS[ZOOMS.length - 1]);
-  const zoomOut = () => { const z = [...ZOOMS].reverse().find((x) => x < cellPx() - 1); setZoom(z ?? null); };
+  // Zoom scales the whole canvas as one: the viewBox shrinks (zoom in) or widens (zoom out) around `centre`.
+  // null = the fit view (zoom 1, centred), which follows the grid when its size changes.
+  const [view, setView] = useState<View | null>(() => readView(encounterId));
+  useEffect(() => {
+    try {
+      if (view) localStorage.setItem(viewKey(encounterId), JSON.stringify({ zoom: view.zoom, x: view.centre.x, y: view.centre.y }));
+      else localStorage.removeItem(viewKey(encounterId));
+    } catch { /* not saved */ }
+  }, [encounterId, view]);
+  const W = map.width * CELL, H = map.height * CELL;
+  const zoom = view?.zoom ?? 1, centre = view?.centre ?? { x: W / 2, y: H / 2 };
+  const vw = W / zoom, vh = H / zoom;
+  const box = { x: centre.x - vw / 2, y: centre.y - vh / 2, w: vw, h: vh };
+  // The grid carries on past the map area: lines and ruler squares cover whatever is in view.
+  const cols = { lo: Math.floor(box.x / CELL), hi: Math.ceil((box.x + box.w) / CELL) };
+  const rows = { lo: Math.floor(box.y / CELL), hi: Math.ceil((box.y + box.h) / CELL) };
+  const stride = 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(cols.hi - cols.lo, rows.hi - rows.lo) / MAX_LINES)));
+  const lines = (r: { lo: number; hi: number }) => { const out: number[] = []; for (let i = Math.ceil(r.lo / stride) * stride; i <= r.hi; i += stride) out.push(i); return out; };
+  const visibleSquares = (cols.hi - cols.lo) * (rows.hi - rows.lo);
+  const zoomBy = (k: number) => setView({ zoom: zoom * k, centre });
+  const panning = useRef<{ x: number; y: number } | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const change = (fn: (m: BattleMap) => BattleMap) => updateBattleMap(campaignId, encounterId, fn);
@@ -75,11 +108,11 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
     const pt = el.createSVGPoint();
     pt.x = e.clientX; pt.y = e.clientY;
     const p = pt.matrixTransform(ctm.inverse());
-    return { x: clampInt(Math.floor(p.x / CELL), 0, map.width - 1), y: clampInt(Math.floor(p.y / CELL), 0, map.height - 1) };
+    return { x: Math.floor(p.x / CELL), y: Math.floor(p.y / CELL) }; // the grid never ends
   };
   // Click start then end, or press on one square and release on another; both snap to squares.
   const rulerDown = (q: Square) => { if (!rule || rule.locked) setRule({ a: q, b: q, locked: false }); };
-  const rulerOver = (q: Square) => { if (rule && !rule.locked) setRule({ ...rule, b: q }); };
+  const rulerOver = (q: Square) => { if (rule && !rule.locked && (q.x !== rule.b.x || q.y !== rule.b.y)) setRule({ ...rule, b: q }); };
   const rulerEnd = (q: Square) => { if (rule && !rule.locked && (q.x !== rule.a.x || q.y !== rule.a.y)) setRule({ ...rule, b: q, locked: true }); };
   const toggleRuler = () => { setRuler((r) => !r); setRule(null); };
   const nudge = (t: Token, e: React.KeyboardEvent) => {
@@ -100,9 +133,10 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
       <div className="row map-toolbar">
         <button aria-pressed={ruler} onClick={toggleRuler}>Ruler</button>
         <span className="row zoom-ctl" role="group" aria-label="Zoom">
-          <button aria-label="Zoom out" title="Zoom out" onClick={zoomOut} disabled={zoom === null}>−</button>
-          <button aria-label="Zoom in" title="Zoom in" onClick={zoomIn} disabled={zoom === ZOOMS[ZOOMS.length - 1]}>+</button>
-          <button aria-pressed={zoom === null} onClick={() => setZoom(null)} title="Show the whole map">Fit</button>
+          <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
+          <span className="muted" aria-live="polite">{Math.round(zoom * 100)}%</span>
+          <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
+          <button aria-pressed={view === null} onClick={() => setView(null)} title="Show the whole map">Fit</button>
         </span>
         {rule && <button onClick={() => setRule(null)}>Clear measurement</button>}
         {rule && <span role="status" aria-label="Measured distance">{distanceSquares(rule.a, rule.b)} squares, {distanceFeet(rule.a, rule.b, map.feetPerSquare)} ft</span>}
@@ -125,11 +159,33 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
         </>}
       </div>
       </details>
-      <div className={"battle-scroll" + (zoom === null ? " fit" : "")}>
-      <svg ref={svg} style={zoom === null ? undefined : { width: map.width * zoom }} viewBox={`0 0 ${map.width * CELL} ${map.height * CELL}`} className={"map-canvas battle-grid" + (bgUrl ? " has-bg" : "")} role="group" aria-label="Battle grid">
+      <div className="battle-scroll fit">
+      <svg ref={svg} viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`} className={"map-canvas battle-grid" + (bgUrl ? " has-bg" : "")} role="group" aria-label="Battle grid">
+        {/* Drag the background (anywhere off a token) to pan. */}
+        <rect x={box.x} y={box.y} width={box.w} height={box.h} className="battle-bg" data-testid="battle-pan"
+          onPointerDown={(e) => { panning.current = { x: e.clientX, y: e.clientY }; (e.currentTarget as Element).setPointerCapture?.(e.pointerId); }}
+          onPointerMove={(e) => {
+            const last = panning.current, el = svg.current;
+            if (!last || !el) return;
+            const r = el.getBoundingClientRect();
+            const k = Math.max(box.w / (r.width || box.w), box.h / (r.height || box.h)); // letterboxed: the tighter side sets the scale
+            setView({ zoom, centre: { x: centre.x - (e.clientX - last.x) * k, y: centre.y - (e.clientY - last.y) * k } });
+            panning.current = { x: e.clientX, y: e.clientY };
+          }}
+          onPointerUp={() => { panning.current = null; }} />
         {bgUrl && <image href={bgUrl} x={bgX * CELL} y={bgY * CELL} width={map.width * CELL * bgScale} height={map.height * CELL * bgScale} preserveAspectRatio="xMinYMin meet" pointerEvents="none" aria-hidden="true" />}
-        {Array.from({ length: map.width + 1 }, (_, i) => <line key={`v${i}`} x1={i * CELL} y1={0} x2={i * CELL} y2={map.height * CELL} className="grid-line" />)}
-        {Array.from({ length: map.height + 1 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * CELL} x2={map.width * CELL} y2={i * CELL} className="grid-line" />)}
+        {lines(cols).map((i) => <line key={`v${i}`} x1={i * CELL} y1={box.y} x2={i * CELL} y2={box.y + box.h} className="grid-line" pointerEvents="none" />)}
+        {lines(rows).map((i) => <line key={`h${i}`} x1={box.x} y1={i * CELL} x2={box.x + box.w} y2={i * CELL} className="grid-line" pointerEvents="none" />)}
+        <rect x={0} y={0} width={W} height={H} className="battle-area" pointerEvents="none" aria-hidden="true" />
+        {selectedToken && speedFeet !== null && (() => {
+          const r = reachArea(selectedToken, speedFeet, map.feetPerSquare, map);
+          return (
+            <g className="speed-ring" data-testid="speed-ring" pointerEvents="none" aria-label={`Speed ${speedFeet} ft, ${r.squares} squares`}>
+              <rect x={r.x * CELL + 2} y={r.y * CELL + 2} width={r.w * CELL - 4} height={r.h * CELL - 4} rx={CELL / 2} />
+              <text x={r.x * CELL + 10} y={r.y * CELL + 22}>{speedFeet} ft</text>
+            </g>
+          );
+        })()}
         {shown.map(({ t, name, defeated, selected }) => {
           const p = drag?.id === t.id ? drag : t;
           return (
@@ -149,9 +205,12 @@ function Grid({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
             </g>
           );
         })}
-        {ruler && Array.from({ length: map.width * map.height }, (_, i) => {
-          const q = { x: i % map.width, y: Math.floor(i / map.width) };
-          return <rect key={i} x={q.x * CELL} y={q.y * CELL} width={CELL} height={CELL} className="ruler-square" aria-label={`Square ${q.x},${q.y}`}
+        {ruler && <rect x={box.x} y={box.y} width={box.w} height={box.h} className="ruler-square"
+          onPointerDown={(e) => { const q = square(e); if (q) rulerDown(q); }} onPointerMove={(e) => { const q = square(e); if (q) rulerOver(q); }}
+          onPointerUp={(e) => { const q = square(e); if (q) rulerEnd(q); }} />}
+        {ruler && visibleSquares <= MAX_RULER_SQUARES && Array.from({ length: visibleSquares }, (_, i) => {
+          const w = cols.hi - cols.lo, q = { x: cols.lo + (i % w), y: rows.lo + Math.floor(i / w) };
+          return <rect key={`${q.x},${q.y}`} x={q.x * CELL} y={q.y * CELL} width={CELL} height={CELL} className="ruler-square" aria-label={`Square ${q.x},${q.y}`}
             onPointerDown={() => rulerDown(q)} onPointerEnter={() => rulerOver(q)} onPointerUp={() => rulerEnd(q)} onClick={() => rulerEnd(q)} />;
         })}
         {rule && (() => {

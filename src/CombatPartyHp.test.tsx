@@ -50,14 +50,15 @@ describe("Party HP and end combat", () => {
     await user.selectOptions(within(p).getByRole("combobox", { name: "Add Party member" }), "Thia");
     await waitFor(() => expect(within(row("Thia")).getByLabelText("HP Thia")).toHaveTextContent("HP 20/28"));
 
-    await user.type(screen.getByLabelText("Amount Thia"), "8");
-    await user.click(screen.getByRole("button", { name: "Damage Thia" }));
+    await user.type(within(p).getByLabelText("Amount Thia"), "8");
+    await user.click(within(p).getByRole("button", { name: "Damage Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByLabelText("HP Thia")).toHaveTextContent("HP 12/28"));
     // sheet is untouched until the encounter ends
     expect(currentHpOf((await listParty(id))[0])).toBe(20);
 
     await user.click(within(p).getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
+    await user.click(await screen.findByRole("button", { name: /end without xp/i }));
     await waitFor(async () => expect(currentHpOf((await listParty(id))[0])).toBe(12));
 
     await user.keyboard("{Escape}");

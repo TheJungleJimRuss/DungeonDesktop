@@ -13,6 +13,8 @@ export interface Subspecies { id: string; name: string; species: NameRef; damage
 export interface Trait { id: string; name: string; description: string; species: NameRef[]; subspecies?: NameRef[] }
 export interface ClassLevel { level: number; profBonus: number; columns: Record<string, string | number>; featureIds: string[] }
 export interface Class {
+  /** Optional in the data; autoSheet falls back to a name table. */
+  spellcastingAbility?: "str" | "dex" | "con" | "int" | "wis" | "cha";
   id: string; name: string; hitDie: number; primaryAbility: string; savingThrows: string[]; proficiencies: string[];
   skillChoices: string; startingEquipment: string; multiclass: string; levels: ClassLevel[]; subclasses: NameRef[];
 }

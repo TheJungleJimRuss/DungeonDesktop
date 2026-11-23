@@ -11,6 +11,7 @@ import { useChangeVersion } from "../sync/changeBus";
 import { CombatExtras, LairRow, monsterCombatants } from "./CombatExtras";
 import { ConditionControls, ConditionNotices } from "./ConditionControls";
 import { advanceTurnWithConditions } from "../combat/conditions";
+import AwardXpStep from "./AwardXpStep";
 import AddNpcCombatants from "./AddNpcCombatants";
 import AddSelect from "./AddSelect";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
@@ -156,6 +157,14 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
     document.getElementById(`amt-${focusAmount}`)?.focus();
     setFocusAmount(null);
   }, [focusAmount]);
+  const [awarding, setAwarding] = useState(false);
+  const hasParty = enc.combatants.some((c) => c.kind === "party" && c.partyId);
+  // Party HP is written back first; XP (if any) lands after, so its level-up sees the final HP.
+  const finish = async (award: (() => Promise<void>) | null) => {
+    await writeBackPartyHp(enc.combatants);
+    if (award) await award();
+    await endEncounter(campaign.id);
+  };
   const unrolled = enc.combatants.filter((c) => c.kind === "party" && c.initiative === undefined);
   const inFight = new Set(enc.combatants.flatMap((c) => (c.partyId ? [c.partyId] : [])));
 
@@ -167,8 +176,9 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
         <button className="primary" onClick={() => update(advanceTurnWithConditions)} disabled={!n}>Next turn</button>
         <button onClick={rollMonsters} disabled={!enc.combatants.some((c) => c.kind === "monster")}>Roll monster initiative</button>
         <DefeatModeToggle enc={enc} update={update} />
-        <EndEncounterButton onEnd={() => void writeBackPartyHp(enc.combatants).then(() => endEncounter(campaign.id))} />
+        {!awarding && <EndEncounterButton onEnd={() => (hasParty ? setAwarding(true) : void finish(null))} />}
       </div>
+      {awarding && <AwardXpStep campaignId={campaign.id} enc={enc} onFinish={(a) => void finish(a)} />}
       <ConditionNotices enc={enc} update={update} />
       {n === 0 && <p className="muted">Add combatants below.</p>}
       {unrolled.length > 0 && (

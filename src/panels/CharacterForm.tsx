@@ -1,10 +1,15 @@
 import { passivePerceptionOf } from "../party/passive";
+import { useSrdEquipment } from "../ui/useSrdEquipment";
 import type { PartyMember } from "../storage/party";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { asLanguages, asList, type PartyMemberInput } from "../storage/party";
 import { GUARD } from "../ui/unsaved";
+import SrdSelect from "../ui/SrdSelect";
+import { loadCharacterData, type CharacterData } from "../srd/character";
+import { matchSrd } from "../srd/match";
+import { activeAutoFields, applyAuto, protectExisting, type AutoField } from "../party/autoSheet";
 import {
-  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, attackToHitText, asEquipment, attackLabel, isPack, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
+  ABILITIES, ABILITY_NAMES, CURRENCIES, DAMAGE_DICE, DAMAGE_TYPES, asAttacks, attackDamageText, attackToHitText, ATTACK_ABILITY_LABELS, type AttackAbility, type AttackContext, asEquipment, attackLabel, isPack, newEquipmentEntry, toCount, type Attack, type EquipmentEntry, DEFAULT_ABILITIES, NO_COINS, SKILLS, SPELL_LEVELS,
   type AbilityKey, type SkillLevel,
 } from "../party/sheet";
 
@@ -52,6 +57,7 @@ function CountInput({ of, value, onChange }: { of: string; value: number | undef
 
 /** Equipment: single items and packs that hold several items, each with a count. */
 function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChange: (items: EquipmentEntry[]) => void }) {
+  const srdGear = useSrdEquipment();
   const [draft, setDraft] = useState("");
   const [draftCount, setDraftCount] = useState(1);
   const [packDrafts, setPackDrafts] = useState<Record<number, string>>({});
@@ -65,7 +71,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
   const withCount = <T extends { name: string }>(x: T, n: number): T & { quantity?: number } => (n > 1 ? { ...x, quantity: n } : x);
   const add = (pack: boolean) => {
     const t = draft.trim();
-    if (t) onChange([...items, withCount(pack ? { name: t, contents: [] } : { name: t }, toCount(draftCount))]);
+    if (t) onChange([...items, newEquipmentEntry(t, toCount(draftCount), srdGear.items, pack)]);
     setDraft("");
     setDraftCount(1);
   };
@@ -103,7 +109,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
                   ))}
                 </ul>
                 <div className="row">
-                  <input aria-label={`New item in ${e.name}`} value={packDrafts[i] ?? ""}
+                  <input aria-label={`New item in ${e.name}`} list={srdGear.listId} value={packDrafts[i] ?? ""}
                     onChange={(ev) => setPackDrafts({ ...packDrafts, [i]: ev.target.value })}
                     onKeyDown={(ev) => { if (ev.key === "Enter") { ev.preventDefault(); addToPack(i); } }} />
                   <span className="qty"><span aria-hidden="true">Count</span>
@@ -119,7 +125,7 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
         ))}
       </ul>
       <div className="row">
-        <input aria-label="New item" value={draft} onChange={(e) => setDraft(e.target.value)}
+        <input aria-label="New item" list={srdGear.listId} placeholder="Search SRD gear or type your own" value={draft} onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(false); } }} />
         <label className="qty">Count
           <input type="number" min={1} value={Number.isNaN(draftCount) ? "" : draftCount} onChange={(e) => setDraftCount(e.target.valueAsNumber)}
@@ -128,19 +134,23 @@ function EquipmentEditor({ items, onChange }: { items: EquipmentEntry[]; onChang
         <button type="button" onClick={() => add(false)} aria-label="Add item">Add</button>
         <button type="button" onClick={() => add(true)} aria-label="Add pack">Add as pack</button>
       </div>
+      {srdGear.datalist}
     </div>
   );
 }
 
-const BLANK_ATTACK: Attack = { name: "", quantity: 1, attackBonus: 0, count: 1, die: 8, bonus: 0, type: "slashing" };
+const ATTACK_ABILITIES: AttackAbility[] = ["str", "dex", "finesse", "spell"];
+
+const BLANK_ATTACK: Attack = { name: "", quantity: 1, ability: "str", proficient: true, magic: 0, count: 1, die: 8, bonus: 0, type: "slashing" };
 
 /** Structured attack entries: name, dice count, die, damage bonus and damage type. */
-function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: Attack[]) => void }) {
+function AttackEditor({ items, onChange, ctx }: { items: Attack[]; onChange: (items: Attack[]) => void; ctx: AttackContext }) {
   const [d, setD] = useState<Attack>(BLANK_ATTACK);
   const int = (x: number) => (Number.isNaN(x) ? 0 : x);
+  const change = (i: number, patch: Partial<Attack>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const add = () => {
     if (!d.name.trim()) return;
-    onChange([...items, { ...d, name: d.name.trim(), quantity: Math.max(1, int(d.quantity ?? 1)), attackBonus: int(d.attackBonus ?? 0), count: Math.max(0, int(d.count)), bonus: int(d.bonus) }]);
+    onChange([...items, { ...d, name: d.name.trim(), quantity: Math.max(1, int(d.quantity ?? 1)), magic: int(d.magic ?? 0), count: Math.max(0, int(d.count)), bonus: int(d.bonus) }]);
     setD(BLANK_ATTACK);
   };
   return (
@@ -149,15 +159,30 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
       <ul>
         {items.map((a, i) => (
           <li key={i}>
-            <span>{attackLabel(a)}{a.attackBonus ? ` ${attackToHitText(a)}` : ""} — {attackDamageText(a)}</span>
+            <span>{attackLabel(a)} {attackToHitText(a, ctx) ? `${attackToHitText(a, ctx)} — ` : "— "}{attackDamageText(a, ctx)}</span>
             <label className="qty">Quantity of {a.name}
               <input type="number" min={1} value={a.quantity ?? 1}
                 onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, quantity: Math.max(1, e.target.valueAsNumber || 1) } : x)))} />
             </label>
-            <label className="qty">Attack bonus of {a.name}
-              <input type="number" value={a.attackBonus ?? 0}
-                onChange={(e) => onChange(items.map((x, j) => (j === i ? { ...x, attackBonus: e.target.valueAsNumber || 0 } : x)))} />
-            </label>
+            {a.ability ? (
+              <>
+                <label className="qty">Ability of {a.name}
+                  <select value={a.ability} onChange={(e) => change(i, { ability: e.target.value as AttackAbility })}>
+                    {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
+                  </select>
+                </label>
+                <label className="qty">Proficient with {a.name}
+                  <input type="checkbox" checked={a.proficient !== false} onChange={(e) => change(i, { proficient: e.target.checked })} />
+                </label>
+                <label className="qty">Magic bonus of {a.name}
+                  <input type="number" value={a.magic ?? 0} onChange={(e) => change(i, { magic: e.target.valueAsNumber || 0 })} />
+                </label>
+              </>
+            ) : (
+              <label className="qty">Attack bonus of {a.name}
+                <input type="number" value={a.attackBonus ?? 0} onChange={(e) => change(i, { attackBonus: e.target.valueAsNumber || 0 })} />
+              </label>
+            )}
             <button type="button" aria-label={`Remove attack ${a.name}`} onClick={() => onChange(items.filter((_, j) => j !== i))}>Remove</button>
           </li>
         ))}
@@ -166,7 +191,13 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
         <label>Attack name<input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
         <label>Quantity<input type="number" min={1} value={Number.isNaN(d.quantity ?? 1) ? "" : (d.quantity ?? 1)} onChange={(e) => setD({ ...d, quantity: e.target.valueAsNumber })} /></label>
-        <label>Attack bonus<input type="number" value={Number.isNaN(d.attackBonus ?? 0) ? "" : (d.attackBonus ?? 0)} onChange={(e) => setD({ ...d, attackBonus: e.target.valueAsNumber })} /></label>
+        <label>Ability
+          <select value={d.ability} onChange={(e) => setD({ ...d, ability: e.target.value as AttackAbility })}>
+            {ATTACK_ABILITIES.map((k) => <option key={k} value={k}>{ATTACK_ABILITY_LABELS[k]}</option>)}
+          </select>
+        </label>
+        <label>Proficient<input type="checkbox" checked={d.proficient !== false} onChange={(e) => setD({ ...d, proficient: e.target.checked })} /></label>
+        <label>Magic bonus<input type="number" value={Number.isNaN(d.magic ?? 0) ? "" : (d.magic ?? 0)} onChange={(e) => setD({ ...d, magic: e.target.valueAsNumber })} /></label>
         <label>Dice count<input type="number" min={0} value={Number.isNaN(d.count) ? "" : d.count} onChange={(e) => setD({ ...d, count: e.target.valueAsNumber })} /></label>
         <label>Dice
           <select value={d.die} onChange={(e) => setD({ ...d, die: Number(e.target.value) })}>
@@ -174,7 +205,7 @@ function AttackEditor({ items, onChange }: { items: Attack[]; onChange: (items: 
             {DAMAGE_DICE.map((s) => <option key={s} value={s}>d{s}</option>)}
           </select>
         </label>
-        <label>Damage bonus<input type="number" value={Number.isNaN(d.bonus) ? "" : d.bonus} onChange={(e) => setD({ ...d, bonus: e.target.valueAsNumber })} /></label>
+        <label>Extra damage<input type="number" value={Number.isNaN(d.bonus) ? "" : d.bonus} onChange={(e) => setD({ ...d, bonus: e.target.valueAsNumber })} /></label>
         <label>Damage type
           <select value={d.type} onChange={(e) => setD({ ...d, type: e.target.value })}>
             <option value="">—</option>
@@ -197,38 +228,75 @@ function Section({ title, open, className, children }: { title: string; open: bo
   );
 }
 
+/** "auto" tag on a computed field, or a Reset button once the DM has overridden it. Renders nothing when the field is not auto-driven. */
+function AutoMark({ active, manual, label, onReset }: { active: boolean; manual: boolean; label: string; onReset: () => void }) {
+  if (!active) return null;
+  return manual
+    ? <button type="button" className="auto-reset" onClick={onReset}>Reset {label} to auto</button>
+    : <span className="auto-tag" title={`${label} follows class, level, species and abilities`}>auto</span>;
+}
+
+/** Generated entries (from class, background, species): shown read-only above the DM's own list. */
+function GeneratedList({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="wide generated-list" role="group" aria-label={label}>
+      <span className="muted">{label} <span className="auto-tag">auto</span></span>
+      <ul>{items.map((it, i) => <li key={i}>{it}</li>)}</ul>
+    </div>
+  );
+}
+
 const n = (x: number | undefined, fallback: number) => (x === undefined || Number.isNaN(x) ? fallback : x);
 
 /** Full character-sheet editor. Labels of the basic fields match the quick Party form. */
 export default function CharacterForm({ initial, onSave, onCancel }: { initial: PartyMemberInput; onSave: (v: PartyMemberInput) => void; onCancel: () => void }) {
   const [v, setV] = useState<PartyMemberInput>(initial);
   const set = <K extends keyof PartyMemberInput>(k: K, val: PartyMemberInput[K]) => setV((x) => ({ ...x, [k]: val }));
-  const abilities = v.abilities ?? DEFAULT_ABILITIES;
+  const [srd, setSrd] = useState<CharacterData | null>(null);
+  useEffect(() => { let live = true; void loadCharacterData().then((d) => { if (live) setSrd(d); }, () => {}); return () => { live = false; }; }, []);
+  // `v` holds what the DM typed; `w` is what the sheet shows: v with every non-manual auto field recomputed.
+  const w: PartyMemberInput = srd ? applyAuto(v, srd) : v;
+  const autoOn = srd ? activeAutoFields(v, srd) : [];
+  const isAuto = (f: AutoField) => autoOn.includes(f);
+  const isManual = (f: AutoField) => !!v.manual?.[f];
+  const setManual = (f: AutoField) => setV((x) => ({ ...x, manual: { ...x.manual, [f]: true } }));
+  const resetAuto = (f: AutoField) => setV((x) => { const { [f]: _gone, ...rest } = x.manual ?? {}; return { ...x, manual: rest }; });
+  const mark = (f: AutoField, label: string) => <AutoMark active={isAuto(f)} manual={isManual(f)} label={label} onReset={() => resetAuto(f)} />;
+  const abilities = w.abilities ?? DEFAULT_ABILITIES;
   const coins = v.coins ?? NO_COINS;
-  const slotsMax = v.spellSlotsMax ?? [];
+  const slotsMax = w.spellSlotsMax ?? [];
 
-  const text = (k: keyof PartyMemberInput, label: string) => (
-    <label>{label}<input autoFocus={k === "name"} value={(v[k] as string | undefined) ?? ""} onChange={(e) => set(k, e.target.value as never)} /></label>
-  );
+  const text = (k: keyof PartyMemberInput, label: string, auto?: AutoField) => {
+    const field = (
+      <label>{label}<input autoFocus={k === "name"} value={(w[k] as string | undefined) ?? ""}
+        onChange={(e) => { set(k, e.target.value as never); if (auto) setManual(auto); }} /></label>
+    );
+    return auto ? <div className="auto-field">{field}{mark(auto, label)}</div> : field;
+  };
   const area = (k: keyof PartyMemberInput, label: string) => (
     <label className="wide">{label}<textarea rows={3} value={(v[k] as string | undefined) ?? ""} onChange={(e) => set(k, e.target.value as never)} /></label>
   );
   const list = (k: ListKey, label: string, noun: string) => (
     <ListEditor label={label} noun={noun} items={asList(v[k])} onChange={(items) => set(k, items)} />
   );
-  const num = (k: "level" | "ac" | "maxHp" | "currentHp" | "passivePerception" | "xp", label: string) => (
-    <label>{label}
-      <input type="number" value={Number.isNaN(v[k]) ? "" : (v[k] ?? (k === "currentHp" ? v.maxHp : ""))}
-        onChange={(e) => set(k, e.target.valueAsNumber as never)} />
-    </label>
-  );
+  const num = (k: "level" | "ac" | "maxHp" | "currentHp" | "passivePerception" | "xp", label: string, auto?: AutoField) => {
+    const field = (
+      <label>{label}
+        <input type="number" value={Number.isNaN(w[k]) ? "" : (w[k] ?? (k === "currentHp" ? w.maxHp : ""))}
+          onChange={(e) => { set(k, e.target.valueAsNumber as never); if (auto) setManual(auto); }} />
+      </label>
+    );
+    return auto ? <div className="auto-field">{field}{mark(auto, label)}</div> : field;
+  };
 
   const toggleSave = (a: AbilityKey) => {
-    const cur = v.saveProficiencies ?? [];
+    const cur = w.saveProficiencies ?? [];
     set("saveProficiencies", cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]);
+    setManual("saves");
   };
   const setSkill = (key: string, lvl: SkillLevel | "") => {
-    const next = { ...(v.skills ?? {}) };
+    const next = { ...(w.skills ?? {}) };
     if (lvl) next[key] = lvl; else delete next[key];
     set("skills", next);
   };
@@ -237,17 +305,30 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     while (max.length < 9) max.push(0);
     max[i] = Number.isNaN(val) ? 0 : Math.max(0, val);
     set("spellSlotsMax", max);
+    setManual("spellSlots");
     set("spellSlotsUsed", (v.spellSlotsUsed ?? []).map((u, j) => (j === i ? Math.min(u, max[i]) : u)));
   };
 
+  /** Names that match an SRD entry (older records, typed text) are saved with its canonical name and id. */
+  const resolveSrd = (text: string | undefined, id: string | undefined, entries: { id: string; name: string }[] | undefined) => {
+    const hit = entries && (id ? entries.find((e) => e.id === id) : matchSrd(text, entries));
+    return hit ? { text: hit.name, id: hit.id } : { text: text?.trim() ?? "", id: entries ? undefined : id };
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!v.name.trim()) return;
-    const maxHp = n(v.maxHp, 0);
+    const cls = resolveSrd(v.class, v.classId, srd?.classes);
+    const bg = resolveSrd(v.background, v.backgroundId, srd?.backgrounds);
+    const sp = resolveSrd(v.race, v.speciesId, srd?.species);
+    // An older record that only now matches an SRD entry keeps the numbers it already holds.
+    const fresh = (!v.classId && cls.id) || (!v.speciesId && sp.id) || (!v.backgroundId && bg.id);
+    const picked = { ...v, class: cls.text, classId: cls.id, background: bg.text, backgroundId: bg.id, race: sp.text, speciesId: sp.id, ...(fresh ? { manual: protectExisting(v) } : {}) };
+    const a = srd ? applyAuto({ ...picked, abilities: { ...DEFAULT_ABILITIES, ...picked.abilities } }, srd) : picked;
+    const maxHp = n(a.maxHp, 0);
     onSave({
-      ...v, attacks: asAttacks(v.attacks), equipment: asEquipment(v.equipment), name: v.name.trim(), level: n(v.level, 1) || 1, ac: n(v.ac, 0), maxHp,
-      currentHp: Math.max(0, Math.min(n(v.currentHp, maxHp), maxHp)),
-      passivePerception: passivePerceptionOf({ ...v, abilities, level: n(v.level, 1) || 1 } as PartyMember),
+      ...a, attacks: asAttacks(v.attacks), equipment: asEquipment(v.equipment), name: v.name.trim(), level: n(a.level, 1) || 1, ac: n(v.ac, 0), maxHp,
+      currentHp: Math.max(0, Math.min(n(a.currentHp, maxHp), maxHp)),
+      passivePerception: passivePerceptionOf({ ...a, abilities, level: n(a.level, 1) || 1 } as PartyMember),
       xp: v.xp === undefined || Number.isNaN(v.xp) ? undefined : v.xp,
       abilities: ABILITIES.reduce((acc, a) => ({ ...acc, [a]: n(abilities[a], 10) }), DEFAULT_ABILITIES),
       coins: CURRENCIES.reduce((acc, c) => ({ ...acc, [c]: n(coins[c], 0) }), NO_COINS),
@@ -257,41 +338,49 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
   return (
     <form {...GUARD} className="sheet-form" onSubmit={submit} aria-label="Character sheet form">
       <fieldset><legend>Identity</legend>
-        {text("name", "Name")}{text("class", "Class")}{num("level", "Level")}{text("race", "Species")}
-        {text("background", "Background")}{text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}
+        {text("name", "Name")}
+        <SrdSelect label="Class" entries={srd?.classes} text={v.class} id={v.classId} onChange={(t, id) => setV((x) => ({ ...x, class: t, classId: id }))} />
+        {num("level", "Level", "level")}
+        <SrdSelect label="Species" entries={srd?.species} text={v.race ?? ""} id={v.speciesId} onChange={(t, id) => setV((x) => ({ ...x, race: t, speciesId: id }))} />
+        <SrdSelect label="Background" entries={srd?.backgrounds} text={v.background ?? ""} id={v.backgroundId} onChange={(t, id) => setV((x) => ({ ...x, background: t, backgroundId: id }))} />
+        {text("alignment", "Alignment")}{text("playerName", "Player")}{num("xp", "XP")}
       </fieldset>
       <fieldset><legend>Combat</legend>
-        {num("ac", "AC")}{num("maxHp", "Max HP")}{num("currentHp", "Current HP")}
-        {text("speed", "Speed")}{text("hitDice", "Hit Dice")}
+        {num("ac", "AC")}{num("maxHp", "Max HP", "maxHp")}{num("currentHp", "Current HP")}
+        {text("speed", "Speed", "speed")}{text("hitDice", "Hit Dice", "hitDice")}
         <label className="check"><input type="checkbox" checked={!!v.inspiration} onChange={(e) => set("inspiration", e.target.checked)} />Heroic Inspiration</label>
       </fieldset>
-      <fieldset className="abilities"><legend>Ability scores and saving throws</legend>
+      <fieldset className="abilities"><legend>Ability scores and saving throws {mark("saves", "Saving throws")}</legend>
         {ABILITIES.map((a) => (
           <div key={a} className="ability-col">
             <label>{a.toUpperCase()} score
               <input type="number" min={1} max={30} value={Number.isNaN(abilities[a]) ? "" : abilities[a]}
                 onChange={(e) => set("abilities", { ...abilities, [a]: e.target.valueAsNumber })} />
             </label>
-            <label className="check"><input type="checkbox" checked={(v.saveProficiencies ?? []).includes(a)} onChange={() => toggleSave(a)} />{ABILITY_NAMES[a]} save</label>
+            <label className="check"><input type="checkbox" checked={(w.saveProficiencies ?? []).includes(a)} onChange={() => toggleSave(a)} />{ABILITY_NAMES[a]} save</label>
           </div>
         ))}
       </fieldset>
-      <Section title="Skills" open={Object.keys(v.skills ?? {}).length > 0} className="skills-grid">
+      <Section title="Skills" open={Object.keys(w.skills ?? {}).length > 0} className="skills-grid">
         {SKILLS.map((s) => (
           <label key={s.key} className="inline">{s.label} ({s.ability.toUpperCase()})
-            <select value={v.skills?.[s.key] ?? ""} onChange={(e) => setSkill(s.key, e.target.value as SkillLevel | "")}>
+            <select value={w.skills?.[s.key] ?? ""} onChange={(e) => setSkill(s.key, e.target.value as SkillLevel | "")}>
               <option value="">—</option><option value="proficient">Proficient</option><option value="expertise">Expertise</option>
             </select>
           </label>
         ))}
       </Section>
-      <Section title="Spellcasting" open={!!v.spellcastingAbility || slotsMax.some((x) => x > 0) || asList(v.spells).length > 0}>
-        <label className="wide inline">Spellcasting ability
-          <select value={v.spellcastingAbility ?? ""} onChange={(e) => set("spellcastingAbility", (e.target.value || undefined) as AbilityKey | undefined)}>
-            <option value="">None</option>
-            {ABILITIES.map((a) => <option key={a} value={a}>{ABILITY_NAMES[a]}</option>)}
-          </select>
-        </label>
+      <Section title="Spellcasting" open={!!w.spellcastingAbility || slotsMax.some((x) => x > 0) || asList(v.spells).length > 0}>
+        <div className="wide auto-field">
+          <label className="inline">Spellcasting ability
+            <select value={w.spellcastingAbility ?? ""} onChange={(e) => { set("spellcastingAbility", (e.target.value || undefined) as AbilityKey | undefined); setManual("spellcastingAbility"); }}>
+              <option value="">None</option>
+              {ABILITIES.map((a) => <option key={a} value={a}>{ABILITY_NAMES[a]}</option>)}
+            </select>
+          </label>
+          {mark("spellcastingAbility", "Spellcasting ability")}
+        </div>
+        <div className="wide auto-field">{mark("spellSlots", "Spell slots")}</div>
         <div className="wide slot-row">
           {SPELL_LEVELS.map((l) => (
             <label key={l}>Level {l} slots
@@ -309,10 +398,10 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
             </label>
           ))}
         </div>
-        <AttackEditor items={asAttacks(v.attacks)} onChange={(items) => set("attacks", items)} /><EquipmentEditor items={asEquipment(v.equipment)} onChange={(items) => set("equipment", items)} />
+        <AttackEditor ctx={{ abilities, level: n(w.level, 1) || 1, spellcastingAbility: w.spellcastingAbility }} items={asAttacks(v.attacks)} onChange={(items) => set("attacks", items)} /><EquipmentEditor items={asEquipment(v.equipment)} onChange={(items) => set("equipment", items)} />
       </Section>
-      <Section title="Features and proficiencies" open={asList(v.features).length + asList(v.proficiencies).length + asLanguages(v.languages).length > 0}>
-        {list("features", "Features and traits", "trait")}{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
+      <Section title="Features and proficiencies" open={(w.autoFeatures?.length ?? 0) + (w.autoProficiencies?.length ?? 0) + asList(v.features).length + asList(v.proficiencies).length + asLanguages(v.languages).length > 0}>
+        <GeneratedList label="Generated features" items={w.autoFeatures ?? []} />{list("features", "Features and traits", "trait")}<GeneratedList label="Generated proficiencies" items={w.autoProficiencies ?? []} />{list("proficiencies", "Armor, weapon and tool proficiencies", "proficiency")}<ListEditor label="Languages" noun="language" items={asLanguages(v.languages)} onChange={(items) => set("languages", items)} />
       </Section>
       <Section title="Story" open={!!(v.personality || v.backstory || v.notes)}>
         {area("personality", "Personality, ideals, bonds, flaws")}{area("backstory", "Backstory")}{area("notes", "Notes")}

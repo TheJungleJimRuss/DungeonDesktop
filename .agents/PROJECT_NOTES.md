@@ -1,25 +1,10 @@
 # Project notes
 
 ## Status
-2026-11-17: Spec 0002 fully built (slices 2-5). Slice 4 Social (tickets in .agents/issues/dm-site-slice-4) and slice 5 Battle Map (.agents/issues/dm-site-slice-5) done. 224 Vitest, 12 Playwright, build clean. First commit 3ddee86 on main. Per-ticket history in NOTES_ARCHIVE.md.
-2026-11-17: Follow-ups done: per-token "Link to combatant" select, background images downscaled to 2048 px (src/storage/imageResize.ts, injectable resizer; jsdom falls back to the original), several pinned NPCs (JSON id list per Campaign, old single id still read). 232 Vitest, 13 Playwright, build clean. Not committed.
-
-2026-11-17: Spec 0003 Customizable Dashboard built (docs/specs/0003-customizable-dashboard.md): per-Campaign `dashboard` field on the Campaign record, src/storage/dashboard.ts, src/modes/dashboardLayout.ts, src/ui/DashboardCustomizer.tsx. Revision 2: drag and resize via react-grid-layout 2.3.0 (src/ui/DashboardGrid.tsx; grid positions {x,y,w,h}; revision-1 entries migrate on read); drag covered by e2e/dashboard-drag.spec.ts. Not committed.
-
-2026-11-17: UI polish: src/ui/PanelStates.tsx (`Loading` delayed skeleton, `EmptyState` with `goTo` Mode jump via ModeSwitchContext from Dashboard), campaign picker restyle (ghost buttons, meta line), CSS section "UI polish 2". 254 Vitest. Not committed.
-
-2026-11-17: UX fixes from a mock-session playtest (top 4 of 14): unsaved-form guard, End encounter confirm, PC death saves, Next turn skips defeated. 270 Vitest, tsc clean. Not committed.
-
-2026-11-17: Medium playtest findings 5-10 fixed: collapsed initiative rows show HP and expand to a focused damage box; missing PC initiative prompt; party dropdown hides members already in; "How many" for monsters; token labels G1/GW2 (src/battle/tokens.ts), "Add tokens for all" puts party left / others 6 squares right; editor forms autofocus their first field; Prep in 3 columns. 277 Vitest, 10 e2e. Not committed.
-
-2026-11-17: Battle Map fits the whole grid by default (height capped to viewport minus chrome); zoom −/+/Fit (ZOOMS in BattleMapPanel.tsx); size and background settings folded into a collapsed "Map settings" details (e2e clicks it first). 278 Vitest, 10 Playwright. Not committed.
-
-2026-11-17: Coin and item counts change without Edit sheet: src/panels/CoinPurse.tsx (editable amounts + Gain/Spend box, `adjustCoins` in party/sheet.ts refuses overspending) on the Character Sheet and Player card. Equipment and pack items get an inline − count + stepper (`Qty` in CharacterSheetsPanel.tsx, labels "Quantity of X" / "Increase X"). 302 Vitest. Not committed.
-
-2026-11-17: Spec 0004 SRD search expansion done (classes, species, backgrounds, feats, rules in Global Search; details in NOTES_ARCHIVE.md). 301 Vitest, 10 Playwright, build clean. Not committed.
+2026-11-23: Spec 0005 Auto character sheet built (docs/specs/0005-auto-character-sheet.md, tickets .agents/issues/auto-character-sheet/issues/ 01-05 done): Player card in Combat (replaces the dice column), attack to-hit = ability + prof + magic, SRD class/species/background dropdowns with Custom, auto fields with per-field manual override and "Reset to auto", level from XP with Award XP (Player card + end-encounter step). Plus a speed ring around the selected Battle Map token (src/battle/speed.ts, useCombatantSpeed.ts). 358 Vitest; full suite has 1-2 load flakes (CombatPlayerCard, CharacterSheets "SRD packs") that pass alone. Browser-checked. Not committed. Older status lines are in NOTES_ARCHIVE.md.
 
 ## Current goal
-Specs 0002-0004 done. Commit the uncommitted work, then settle open questions (see Next steps) and pick the next spec.
+Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (see Next steps) and pick the next spec.
 
 ## Active decisions
 - Local-first React + Vite + TypeScript static app; IndexedDB; per-Campaign JSON export/import. No server, no accounts.
@@ -49,7 +34,12 @@ Specs 0002-0004 done. Commit the uncommitted work, then settle open questions (s
 - Unsaved guard: editor forms opt in with `<form {...GUARD}>` (src/ui/unsaved.ts); `<main>` marks them dirty via capture events; every mode switch/All campaigns goes through `confirmLeave()` (window.confirm). Quick add forms are deliberately unguarded.
 - Combat: party members at 0 HP are Dying (death saves on Combatant.deathSaves), not Defeated; only 3 failures = dead. Damage at 0 HP adds a failure, healing clears saves. advanceTurn/rewindTurn skip isDefeated combatants unless all are. End encounter is a two-step inline confirm ("Yes, end it").
 
+- Auto sheet: auto values are written into the PartyMember record on save (computeAuto/applyAuto in src/party/autoSheet.ts, applyAutoAndSave/awardXp in src/party/recompute.ts); `manual` marks hand-edited fields. Readers keep reading plain fields. Legacy records keep their numbers as manual.
+- Ending an Encounter with Party combatants opens the "Award XP to party" dialog (src/panels/AwardXpStep.tsx); tests click "End without XP" after "Yes, end it".
+- Player card in Combat duplicates Damage/Heal buttons: scope tracker queries with within(region).
+
 ## Next steps
+- Spec 0005 limits: background skills re-added on save even if un-ticked; XP from monsters already removed ("Remove defeated") isn't counted; speed ring ignores fly/swim, used movement and speed-0 conditions.
 - Remaining playtest UX findings 11-14 (low) from the 2026-11-17 mock session: create-and-open campaign, CR shown as 0.25 vs 1/4, scene checkbox label, missing mode tools (Name Generator, Social dice, add location from World Map, "Edge" jargon).
 - Open questions: Battle Map only exists during an Encounter; ruler has no keyboard path; Social location filter replaces party scoping rather than narrowing.
 - Background image is stored as {type, ArrayBuffer} on the map record, not a Blob (fake-indexeddb can't clone jsdom Blobs).

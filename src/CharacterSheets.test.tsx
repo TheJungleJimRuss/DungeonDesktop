@@ -1,6 +1,8 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
+import { setReferenceSource } from "./srd/reference";
+import { FIXTURE_REFERENCE } from "./srd/fixtures";
 
 async function openCampaign(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.type(await screen.findByRole("textbox", { name: /new campaign name/i }), name);
@@ -20,10 +22,10 @@ describe("Party tab and character sheets", () => {
     const p = within(panel);
     await user.click(p.getByRole("button", { name: /add character/i }));
     await user.type(p.getByLabelText("Name"), "Mira");
-    await user.type(p.getByLabelText("Class"), "Wizard");
+    await user.selectOptions(await p.findByRole("combobox", { name: "Class" }), "Mage Test");
     await user.clear(p.getByLabelText("Level")); await user.type(p.getByLabelText("Level"), "5");
     await user.clear(p.getByLabelText("INT score")); await user.type(p.getByLabelText("INT score"), "18");
-    await user.click(p.getByLabelText("Intelligence save"));
+    // Intelligence save is already ticked: the Mage class grants it.
     await user.selectOptions(p.getByLabelText(/^Arcana/), "expertise");
     await user.selectOptions(p.getByLabelText("Spellcasting ability"), "int");
     await user.clear(p.getByLabelText("Level 1 slots")); await user.type(p.getByLabelText("Level 1 slots"), "4");
@@ -33,28 +35,28 @@ describe("Party tab and character sheets", () => {
     await user.clear(p.getByLabelText("Quantity")); await user.type(p.getByLabelText("Quantity"), "3");
     await user.clear(p.getByLabelText("Dice count")); await user.type(p.getByLabelText("Dice count"), "2");
     await user.selectOptions(p.getByLabelText("Dice"), "10");
-    await user.clear(p.getByLabelText("Damage bonus")); await user.type(p.getByLabelText("Damage bonus"), "3");
+    await user.clear(p.getByLabelText("Extra damage")); await user.type(p.getByLabelText("Extra damage"), "3");
     await user.selectOptions(p.getByLabelText("Damage type"), "fire");
     await user.click(p.getByRole("button", { name: "Add attack" }));
     await user.click(p.getByRole("button", { name: "Remove attack Dagger" }));
     await user.type(p.getByLabelText("New item"), "Spellbook");
     await user.click(p.getByRole("button", { name: "Add item" }));
-    await user.type(p.getByLabelText("New item"), "Scholar's Pack");
+    await user.type(p.getByLabelText("New item"), "Spell Satchel");
     await user.click(p.getByRole("button", { name: "Add pack" }));
-    await user.type(p.getByLabelText("New item in Scholar's Pack"), "Ink{Enter}");
-    await user.type(p.getByLabelText("New item in Scholar's Pack"), "Parchment{Enter}");
-    await user.click(p.getByRole("button", { name: "Remove Ink from Scholar's Pack" }));
-    await user.clear(p.getByLabelText("Count of Parchment in Scholar's Pack")); await user.type(p.getByLabelText("Count of Parchment in Scholar's Pack"), "5");
-    await user.click(p.getByRole("button", { name: "Collapse Scholar's Pack" }));
-    expect(p.queryByLabelText("New item in Scholar's Pack")).not.toBeInTheDocument();
-    expect(p.getByRole("button", { name: "Expand Scholar's Pack" })).toHaveTextContent("1 item");
-    await user.click(p.getByRole("button", { name: "Expand Scholar's Pack" }));
-    expect(p.getByLabelText("New item in Scholar's Pack")).toBeInTheDocument();
+    await user.type(p.getByLabelText("New item in Spell Satchel"), "Ink{Enter}");
+    await user.type(p.getByLabelText("New item in Spell Satchel"), "Parchment{Enter}");
+    await user.click(p.getByRole("button", { name: "Remove Ink from Spell Satchel" }));
+    await user.clear(p.getByLabelText("Count of Parchment in Spell Satchel")); await user.type(p.getByLabelText("Count of Parchment in Spell Satchel"), "5");
+    await user.click(p.getByRole("button", { name: "Collapse Spell Satchel" }));
+    expect(p.queryByLabelText("New item in Spell Satchel")).not.toBeInTheDocument();
+    expect(p.getByRole("button", { name: "Expand Spell Satchel" })).toHaveTextContent("1 item");
+    await user.click(p.getByRole("button", { name: "Expand Spell Satchel" }));
+    expect(p.getByLabelText("New item in Spell Satchel")).toBeInTheDocument();
     await user.type(p.getByLabelText("New item"), "Torch");
     await user.clear(p.getByLabelText("Count")); await user.type(p.getByLabelText("Count"), "10{Enter}");
     await user.clear(p.getByLabelText("Count of Spellbook")); await user.type(p.getByLabelText("Count of Spellbook"), "2");
     await user.type(p.getByLabelText("New trait"), "Arcane Recovery{Enter}");
-    await user.type(p.getByLabelText("New proficiency"), "Daggers{Enter}");
+    await user.type(p.getByLabelText("New proficiency"), "Darts{Enter}");
     await user.type(p.getByLabelText("New language"), "Common{Enter}");
     await user.type(p.getByLabelText("New language"), "Draconic{Enter}");
     await user.type(p.getByLabelText("Backstory"), "Fled the academy.");
@@ -62,26 +64,27 @@ describe("Party tab and character sheets", () => {
 
     const sheet = await p.findByRole("article", { name: /mira character sheet/i });
     const s = within(sheet);
+    expect(sheet).toHaveTextContent("Mage Test 5");
     expect(s.getByLabelText("Intelligence save")).toHaveTextContent("+7");
     expect(s.getByLabelText("Arcana")).toHaveTextContent("+10");
     expect(s.getByText(/spell save dc 15/i)).toBeInTheDocument();
     expect(s.getByLabelText("Quantity of Spellbook")).toHaveValue(2);
     expect(s.getByLabelText("Quantity of Torch")).toHaveValue(10);
-    for (const t of ["Arcane Recovery", "Daggers", "Common", "Draconic"]) expect(s.getByText(t).tagName).toBe("LI");
+    for (const t of ["Arcane Recovery", "Darts", "Common", "Draconic"]) expect(s.getByText(t).tagName).toBe("LI");
     expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(3);
-    expect(s.getByText(/— 2d10\+3 fire/)).toBeInTheDocument();
-    await user.clear(s.getByLabelText("Attack bonus of Fire Bolt")); await user.type(s.getByLabelText("Attack bonus of Fire Bolt"), "5{Enter}");
+    expect(s.getByText(/— \+3 to hit, 2d10\+3 fire/)).toBeInTheDocument();
+    expect(s.queryByLabelText("Attack bonus of Fire Bolt")).not.toBeInTheDocument();
     await user.click(s.getByLabelText("Increase Fire Bolt"));
-    await waitFor(() => expect(s.getByText(/\+5 to hit, 2d10\+3 fire/)).toBeInTheDocument());
+    await waitFor(() => expect(s.getByText(/\+3 to hit, 2d10\+3 fire/)).toBeInTheDocument());
     expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(4);
-    const pack = within(s.getByRole("list", { name: "Scholar's Pack contents" }));
-    expect(pack.getByLabelText("Quantity of Parchment in Scholar's Pack")).toHaveValue(5);
+    const pack = within(s.getByRole("list", { name: "Spell Satchel contents" }));
+    expect(pack.getByLabelText("Quantity of Parchment in Spell Satchel")).toHaveValue(5);
     expect(pack.queryByText("Ink")).not.toBeInTheDocument();
-    await user.click(s.getByRole("button", { name: "Collapse Scholar's Pack" }));
-    expect(s.queryByRole("list", { name: "Scholar's Pack contents" })).not.toBeInTheDocument();
+    await user.click(s.getByRole("button", { name: "Collapse Spell Satchel" }));
+    expect(s.queryByRole("list", { name: "Spell Satchel contents" })).not.toBeInTheDocument();
     expect(s.getByText("(1 item)")).toBeInTheDocument();
-    await user.click(s.getByRole("button", { name: "Expand Scholar's Pack" }));
-    expect(s.getByRole("list", { name: "Scholar's Pack contents" })).toBeInTheDocument();
+    await user.click(s.getByRole("button", { name: "Expand Spell Satchel" }));
+    expect(s.getByRole("list", { name: "Spell Satchel contents" })).toBeInTheDocument();
     expect(s.queryByText(/^Dagger —/)).not.toBeInTheDocument();
     expect(s.getByText("Fled the academy.")).toBeInTheDocument();
 
@@ -133,7 +136,9 @@ describe("Party tab and character sheets", () => {
     await user.click(s.getByRole("button", { name: "Remove Rope" }));
     await user.click(s.getByRole("button", { name: "Confirm remove Rope" }));
     await user.type(s.getByLabelText("Add attack"), "Dagger{Enter}");
-    expect(await s.findByText(/^Dagger —/)).toBeInTheDocument();
+    expect(await s.findByText(/^Dagger/)).toBeInTheDocument();
+    expect(s.queryByLabelText("Attack bonus of Dagger")).not.toBeInTheDocument();
+    expect(s.getByLabelText("Ability of Dagger")).toHaveValue("str");
     await user.type(s.getByLabelText("Add language"), "Elvish{Enter}");
     await user.click(await s.findByRole("button", { name: "Remove Elvish" }));
     await user.click(s.getByRole("button", { name: "Confirm remove Elvish" }));
@@ -200,11 +205,37 @@ describe("Item counts on the character sheet", () => {
     await user.click(sheet.getByRole("button", { name: "Decrease Torch" }));
     await waitFor(() => expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(9));
 
-    await user.type(sheet.getByLabelText("Add item"), "Explorer's Pack");
+    await user.type(sheet.getByLabelText("Add item"), "Trail Kit");
     await user.click(sheet.getByRole("button", { name: "Add pack" }));
-    await user.type(await sheet.findByLabelText("Add item in Explorer's Pack"), "Rations{Enter}");
-    await user.click(await sheet.findByRole("button", { name: "Increase Rations in Explorer's Pack" }));
-    await waitFor(() => expect(sheet.getByLabelText("Quantity of Rations in Explorer's Pack")).toHaveValue(2));
+    await user.type(await sheet.findByLabelText("Add item in Trail Kit"), "Rations{Enter}");
+    await user.click(await sheet.findByRole("button", { name: "Increase Rations in Trail Kit" }));
+    await waitFor(() => expect(sheet.getByLabelText("Quantity of Rations in Trail Kit")).toHaveValue(2));
     expect(sheet.getByLabelText("Quantity of Torch")).toHaveValue(9);
+  });
+});
+
+describe("SRD packs", () => {
+  afterEach(() => setReferenceSource(null));
+  it("adds an SRD pack with its contents, from the sheet and from Edit sheet", async () => {
+    setReferenceSource(async () => FIXTURE_REFERENCE);
+    const user = userEvent.setup();
+    render(<App />);
+    await openCampaign(user, "Packs");
+    await user.click(screen.getByRole("button", { name: /^party/i }));
+    const p = within(await screen.findByRole("region", { name: /character sheets/i }));
+    await user.click(p.getByRole("button", { name: /add character/i }));
+    await user.type(p.getByLabelText("Name"), "Vex");
+    const box = p.getByLabelText("New item");
+    await waitFor(() => expect(document.getElementById(box.getAttribute("list")!)?.querySelector("option[value=\"Explorer's Pack\"]")).toBeTruthy());
+    await user.type(box, "explorer's pack{Enter}");
+    expect(p.getByRole("button", { name: "Collapse Explorer's Pack" })).toHaveTextContent("(pack)");
+    expect(p.getByLabelText("Count of Rations in Explorer's Pack")).toHaveValue(10);
+    await user.click(p.getByRole("button", { name: /save member/i }));
+
+    const s = within(await p.findByRole("article", { name: /vex character sheet/i }));
+    expect(within(s.getByRole("list", { name: "Explorer's Pack contents" })).getByText("Backpack")).toBeInTheDocument();
+    await user.type(s.getByLabelText("Add item"), "Explorer's Pack{Enter}");
+    expect(await s.findAllByRole("button", { name: "Collapse Explorer's Pack" })).toHaveLength(2);
+    expect(s.getAllByLabelText("Quantity of Torch in Explorer's Pack")[1]).toHaveValue(10);
   });
 });

@@ -21,7 +21,7 @@ const pos = (el: HTMLElement) => [el.getAttribute("data-col"), el.getAttribute("
 beforeEach(() => localStorage.clear());
 
 describe("Battle Map", () => {
-  it("needs an Encounter, then keeps grid settings and tokens (keyboard moves snap and clamp)", async () => {
+  it("needs an Encounter, then keeps grid settings and tokens (keyboard moves snap; the grid never ends)", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { id, map } = await openCombat(user);
@@ -43,16 +43,17 @@ describe("Battle Map", () => {
     const tok = await m.findByRole("button", { name: "Token Goblin" });
     expect(pos(tok)).toEqual(["0", "0"]);
     tok.focus();
-    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}{ArrowLeft}{ArrowLeft}{ArrowLeft}{ArrowUp}{ArrowUp}");
-    await waitFor(() => expect(pos(m.getByRole("button", { name: "Token Goblin" }))).toEqual(["0", "0"]));
+    await user.keyboard("{ArrowLeft}{ArrowUp}"); // past the map's edge: the grid carries on
+    await waitFor(() => expect(pos(m.getByRole("button", { name: "Token Goblin" }))).toEqual(["-1", "-1"]));
     m.getByRole("button", { name: "Token Goblin" }).focus();
-    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}");
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{ArrowDown}{ArrowDown}");
     await waitFor(() => expect(pos(m.getByRole("button", { name: "Token Goblin" }))).toEqual(["2", "1"]));
     await waitFor(async () => expect((await maps(id))[0].tokens[0]).toMatchObject({ name: "Goblin", x: 2, y: 1 }));
 
-    // shrinking the grid pulls tokens inside it
+    // shrinking the map area leaves tokens where they are
     await user.clear(m.getByLabelText("Grid width")); await user.type(m.getByLabelText("Grid width"), "2" + "{Tab}");
-    await waitFor(() => expect(pos(m.getByRole("button", { name: "Token Goblin" }))).toEqual(["1", "1"]));
+    await waitFor(async () => expect((await maps(id))[0]).toMatchObject({ width: 2 }));
+    expect(pos(m.getByRole("button", { name: "Token Goblin" }))).toEqual(["2", "1"]);
 
     // edit and delete
     const name = m.getByLabelText("Name of Goblin");
@@ -121,8 +122,14 @@ describe("Battle Map", () => {
     await user.click(m.getByLabelText("Square 3,3"));
     expect(m.getByRole("status", { name: "Measured distance" })).toHaveTextContent("3 squares, 15 ft");
 
+    // squares past the map area measure too, once zoomed out to show them
+    await user.click(m.getByRole("button", { name: "Zoom out" }));
+    await user.click(m.getByLabelText("Square -2,0"));
+    await user.click(m.getByLabelText("Square 2,0"));
+    expect(m.getByRole("status", { name: "Measured distance" })).toHaveTextContent("4 squares, 20 ft");
+
     await user.clear(m.getByLabelText("Feet per square")); await user.type(m.getByLabelText("Feet per square"), "10{Tab}");
-    await waitFor(() => expect(m.getByRole("status", { name: "Measured distance" })).toHaveTextContent("30 ft"));
+    await waitFor(() => expect(m.getByRole("status", { name: "Measured distance" })).toHaveTextContent("40 ft"));
 
     await user.click(m.getByRole("button", { name: "Clear measurement" }));
     expect(m.queryByTestId("ruler-line")).not.toBeInTheDocument();
@@ -132,7 +139,7 @@ describe("Battle Map", () => {
 });
 
 describe("Battle Map zoom", () => {
-  it("fits the whole map by default, zooms in to a fixed square size, and Fit goes back", async () => {
+  it("fits the whole map by default, zooms in and out without limit, and Fit goes back", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.type(await screen.findByRole("textbox", { name: /new campaign name/i }), "Zoomy");
@@ -143,11 +150,18 @@ describe("Battle Map zoom", () => {
     await user.click(await within(await screen.findByRole("region", { name: "Initiative" })).findByRole("button", { name: /start encounter/i }));
     const map = within(await screen.findByRole("region", { name: "Battle Map" }));
     const grid = await map.findByRole("group", { name: "Battle grid" });
-    expect(grid.style.width).toBe("");
+    const fit = grid.getAttribute("viewBox")!;
+    const width = () => Number(grid.getAttribute("viewBox")!.split(" ")[2]);
+    const w0 = width();
     expect(map.getByRole("button", { name: "Fit" })).toHaveAttribute("aria-pressed", "true");
-    await user.click(map.getByRole("button", { name: "Zoom in" }));
-    expect(grid.style.width).toBe("480px"); // jsdom has no layout, so the first step (24 px) x 20 squares
+    for (let i = 0; i < 8; i++) await user.click(map.getByRole("button", { name: "Zoom in" }));
+    expect(width()).toBeCloseTo(w0 / 1.5 ** 8);
+    expect(map.getByRole("button", { name: "Zoom in" })).toBeEnabled();
+    expect(map.getByRole("button", { name: "Fit" })).toHaveAttribute("aria-pressed", "false");
+    for (let i = 0; i < 12; i++) await user.click(map.getByRole("button", { name: "Zoom out" }));
+    expect(width()).toBeCloseTo(w0 * 1.5 ** 4); // past the fit view: the grid shrinks inside empty space
+    expect(map.getByRole("button", { name: "Zoom out" })).toBeEnabled();
     await user.click(map.getByRole("button", { name: "Fit" }));
-    expect(grid.style.width).toBe("");
+    expect(grid.getAttribute("viewBox")).toBe(fit);
   });
 });

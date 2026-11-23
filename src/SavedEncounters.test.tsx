@@ -51,6 +51,7 @@ describe("saved encounters", () => {
     expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
+    await user.click(await screen.findByRole("button", { name: /end without xp/i }, { timeout: 4000 }));
 
     const saved = await screen.findByRole("list", { name: /saved encounters/i });
     const item = within(saved).getByRole("listitem", { name: "Goblin ambush" });
@@ -68,6 +69,7 @@ describe("saved encounters", () => {
 
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
+    await user.click(await screen.findByRole("button", { name: /end without xp/i }, { timeout: 4000 }));
     await user.click(within(await screen.findByRole("listitem", { name: "Ambush" })).getByRole("button", { name: /delete/i }));
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Ambush" })).not.toBeInTheDocument());
     expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(0);

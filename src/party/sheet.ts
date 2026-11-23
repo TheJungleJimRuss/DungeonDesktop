@@ -81,8 +81,16 @@ export const DAMAGE_TYPES = [
 ] as const;
 export const DAMAGE_DICE = [4, 6, 8, 10, 12] as const;
 
+export type AttackAbility = "str" | "dex" | "finesse" | "spell";
+
 export interface Attack {
   name: string;
+  /** Ability the attack uses; absent = legacy attack that keeps its typed attackBonus and bonus. */
+  ability?: AttackAbility;
+  /** Add proficiency bonus to hit; absent = true when ability is set. */
+  proficient?: boolean;
+  /** Magic bonus added to both to-hit and damage. */
+  magic?: number;
   /** How many of this weapon the character carries; absent = 1. */
   quantity?: number;
   /** To-hit bonus added to the attack roll (may be negative); absent = none. */
@@ -96,24 +104,57 @@ export interface Attack {
   type: string;
 }
 
-/** Dice expression for the roller, e.g. "2d6+3"; null when the attack has no damage. */
-export function attackExpression(a: Attack): string | null {
+/** What an attack needs from its owner to compute live numbers. A PartyMember fits. */
+export interface AttackContext {
+  abilities?: Partial<Abilities>;
+  level: number;
+  spellcastingAbility?: AbilityKey;
+}
+
+export const ATTACK_ABILITY_LABELS: Record<AttackAbility, string> = { str: "STR", dex: "DEX", finesse: "Finesse (STR or DEX)", spell: "Spell" };
+
+/** Ability modifier an attack uses; 0 for legacy attacks, and for Spell with no spellcasting ability. */
+export function attackAbilityMod(ctx: AttackContext, a: Attack): number {
+  if (!a.ability) return 0;
+  const ab = { ...DEFAULT_ABILITIES, ...ctx.abilities };
+  const mod = (k: AbilityKey) => abilityMod(ab[k]);
+  if (a.ability === "finesse") return Math.max(mod("str"), mod("dex"));
+  if (a.ability === "spell") return ctx.spellcastingAbility ? mod(ctx.spellcastingAbility) : 0;
+  return mod(a.ability);
+}
+
+/** To-hit for an attack; legacy attacks keep their stored bonus (null when none). */
+export function attackToHit(ctx: AttackContext, a: Attack): number | null {
+  if (!a.ability) return a.attackBonus ? a.attackBonus : null;
+  return attackAbilityMod(ctx, a) + (a.proficient === false ? 0 : proficiencyBonus(ctx.level)) + (a.magic ?? 0);
+}
+
+/** Dice expression for the roller, e.g. "2d6+3"; null when the attack has no damage. Pass ctx to include ability mod and magic. */
+export function attackExpression(a: Attack, ctx?: AttackContext): string | null {
+  const bonus = a.bonus + (ctx && a.ability ? attackAbilityMod(ctx, a) + (a.magic ?? 0) : 0);
   const dice = a.count > 0 && a.die > 0 ? `${a.count}d${a.die}` : "";
-  if (!dice) return a.bonus ? String(Math.max(0, a.bonus)) : null;
-  return a.bonus ? `${dice}${a.bonus > 0 ? "+" : "-"}${Math.abs(a.bonus)}` : dice;
+  if (!dice) return bonus ? String(Math.max(0, bonus)) : null;
+  return bonus ? `${dice}${bonus > 0 ? "+" : "-"}${Math.abs(bonus)}` : dice;
 }
 
 /** "Dagger" or "Dagger ×3". */
 export const attackLabel = (a: Attack) => countLabel(a);
 
-/** "+5 to hit", or "" when the attack has no to-hit bonus. */
-export const attackToHitText = (a: Attack) => (a.attackBonus ? `${signed(a.attackBonus)} to hit` : "");
+/** "+5 to hit", or "" when the attack has no to-hit bonus. Pass ctx to compute new-style attacks. */
+export function attackToHitText(a: Attack, ctx?: AttackContext): string {
+  const n = ctx ? attackToHit(ctx, a) : a.ability ? null : a.attackBonus || null;
+  return n === null ? "" : `${signed(n)} to hit`;
+}
 
 /** "2d6+3 slashing", or "—" with no damage. */
-export function attackDamageText(a: Attack): string {
-  const e = attackExpression(a);
+export function attackDamageText(a: Attack, ctx?: AttackContext): string {
+  const e = attackExpression(a, ctx);
   return e ? `${e}${a.type ? ` ${a.type}` : ""}` : "—";
 }
+
+/** "+5 to hit — 2d6+3 slashing" (to-hit part omitted for legacy attacks with none). */
+export const attackSummary = (a: Attack, ctx?: AttackContext) =>
+  [attackToHitText(a, ctx), attackDamageText(a, ctx)].filter(Boolean).join(" — ");
 
 /** Reads an attack list, tolerating the earlier string-list and text formats. */
 export function asAttacks(v: (Attack | string)[] | string | undefined): Attack[] {
@@ -159,4 +200,27 @@ export function asEquipment(v: (EquipmentEntry | string)[] | string | undefined)
       return { ...x, contents: (x.contents as (PackItem | string)[]).map(asPackItem).filter((c) => c.name) };
     })
     .filter((e) => e.name);
+}
+
+/** "Candle (10)" → { name: "Candle", quantity: 10 }; SRD pack contents carry their count in brackets. */
+export function parsePackItem(s: string): PackItem {
+  const m = s.trim().match(/^(.*?)\s*\((\d+)\)$/);
+  if (!m) return { name: s.trim() };
+  const quantity = toCount(Number(m[2]));
+  return quantity > 1 ? { name: m[1], quantity } : { name: m[1] };
+}
+
+/** The SRD equipment entry named `name` (case-insensitive), if any. */
+export const findSrdItem = <T extends { name: string }>(name: string, srd: T[] | undefined) => {
+  const key = name.trim().toLowerCase();
+  return srd?.find((x) => x.name.toLowerCase() === key);
+};
+
+/** A new equipment entry. A name matching an SRD pack becomes that pack with its contents filled in;
+ *  `asPack` makes any name a pack (empty unless the SRD knows its contents). */
+export function newEquipmentEntry(name: string, count: number, srd: { name: string; contents?: string[] }[] | undefined, asPack = false): EquipmentEntry {
+  const hit = findSrdItem(name, srd);
+  const contents = hit?.contents?.length ? hit.contents.map(parsePackItem) : asPack ? [] : undefined;
+  const entry: EquipmentEntry = { name: hit?.name ?? name.trim(), ...(contents ? { contents } : {}) };
+  return count > 1 ? { ...entry, quantity: count } : entry;
 }

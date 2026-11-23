@@ -37,6 +37,7 @@ describe("End encounter asks first", () => {
     expect(row("Thia")).toBeInTheDocument();
     await user.click(within(p).getByRole("button", { name: /end encounter/i }));
     await user.click(within(p).getByRole("button", { name: /yes, end it/i }));
+    await user.click(await within(p).findByRole("button", { name: /end without xp/i }));
     expect(await within(p).findByText(/no encounter in progress/i)).toBeInTheDocument();
   });
 });
@@ -45,29 +46,29 @@ describe("A PC at 0 HP", () => {
   it("is Dying with death saves, survives 'remove defeated', and dies on three failures", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await openCombatWithThia(user);
+    const p = await openCombatWithThia(user);
     await user.click(screen.getByRole("checkbox", { name: /remove defeated/i }));
-    await user.type(screen.getByLabelText("Amount Thia"), "40");
-    await user.click(screen.getByRole("button", { name: "Damage Thia" }));
+    await user.type(within(p).getByLabelText("Amount Thia"), "40");
+    await user.click(within(p).getByRole("button", { name: "Damage Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByText("Dying")).toBeInTheDocument());
     expect(row("Thia")).toHaveClass("dying");
-    for (let i = 0; i < 3; i++) await user.click(screen.getByRole("button", { name: "Death save failure Thia" }));
+    for (let i = 0; i < 3; i++) await user.click(within(p).getByRole("button", { name: "Death save failure Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByText("Dead")).toBeInTheDocument());
   });
 
   it("stabilises on three successes and clears the saves when healed", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await openCombatWithThia(user);
-    await user.type(screen.getByLabelText("Amount Thia"), "40");
-    await user.click(screen.getByRole("button", { name: "Damage Thia" }));
-    await user.click(await screen.findByRole("button", { name: "Death save success Thia" }));
+    const p = await openCombatWithThia(user);
+    await user.type(within(p).getByLabelText("Amount Thia"), "40");
+    await user.click(within(p).getByRole("button", { name: "Damage Thia" }));
+    await user.click(await within(p).findByRole("button", { name: "Death save success Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByLabelText("Death save successes Thia")).toHaveTextContent("1/3"));
-    await user.click(screen.getByRole("button", { name: "Death save success Thia" }));
-    await user.click(screen.getByRole("button", { name: "Death save success Thia" }));
+    await user.click(within(p).getByRole("button", { name: "Death save success Thia" }));
+    await user.click(within(p).getByRole("button", { name: "Death save success Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByText("Stable")).toBeInTheDocument());
-    await user.type(screen.getByLabelText("Amount Thia"), "5");
-    await user.click(screen.getByRole("button", { name: "Heal Thia" }));
+    await user.type(within(p).getByLabelText("Amount Thia"), "5");
+    await user.click(within(p).getByRole("button", { name: "Heal Thia" }));
     await waitFor(() => expect(within(row("Thia")).getByLabelText("HP Thia")).toHaveTextContent("HP 5/28"));
     expect(within(row("Thia")).queryByText(/Stable|Dying/)).toBeNull();
   });

@@ -39,7 +39,7 @@ const PREP_ALL: PanelPlacement[] = [
 
 export const MODES: ModeDefinition[] = [
   { id: "combat", label: "Combat", shortcut: "Alt+1",
-    layout: [p("battle-map", 1, 6, 1, 2), p("initiative-tracker", 7, 6, 1), p("combatant-stat-block", 7, 3, 2), p("dice-roller", 10, 3, 2)] },
+    layout: [p("battle-map", 1, 6, 1, 2), p("initiative-tracker", 7, 6, 1), p("combatant-stat-block", 7, 3, 2), p("player-card", 10, 3, 2), p("dice-roller", 7, 6, 3)] },
   { id: "exploration", label: "Explore", shortcut: "Alt+2",
     layout: [p("world-map", 1, 8, 1, 2), p("player-card", 9, 4, 1), p("passive-perception", 9, 4, 2), p("locations", 1, 12, 3)] },
   { id: "social", label: "Roleplay", shortcut: "Alt+3",

@@ -5,10 +5,11 @@ import { asLanguages, asList, currentHpOf, listParty, updatePartyMember, type Pa
 import { passivePerceptionOf } from "../party/passive";
 import {
   ABILITIES, ABILITY_NAMES, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
-  attackDamageText, attackLabel, countLabel, isPack, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc, type SkillLevel,
+  attackLabel, attackSummary, proficiencyBonus, countLabel, isPack, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc, type SkillLevel,
 } from "../party/sheet";
 import { Loading, EmptyState } from "../ui/PanelStates";
 import CoinPurse from "./CoinPurse";
+import XpAward from "./XpAward";
 
 /** 10 + skill modifier; null when the member has no sheet abilities to work from. */
 function passiveSkill(m: PartyMember, key: string): number | null {
@@ -70,6 +71,7 @@ function Overview({ m }: { m: PartyMember }) {
     <>
       <div className="party-stats">
         <span>AC {m.ac}</span>
+        <span>Proficiency {signed(proficiencyBonus(m.level))}</span>
         <span>HP {hp}/{m.maxHp}</span>
         <span>Passive Perception {passivePerceptionOf(m)}</span>
         {insight !== null && <span>Passive Insight {insight}</span>}
@@ -83,6 +85,7 @@ function Overview({ m }: { m: PartyMember }) {
         <button type="button" aria-pressed={!!m.inspiration} aria-label={`Inspiration ${m.name}`} title="Inspiration"
           onClick={() => void updatePartyMember(m.id, { inspiration: !m.inspiration })}>★ Inspiration</button>
       </div>
+      <XpAward m={m} />
       <dl>
         {([["Languages", languages], ["Speed", m.speed], ["Personality", m.personality], ["Notes", m.notes]] as [string, string | undefined][])
           .filter(([, v]) => v?.trim()).map(([k, v]) => <div key={k}><dt className="muted">{k}</dt><dd>{v}</dd></div>)}
@@ -143,7 +146,7 @@ function Gear({ m }: { m: PartyMember }) {
     <>
       <section><h4>Attacks</h4>
         {attacks.length === 0 ? <p className="muted">None.</p>
-          : <ul className="sheet-items">{attacks.map((a, i) => <li key={i}>{attackLabel(a)} — {attackDamageText(a)}</li>)}</ul>}
+          : <ul className="sheet-items">{attacks.map((a, i) => <li key={i}>{attackLabel(a)} — {attackSummary(a, m)}</li>)}</ul>}
       </section>
       <section><h4>Equipment</h4>
         {equipment.length === 0 ? <p className="muted">None.</p>
@@ -189,10 +192,18 @@ function Spells({ m }: { m: PartyMember }) {
   );
 }
 
+/** Generated entries first, then the DM's own. */
+function Listing({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null;
+  return <section><h4>{title}</h4><ul className="sheet-items">{items.map((x, i) => <li key={i}>{x}</li>)}</ul></section>;
+}
+
 function Story({ m }: { m: PartyMember }) {
   const save = (p: Partial<PartyMember>) => void updatePartyMember(m.id, p);
   return (
     <>
+      <Listing title="Features and traits" items={[...(m.autoFeatures ?? []), ...asList(m.features)]} />
+      <Listing title="Proficiencies" items={[...(m.autoProficiencies ?? []), ...asList(m.proficiencies)]} />
       <EditableText label="Personality" value={m.personality} onSave={(personality) => save({ personality })} />
       <EditableText label="Backstory" value={m.backstory} onSave={(backstory) => save({ backstory })} />
       <EditableText label="Notes" value={m.notes} onSave={(notes) => save({ notes })} />
@@ -200,14 +211,17 @@ function Story({ m }: { m: PartyMember }) {
   );
 }
 
+/** First word of a name, for the compact player card. */
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+
 function PlayerCard({ m }: { m: PartyMember }) {
   const [tab, setTab] = useState<Tab>("Overview");
   return (
     <article className="player-card npc-view" aria-label={`${m.name} player card`}>
-      <h3>{m.name}</h3>
+      <h3>{firstName(m.name)}</h3>
       <p className="muted">
         {[m.race, `${m.class || "Adventurer"} ${m.level}`, m.background].filter(Boolean).join(" · ")}
-        {m.playerName ? ` · played by ${m.playerName}` : ""}
+        {m.playerName ? ` · played by ${firstName(m.playerName)}` : ""}
       </p>
       <div className="player-tabs" role="group" aria-label="Player card sections">
         {TABS.map((t) => <button key={t} type="button" aria-pressed={t === tab} onClick={() => setTab(t)}>{t}</button>)}
@@ -238,7 +252,7 @@ function PlayerCardPanel({ campaign }: PanelProps) {
       <div className="player-picker" role="group" aria-label="Player characters">
         {members.map((m) => (
           <button key={m.id} aria-pressed={m.id === current.id} onClick={() => setSelected(m.id)}>
-            {m.name}
+            {firstName(m.name)}
             <span className={`hp-bar player-hp ${hpPercent(m) > 50 ? "ok" : hpPercent(m) > 25 ? "bloodied" : "down"}`} aria-hidden="true">
               <span style={{ width: `${hpPercent(m)}%` }} />
             </span>

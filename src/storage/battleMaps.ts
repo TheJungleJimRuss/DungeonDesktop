@@ -45,13 +45,13 @@ export async function getBattleMap(encounterId: string): Promise<BattleMap | und
   return (await (await getDb()).get("battleMaps", encounterId)) as unknown as BattleMap | undefined;
 }
 
-/** Read-modify-write one map (created from defaults on first change). Tokens are kept inside the grid. */
+/** Read-modify-write one map (created from defaults on first change). Tokens snap to whole squares; the grid has no edge, so they may sit outside width x height. */
 export async function updateBattleMap(campaignId: string, encounterId: string, change: (m: BattleMap) => BattleMap): Promise<void> {
   const db = await getDb();
   const tx = db.transaction("battleMaps", "readwrite");
   const row = (await tx.store.get(encounterId)) as unknown as BattleMap | undefined;
   const next = change(row ?? defaultMap(campaignId, encounterId));
-  next.tokens = next.tokens.map((t) => ({ ...t, x: clampInt(t.x, 0, next.width - 1), y: clampInt(t.y, 0, next.height - 1) }));
+  next.tokens = next.tokens.map((t) => ({ ...t, x: Math.round(t.x), y: Math.round(t.y) }));
   await tx.store.put(next as unknown as CollectionRecord);
   await tx.done;
 }

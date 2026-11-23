@@ -385,16 +385,16 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 .shortcut-list > div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); padding:3px 0; }
 .shortcut-list dt { margin:0; } .shortcut-list dd { margin:0; }
 .map-node text.map-party { fill:var(--accent, currentColor); font-weight:700; }
-.battle-scroll { overflow:auto; max-height:70vh; border-radius:6px; }
-.battle-scroll.fit { overflow:hidden; }
+.battle-scroll { overflow:hidden; border-radius:6px; }
 .battle-grid { display:block; }
-.battle-scroll.fit .battle-grid { max-height:max(280px, calc(100vh - 270px)); } /* whole map in view; letterboxed, pointer maths uses the CTM */
-.battle-scroll:not(.fit) .battle-grid { max-width:none; height:auto; }
+.battle-scroll .battle-grid { max-height:max(280px, calc(100vh - 270px)); } /* zoom and pan move the viewBox; letterboxed, pointer maths uses the CTM */
+.battle-grid .battle-bg { fill:transparent; cursor:grab; } .battle-grid .battle-bg:active { cursor:grabbing; }
 .map-settings { display:flex; flex-direction:column; gap:6px; }
 .map-settings > summary { cursor:pointer; font-size:13px; } .map-settings[open] > summary { margin-bottom:6px; }
 .map-settings > .row { flex-wrap:wrap; margin-bottom:6px; }
 .zoom-ctl { gap:2px; margin-left:auto; } .zoom-ctl button { min-width:32px; }
-.battle-grid .grid-line { stroke:var(--line); stroke-width:1; }
+.battle-grid .grid-line { stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
+.battle-grid .battle-area { fill:none; stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 4; vector-effect:non-scaling-stroke; } /* the map's set size: what Fit shows */
 .battle-grid.has-bg .grid-line { stroke:rgba(0,0,0,.6); stroke-width:1.5; } /* stays visible over any image */
 .battle-token { cursor:grab; } .battle-token:focus { outline:none; } .battle-token:focus circle { stroke:currentColor; stroke-width:4; }
 .battle-token circle { stroke:var(--line); stroke-width:2; } .token-label { fill:#fff; font-size:17px; font-weight:800; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.35); stroke-width:2px; } .token-label.long { font-size:13px; }
@@ -750,3 +750,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 input.loc-size { width:64px; }
 .map-node circle.map-hit { fill:transparent; stroke:none; }
 .map-node circle:not(.map-hit) { transition:r .12s ease-out; }
+
+/* Battle Map speed ring: how far the selected token can move this turn. */
+.battle-grid .speed-ring rect { fill:var(--accent, #f39c12); fill-opacity:.07; stroke:var(--accent, #f39c12); stroke-opacity:.55; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }
+.battle-grid .speed-ring text { fill:var(--accent, #f39c12); fill-opacity:.85; font-size:16px; font-weight:700; paint-order:stroke; stroke:var(--bg, #fff); stroke-width:3px; }
+
+/* Auto-filled character sheet fields. */
+.sheet-form .auto-field { display:flex; flex-direction:column; gap:2px; }
+.sheet-form .auto-field.wide { flex-direction:row; align-items:center; gap:8px; }
+.auto-tag { font-size:10px; letter-spacing:.04em; text-transform:uppercase; padding:0 5px; border-radius:8px; border:1px solid var(--line); color:var(--muted); align-self:flex-start; }
+.sheet-form .auto-reset { font-size:11px; padding:1px 6px; align-self:flex-start; }
+.generated-list ul { margin:2px 0 6px; padding-left:18px; }
+.sheet-items li.generated { list-style:none; }
+
+/* XP award (card) and Award XP to party (end encounter) */
+.xp-award { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0.4rem 0; }
+.xp-award input { width: 5rem; }
+.xp-total { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 600; }
+.xp-total input { width: 6.5rem; }
+.xp-status { font-weight: 600; }
+.award-xp { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border, currentColor); border-radius: 6px; }
+.award-xp input { width: 6rem; }
+.award-xp ul { flex-basis: 100%; margin: 0; padding-left: 1.2rem; }

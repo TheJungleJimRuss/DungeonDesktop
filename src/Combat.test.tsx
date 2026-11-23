@@ -109,6 +109,7 @@ describe("combat setup and initiative", () => {
 
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
+    await user.click(await screen.findByRole("button", { name: /end without xp/i }, { timeout: 4000 }));
     expect(await screen.findByText(/no encounter in progress/i)).toBeInTheDocument();
     expect((await exportCampaign(id))!.collections.encounters).toHaveLength(0);
   });

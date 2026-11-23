@@ -31,6 +31,7 @@ export const FIXTURE_REFERENCE: ReferenceData = {
   magicItems: [{ id: "test-bag", name: "Bag of Holding Test", category: "Wondrous Item", rarity: "Uncommon", attunement: "", desc: "This bag has an interior space.", variants: [] }],
   equipment: [
     { id: "test-longsword", name: "Longsword Test", categories: ["Weapons", "Martial Weapons"], cost: "15 gp", weight: 3, properties: ["Versatile"], desc: "", damage: "1d8 Slashing (1d10 two-handed)", mastery: "Sap" },
+    { id: "test-explorers-pack", name: "Explorer's Pack", categories: ["Adventuring Gear", "Equipment Packs"], cost: "10 gp", weight: 55, properties: [], desc: "", contents: ["Backpack", "Rations (10)", "Torch (10)"] },
     { id: "test-plate", name: "Plate Test", categories: ["Armor", "Heavy Armor"], cost: "1500 gp", weight: 65, properties: [], desc: "", armorClass: "18", stealthDisadvantage: true, strMinimum: 15 },
   ],
   conditions: [{ id: "test-blinded", name: "Blinded", desc: "While you have the Blinded condition:\n**Can't See.** You can't see." }],
@@ -73,11 +74,14 @@ export const FIXTURE_CHARACTER: CharacterData = {
         { level: 1, profBonus: 2, columns: { Rages: 2, "Rage Damage": "+2" }, featureIds: ["test-rage", "test-brute-sub"] },
         { level: 2, profBonus: 2, columns: { Rages: 2, "Rage Damage": "+2" }, featureIds: [] },
       ], subclasses: [{ id: "test-path", name: "Path Test" }] },
-    { id: "test-mage", name: "Mage Test", hitDie: 6, primaryAbility: "Intelligence", savingThrows: ["Intelligence", "Wisdom"], proficiencies: ["Daggers"],
+    { id: "test-mage", name: "Mage Test", spellcastingAbility: "int", hitDie: 6, primaryAbility: "Intelligence", savingThrows: ["Intelligence", "Wisdom"], proficiencies: ["Daggers"],
       skillChoices: "Choose 2: Arcana or History", startingEquipment: "(a) Spellbook or (b) 55 GP", multiclass: "Prerequisite: Intelligence 13.",
       levels: [
         { level: 1, profBonus: 2, columns: { Cantrips: 3, "Prepared Spells": 4, "1st": 2, "2nd": "—" }, featureIds: ["test-casting"] },
-        { level: 2, profBonus: 2, columns: { Cantrips: 3, "Prepared Spells": 5, "1st": 3, "2nd": "—" }, featureIds: [] },
+        { level: 2, profBonus: 2, columns: { Cantrips: 3, "Prepared Spells": 5, "1st": 3, "2nd": "—" }, featureIds: ["test-recovery"] },
+        { level: 3, profBonus: 2, columns: { Cantrips: 3, "Prepared Spells": 6, "1st": 4, "2nd": 2, "3rd": "—" }, featureIds: [] },
+        { level: 4, profBonus: 2, columns: { Cantrips: 4, "Prepared Spells": 7, "1st": 4, "2nd": 3, "3rd": "—" }, featureIds: [] },
+        { level: 5, profBonus: 3, columns: { Cantrips: 4, "Prepared Spells": 9, "1st": 4, "2nd": 3, "3rd": 2 }, featureIds: ["test-mage-fire"] },
       ], subclasses: [] },
   ],
   subclasses: [
@@ -88,6 +92,8 @@ export const FIXTURE_CHARACTER: CharacterData = {
     { id: "test-rage", name: "Rage Test", class: { id: "test-brute", name: "Savage Test" }, level: 1, description: "You can enter a **Rage** as a Bonus Action." },
     { id: "test-brute-sub", name: "Savage Test Subclass", class: { id: "test-brute", name: "Savage Test" }, level: 1, description: "Choose a Brute subclass." },
     { id: "test-casting", name: "Casting Test", class: { id: "test-mage", name: "Mage Test" }, level: 1, description: "You can cast spells." },
+    { id: "test-recovery", name: "Recovery Test", class: { id: "test-mage", name: "Mage Test" }, level: 2, description: "You regain spell slots." },
+    { id: "test-mage-fire", name: "Mage Fire Test", class: { id: "test-mage", name: "Mage Test" }, level: 5, description: "Fire." },
     { id: "test-frenzy", name: "Frenzy Test", class: { id: "test-brute", name: "Savage Test" }, subclass: { id: "test-path", name: "Path Test" }, level: 3, description: "Extra damage while raging." },
   ],
 };
