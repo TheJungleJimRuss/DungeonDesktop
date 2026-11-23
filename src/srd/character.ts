@@ -6,6 +6,8 @@ export interface Feat {
 export interface Background {
   id: string; name: string; abilityScores: string[]; feat: { id: string; name: string }; skills: string[]; tools: string[];
   equipment: string[]; proficiencyChoices?: string[];
+  /** Set on hand-written entries that are not in SRD 5.2.1 (src/data/extra/). Their feat id is "" when the feat isn't in the SRD. */
+  source?: string;
 }
 export interface NameRef { id: string; name: string }
 export interface Species { id: string; name: string; type: string; size: string; speed: number; traits: NameRef[]; subspecies: NameRef[] }
@@ -39,15 +41,16 @@ export interface CharacterData {
 
 export type CharacterSource = () => Promise<CharacterData>;
 const bundled: CharacterSource = async () => {
-  const [feats, backgrounds, rules, species, subspecies, traits, classes, classLevels, subclasses, classFeatures] = await Promise.all([
+  const [feats, backgrounds, rules, species, subspecies, traits, classes, classLevels, subclasses, classFeatures, extraBackgrounds] = await Promise.all([
     import("../data/srd/feats.json"), import("../data/srd/backgrounds.json"), import("../data/srd/rules.json"),
     import("../data/srd/species.json"), import("../data/srd/subspecies.json"), import("../data/srd/traits.json"),
     import("../data/srd/classes.json"), import("../data/srd/class-levels.json"), import("../data/srd/subclasses.json"), import("../data/srd/class-features.json"),
+    import("../data/extra/backgrounds-phb2024.json"),
   ]);
   const features = classFeatures.default as ClassFeature[];
   const levels = new Map((classLevels.default as { id: string; levels: ClassLevel[] }[]).map((c) => [c.id, c.levels]));
   return {
-    feats: feats.default as Feat[], backgrounds: backgrounds.default as Background[], rules: rules.default as Rule[],
+    feats: feats.default as Feat[], backgrounds: [...(backgrounds.default as Background[]), ...(extraBackgrounds.default as Background[])].sort((a, b) => a.name.localeCompare(b.name)), rules: rules.default as Rule[],
     species: species.default as Species[], subspecies: subspecies.default as Subspecies[], traits: traits.default as Trait[],
     classes: (classes.default as Omit<Class, "levels">[]).map((c) => ({ ...c, levels: levels.get(c.id) ?? [] })),
     subclasses: (subclasses.default as Omit<Subclass, "features">[]).map((sc) => ({

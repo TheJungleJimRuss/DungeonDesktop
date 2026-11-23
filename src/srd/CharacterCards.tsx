@@ -24,10 +24,10 @@ export function BackgroundView({ b, onOpen }: { b: Background; onOpen?: OpenRef 
   return (
     <article className="stat-block ref-card" aria-label={`${b.name} background`}>
       <h3 className="sb-name">{b.name}</h3>
-      <p className="sb-sub"><em>Background</em></p>
+      <p className="sb-sub"><em>Background{b.source ? ` (${b.source}, not in SRD 5.2.1)` : ""}</em></p>
       <Line label="Ability Scores" value={b.abilityScores.join(", ")} />
       <p className="sb-line"><strong>Feat</strong>{" "}
-        {onOpen ? <button type="button" className="link" onClick={() => onOpen("feat", b.feat.id)}>{b.feat.name}</button> : b.feat.name}</p>
+        {onOpen && b.feat.id ? <button type="button" className="link" onClick={() => onOpen("feat", b.feat.id)}>{b.feat.name}</button> : b.feat.name}</p>
       <Line label="Skill Proficiencies" value={b.skills.join(", ")} />
       <Line label="Tool Proficiencies" value={b.tools.join(", ")} />
       {b.proficiencyChoices?.map((c) => <Line key={c} label="Choice" value={c} />)}

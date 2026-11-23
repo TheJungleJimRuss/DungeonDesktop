@@ -77,7 +77,8 @@ describe("bundled SRD character data", () => {
     setCharacterSource(null);
     const c = await loadCharacterData();
     expect(c.feats).toHaveLength(17);
-    expect(c.backgrounds).toHaveLength(4);
+    expect(c.backgrounds).toHaveLength(16);
+    expect(c.backgrounds.filter((b) => !b.source).map((b) => b.id)).toEqual(["acolyte", "criminal", "sage", "soldier"]);
     expect(c.rules).toHaveLength(84);
     for (const [kind, n] of Object.entries({ skill: 18, language: 19, "damage-type": 13, "weapon-property": 10, "weapon-mastery": 8, alignment: 10, "ability-score": 6 })) {
       expect(c.rules.filter((r) => r.kind === kind), kind).toHaveLength(n);
@@ -97,7 +98,8 @@ describe("bundled SRD character data", () => {
     }
     for (const f of c.feats) expect(f.description.length, f.name).toBeGreaterThan(10);
     for (const b of c.backgrounds) {
-      expect(c.feats.map((f) => f.id), b.name).toContain(b.feat.id);
+      if (b.feat.id || !b.source) expect(c.feats.map((f) => f.id), b.name).toContain(b.feat.id);
+      else expect(b.feat.name, b.name).toBeTruthy();
       expect(b.abilityScores.length && b.skills.length && b.equipment.length, b.name).toBeTruthy();
     }
     expect([c.species.length, c.subspecies.length, c.traits.length]).toEqual([9, 24, 67]);
