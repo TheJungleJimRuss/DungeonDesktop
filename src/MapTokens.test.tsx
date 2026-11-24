@@ -123,12 +123,13 @@ describe("Tokens on a Map", () => {
     await user.click(panel.getByRole("button", { name: "Zoom out" }));
     await user.click(panel.getByLabelText("Square -2,0"));
     await user.click(panel.getByLabelText("Square 2,0"));
-    expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("4 squares, 20 ft");
+    // the count is in shown grid squares (zoomed out, each stands for 1.5 of the Map's), the distance in the Map's unit
+    expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("2.67 squares, 20 ft");
 
     await setVal(user, panel.getByLabelText("Scale per square"), "10");
     await waitFor(() => expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("40 ft"));
     await user.selectOptions(panel.getByLabelText("Scale unit"), "mi");
-    await waitFor(() => expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("4 squares, 40 mi"));
+    await waitFor(() => expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("2.67 squares, 40 mi"));
     expect(panel.getByTestId("ruler-line").parentElement).toHaveTextContent("40 mi");
 
     await user.click(panel.getByRole("button", { name: "Clear measurement" }));

@@ -55,6 +55,16 @@ test("places a Marker by click and drags it freely: fractional positions are sto
   expect(Math.abs(dropped.y - 9.6)).toBeLessThan(0.1);
   expect(dropped.x % 1).not.toBe(0);
 
+  // In the Marker tool a press on a Marker drags it instead of placing another.
+  await map.getByRole("button", { name: "Marker", exact: true }).click();
+  const m2 = await map.getByRole("button", { name: "Marker Camp", exact: true }).boundingBox();
+  await page.mouse.move(m2!.x + m2!.width / 2, m2!.y + m2!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(...at(6.5, 3.5), { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await storedMarkers(page))[0].x).toBeLessThan(7);
+  expect(await storedMarkers(page)).toHaveLength(1);
+
   await page.keyboard.press("Delete");
   await expect.poll(async () => (await storedMarkers(page)).length).toBe(0);
 });

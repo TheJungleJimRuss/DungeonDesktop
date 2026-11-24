@@ -382,7 +382,6 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 .map-settings > .row { flex-wrap:wrap; margin-bottom:6px; }
 .zoom-ctl { gap:2px; margin-left:auto; } .zoom-ctl button { min-width:32px; }
 .map-canvas .grid-line { stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
-.map-canvas .map-extent { fill:none; stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 4; vector-effect:non-scaling-stroke; } /* the map's set size: what Fit shows */
 .map-canvas.has-bg .grid-line { stroke:rgba(0,0,0,.6); stroke-width:1.5; } /* stays visible over any image */
 .map-token { cursor:grab; } .map-token:focus { outline:none; } .map-token:focus circle { stroke:currentColor; stroke-width:4; }
 .map-token circle { stroke:var(--line); stroke-width:2; } .token-label { fill:#fff; font-size:17px; font-weight:800; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.35); stroke-width:2px; } .token-label.long { font-size:13px; }
@@ -392,7 +391,7 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 
 .init-row.selected { outline:2px solid var(--accent); } .init-selected { font-weight:bold; }
 .map-token .token-selected { stroke:var(--accent, #f39c12); stroke-width:3; }
-.map-token .party-ring { stroke:#b7791f; stroke-width:4; } .map-token .party-star { fill:#7a4b00; font-size:22px; font-weight:800; pointer-events:none; }
+.map-token .party-ring { stroke:#b7791f; stroke-width:2.5; } .map-token .party-star { fill:#7a4b00; font-size:15px; font-weight:800; pointer-events:none; }
 .map-token.defeated circle:first-of-type { opacity:.45; } .map-token .token-defeated-mark { stroke:#fff; stroke-width:4; stroke-linecap:round; pointer-events:none; }
 
 /* Narrow cards: let control rows wrap instead of squeezing or clipping. */
@@ -785,6 +784,9 @@ input.loc-size { width:64px; }
 .map-door { fill:var(--bg); stroke:var(--accent, #f39c12); stroke-width:calc(1.5px * var(--ui)); }
 .map-line { cursor:pointer; } .map-line:focus { outline:none; }
 .map-line.selected .map-plain, .map-line.selected .map-wall { stroke:var(--accent, #f39c12); }
+.map-seg-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linecap:round; pointer-events:stroke; cursor:pointer; }
+.map-seg-hit:hover, .map-seg-hit.selected { stroke:color-mix(in srgb, var(--accent, #f39c12) 45%, transparent); }
+.map-area.selected .map-area-fill { cursor:move; }
 .map-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linejoin:round; pointer-events:stroke; }
 .map-route-path { stroke:var(--accent, #f39c12); stroke-width:calc(3px * var(--ui)); stroke-dasharray:calc(10px * var(--ui)) calc(6px * var(--ui)); stroke-linecap:round; stroke-linejoin:round; }
 .map-line.selected .map-route-path { stroke:var(--text, currentColor); }
@@ -810,3 +812,7 @@ input.loc-size { width:64px; }
 .map-icon-btn { padding:3px; line-height:0; }
 .map-marker-note { display:flex; flex-direction:column; gap:2px; } .map-marker-note textarea { width:100%; }
 .map-status { min-height:1.5em; line-height:1.5em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Map scale bar: a fixed corner of the canvas; its length and distance follow zoom. */
+.map-scroll { position:relative; }
+.map-scale { position:absolute; left:8px; bottom:8px; display:flex; flex-direction:column; gap:2px; padding:4px 6px; border-radius:4px; background:color-mix(in srgb, var(--bg) 80%, transparent); font-size:12px; font-weight:600; pointer-events:none; }
+.map-scale-bar { display:block; height:6px; border:2px solid currentColor; border-top:none; }

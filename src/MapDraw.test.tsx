@@ -48,18 +48,26 @@ describe("Lines and Shapes on a Map", () => {
     expect(first.querySelectorAll(".map-wall, .map-door")).toHaveLength(0);
 
     await user.click(first);
-    await user.selectOptions(await panel.findByLabelText("Segment 1 type"), "wall");
+    // One control for the whole Line until a segment is clicked on the canvas; no per-edge list.
+    expect(panel.queryByLabelText(/^Segment \d type$/)).not.toBeInTheDocument();
+    await user.selectOptions(await panel.findByLabelText("Line 1 type"), "wall");
+    await waitFor(async () => expect((await stored(id)).lines[0].segments).toEqual(["wall", "wall"]));
+    await user.click(panel.getByRole("button", { name: "Segment 2 of Line 1" }));
+    expect(panel.getAllByLabelText(/^Segment \d type$/)).toHaveLength(1);
     await user.selectOptions(panel.getByLabelText("Segment 2 type"), "door");
     await waitFor(async () => expect((await stored(id)).lines[0].segments).toEqual(["wall", "door"]));
+    await user.click(panel.getByRole("button", { name: "All segments" }));
+    expect(panel.getByLabelText("Line 1 type")).toHaveValue("mixed");
     expect(panel.getByRole("button", { name: "Line 1" }).querySelectorAll(".map-wall")).toHaveLength(1);
     expect(panel.getByRole("button", { name: "Line 1" }).querySelectorAll(".map-door")).toHaveLength(1);
     expect(panel.getByRole("button", { name: "Shape 1" }).querySelectorAll(".map-wall, .map-door")).toHaveLength(0);
 
     // A Shape has one extra segment (last back to first)
     await user.click(panel.getByRole("button", { name: "Shape 1" }));
+    expect(panel.getAllByRole("button", { name: /^Segment \d of Shape 1$/ })).toHaveLength(3);
+    await user.click(panel.getByRole("button", { name: "Segment 3 of Shape 1" }));
     await user.selectOptions(await panel.findByLabelText("Segment 3 type"), "wall");
     await waitFor(async () => expect((await stored(id)).lines[1].segments).toEqual(["plain", "plain", "wall"]));
-    expect(panel.getAllByLabelText(/^Segment \d type$/)).toHaveLength(3);
   });
 
   it("deletes the selection with the button and with Delete, but not while typing in a field", async () => {
@@ -83,7 +91,7 @@ describe("Lines and Shapes on a Map", () => {
     expect(panel.queryByRole("button", { name: /^Line \d/ })).not.toBeInTheDocument();
   });
 
-  it("Esc cancels the Line being drawn without leaving the Mode; with nothing drawn it still goes to the Dashboard", async () => {
+  it("Esc cancels the Line being drawn, then goes back to Select, and only then to the Dashboard", async () => {
     identitySvg();
     const user = userEvent.setup();
     render(<App />);
@@ -99,6 +107,9 @@ describe("Lines and Shapes on a Map", () => {
     expect(screen.queryByRole("heading", { name: /dashboard/i })).not.toBeInTheDocument();
     expect((await stored(id)).lines).toHaveLength(0);
 
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(panel.getByRole("button", { name: "Select" })).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.queryByRole("heading", { name: /dashboard/i })).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
     await screen.findByRole("heading", { name: /dashboard/i });
   });

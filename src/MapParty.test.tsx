@@ -35,6 +35,7 @@ const partyAt = async (id: string) => (await listCampaigns()).find((c) => c.id =
 const addParty = async (user: User, panel: ReturnType<typeof within>) => {
   await user.click(panel.getByRole("button", { name: "Add party token" }));
   const tok = await panel.findByRole("button", { name: "Party token" });
+  expect((tok.querySelector("g") as SVGGElement).style.transform).toBe("scale(var(--ui))"); // fixed on-screen size at any zoom
   tok.focus();
   return tok;
 };

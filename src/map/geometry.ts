@@ -2,6 +2,14 @@
 export interface Pt { x: number; y: number }
 
 /** The nearest grid corner. */
+/** Nearest multiple of `step` squares on both axes (the shown grid's corners when `step` is its square size). Rounded to 6 decimals,
+ *  so a step like 1/3 stores tidy numbers. */
+export const snapToStep = (p: Pt, step: number): Pt => {
+  const r = (n: number) => +(Math.round(n / step) * step).toFixed(6) + 0; // + 0 turns -0 into 0
+  return { x: r(p.x), y: r(p.y) };
+};
+/** Nearest grid corner, edge midpoint or square centre (half-square steps) of a grid whose squares are `step` squares wide. */
+export const snapToHalf = (p: Pt, step = 1): Pt => snapToStep(p, step / 2);
 export const snapToCorner = (p: Pt): Pt => ({ x: Math.round(p.x) + 0, y: Math.round(p.y) + 0 }); // + 0 turns -0 into 0
 
 /** Length of a polyline; a closed one adds the segment from the last point back to the first. */

@@ -1,20 +1,20 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
 import type { MapLine, SegmentKind } from "../storage/maps";
-import { snapToCorner, type Pt } from "./geometry";
+import { snapToStep, type Pt } from "./geometry";
 
 export const CELL = 40; // pixels per square in the canvas's own coordinates
 export const HIT_PX = 10; // screen pixels: how close a pointer must be to count as on a point or a segment
 
 /** Pointer to a point in squares, through the SVG's own transform (the canvas is letterboxed, so the element box is not the drawing's box).
- *  Snapped to grid corners while the grid is shown, free otherwise. Null when the transform is unavailable. */
-export function pointerSquare(el: SVGSVGElement | null, e: { clientX: number; clientY: number }, snap: boolean): Pt | null {
+ *  `snap` is the shown grid's square size in squares (its corners are snap points), or false for a free point. Null when the transform is unavailable. */
+export function pointerSquare(el: SVGSVGElement | null, e: { clientX: number; clientY: number }, snap: number | false): Pt | null {
   const ctm = el?.getScreenCTM?.();
   if (!el || !ctm) return null;
   const pt = el.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
   const p = pt.matrixTransform(ctm.inverse());
   const q = { x: p.x / CELL, y: p.y / CELL };
-  return snap ? snapToCorner(q) : q;
+  return snap ? snapToStep(q, snap) : q;
 }
 
 /** Screen pixels per SVG unit (the letterboxed canvas scales by its tighter side); 1 where nothing is laid out. Follows resizes. */

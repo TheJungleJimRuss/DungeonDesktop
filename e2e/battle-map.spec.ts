@@ -32,7 +32,7 @@ test("tokens snap to squares on pointer drag", async ({ page }) => {
 
 });
 
-test("ruler measures by pointer drag, snapping to squares, and leaves token dragging alone when off", async ({ page }) => {
+test("ruler measures by pointer drag, snapping to square centres and corners, and leaves token dragging alone when off", async ({ page }) => {
   await openCombat(page, "Ruler Camp");
   const map = page.getByRole("region", { name: "Map" });
   const grid = await map.getByRole("group", { name: "Map canvas" }).boundingBox();
@@ -44,9 +44,15 @@ test("ruler measures by pointer drag, snapping to squares, and leaves token drag
   await page.mouse.move(...at(2, 2, 0.3));
   await page.mouse.down();
   await page.mouse.move(...at(5, 4, 0.2), { steps: 8 });
-  await page.mouse.move(...at(7, 4, 0.8), { steps: 8 });
+  await page.mouse.move(...at(7, 4, 0.6), { steps: 8 });
   await page.mouse.up();
-  await expect(map.getByRole("status", { name: "Measured distance" })).toHaveText("5 squares, 25 ft");
+  await expect(map.getByRole("status", { name: "Measured distance" })).toHaveText("5 squares, 25 ft"); // centre to centre
+  await map.getByRole("button", { name: "Clear measurement" }).click();
+  await page.mouse.move(...at(2, 2, 0.1)); // near a corner: snaps to it
+  await page.mouse.down();
+  await page.mouse.move(...at(7, 4, 0.5), { steps: 8 }); // a square's centre
+  await page.mouse.up();
+  await expect(map.getByRole("status", { name: "Measured distance" })).toHaveText("5.5 squares, 27.5 ft");
 
   await map.getByRole("button", { name: "Ruler" }).click(); // off: measurement gone, drag moves tokens again
   await expect(map.getByTestId("ruler-line")).toHaveCount(0);

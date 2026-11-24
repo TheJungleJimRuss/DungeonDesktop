@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { openDB } from "idb";
 import { vi } from "vitest";
@@ -202,6 +202,7 @@ describe("Map panel", () => {
     const { panel } = await openMapPanel(user);
     await user.click(await panel.findByRole("button", { name: "New map" }));
     expect(await panel.findByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft");
+    expect(panel.getByRole("img", { name: /^Scale bar \d+(\.\d+)? ft$/ })).toBeInTheDocument(); // round distance in the Map's unit
     const lines = () => document.querySelectorAll(".grid-line").length;
     const atFit = lines();
     await user.click(panel.getByRole("button", { name: "Zoom in" }));
@@ -210,6 +211,31 @@ describe("Map panel", () => {
     await user.click(panel.getByRole("button", { name: "Zoom out" }));
     await user.click(panel.getByRole("button", { name: "Zoom out" }));
     await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 7.5 ft"));
+    // No edge: zoomed out, the grid runs past the Map's own size to fill the view.
+    const xs = [...document.querySelectorAll(".map-canvas .grid-line")].map((l) => Number(l.getAttribute("x1")));
+    expect(Math.min(...xs)).toBeLessThan(0);
+
+    // Keys: "+" (or "=") zooms in, "-" zooms out, not while typing in a field.
+    await user.keyboard("+");
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft"));
+    await user.keyboard("=");
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 3.33 ft"));
+    await user.keyboard("-");
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft"));
+    panel.getByLabelText("Map width").focus();
+    await user.keyboard("-");
+    expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft");
+
+    // Cmd/Ctrl + wheel: up zooms in, down zooms out; a plain wheel does not zoom.
+    const canvas = panel.getByRole("group", { name: "Map canvas" });
+    fireEvent.wheel(canvas, { deltaY: 100 });
+    expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft");
+    fireEvent.wheel(canvas, { deltaY: -100, metaKey: true });
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).not.toHaveTextContent("1 square = 5 ft"));
+    expect(Number(/= ([\d.]+)/.exec(panel.getByLabelText("Grid scale").textContent!)![1])).toBeLessThan(5);
+    fireEvent.wheel(canvas, { deltaY: 100, ctrlKey: true });
+    fireEvent.wheel(canvas, { deltaY: 100, ctrlKey: true });
+    await waitFor(() => expect(Number(/= ([\d.]+)/.exec(panel.getByLabelText("Grid scale").textContent!)![1])).toBeGreaterThan(5));
   });
 
   it("shows the Map panel where saved layouts and old imports named world-map", async () => {

@@ -1,9 +1,22 @@
-import { distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, polylineLength, snapToCorner } from "./geometry";
+import { distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, polylineLength, snapToCorner, snapToHalf, snapToStep } from "./geometry";
 
 describe("map geometry", () => {
   it("snaps to the nearest grid corner", () => {
     expect(snapToCorner({ x: 2.4, y: 3.6 })).toEqual({ x: 2, y: 4 });
     expect(snapToCorner({ x: -0.4, y: 0.5 })).toEqual({ x: 0, y: 1 });
+  });
+
+  it("snaps to the nearest square centre, corner or edge midpoint", () => {
+    expect(snapToHalf({ x: 2.4, y: 3.6 })).toEqual({ x: 2.5, y: 3.5 });
+    expect(snapToHalf({ x: 2.1, y: 3.9 })).toEqual({ x: 2, y: 4 });
+    expect(snapToHalf({ x: 2.1, y: 3.4 })).toEqual({ x: 2, y: 3.5 });
+    expect(snapToHalf({ x: -0.1, y: 0 })).toEqual({ x: 0, y: 0 });
+  });
+
+  it("snaps to a shown grid of any square size, and to its half-steps", () => {
+    expect(snapToStep({ x: 1.4, y: 0.2 }, 1 / 3)).toEqual({ x: 1.333333, y: 0.333333 });
+    expect(snapToStep({ x: 3.1, y: 4.9 }, 2)).toEqual({ x: 4, y: 4 });
+    expect(snapToHalf({ x: 1.1, y: 0.6 }, 2)).toEqual({ x: 1, y: 1 });
   });
 
   it("measures a polyline, adding the closing segment when closed", () => {

@@ -34,7 +34,11 @@ export function normalizeCombo(combo: string): string {
 /** The combo a keydown event represents. Letters and digits go by physical key, so Alt+1 works
  *  where Alt turns the key into another character (macOS). */
 export function comboOf(e: KeyboardEvent): string {
-  const mods = MODS.filter((m) => e[`${m.toLowerCase()}Key` as "altKey"]);
+  // "+" and "-" are named Plus and Minus (a combo splits on "+"). "=" counts as Plus, and Shift is ignored for both, so the
+  // key works whether or not the layout needs Shift for "+"; the number pad's keys count too.
+  const sign = e.key === "+" || e.key === "=" ? "Plus" : e.key === "-" || e.key === "_" ? "Minus" : null;
+  const mods = MODS.filter((m) => e[`${m.toLowerCase()}Key` as "altKey"] && !(sign && m === "Shift"));
+  if (sign) return [...mods, sign].join("+");
   const code = /^(?:Digit|Key)(.)$/.exec(e.code ?? "");
   const key = code ? code[1] : e.key.length === 1 ? e.key.toUpperCase() : e.key;
   return [...mods, key].join("+");

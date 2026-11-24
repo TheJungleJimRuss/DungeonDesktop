@@ -18,8 +18,9 @@ import { setPartyLocation } from "../storage/campaigns";
 import { useShortcutClaim } from "../shortcuts/shortcuts";
 import { routeLength } from "../map/routes";
 import { partyLocationInSquare } from "../map/party";
+import { scaleBar } from "../map/scale";
 import { CELL, lineLabels, newLine, pointerSquare, usePxPerUnit } from "../map/lines";
-import type { Pt } from "../map/geometry";
+import { snapToHalf, type Pt } from "../map/geometry";
 import { LinesLayer, PointHandles } from "../map/LinesLayer";
 import { DrawLayer } from "../map/DrawLayer";
 import { LineEditor } from "../map/LineEditor";
@@ -79,12 +80,33 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   const box = { x: centre.x - vw / 2, y: centre.y - vh / 2, w: vw, h: vh };
   const stride = 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(map.width, map.height) / MAX_LINES)));
   const zoomBy = (k: number) => setView({ zoom: zoom * k, centre });
+  // Cmd/Ctrl + scroll wheel (and trackpad pinch, which arrives as Ctrl + wheel) zooms about the pointer: the point under it stays put.
+  // A native listener, because React's wheel listener is passive and could not stop the page from zooming or scrolling.
+  const wheelView = useRef({ zoom, centre });
+  wheelView.current = { zoom, centre };
+  useEffect(() => {
+    const el = svg.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || !e.deltaY) return;
+      e.preventDefault();
+      const { zoom: z, centre: c } = wheelView.current;
+      const k = Math.exp(-Math.max(-100, Math.min(100, e.deltaY)) * 0.005);
+      const ctm = el.getScreenCTM?.();
+      const p = ctm ? new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse()) : c;
+      setView({ zoom: z * k, centre: { x: p.x + (c.x - p.x) / k, y: p.y + (c.y - p.y) / k } });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
   // The shown grid keeps its on-screen size at every zoom; what one of its squares stands for scales with zoom
   // (zoom in: smaller). Tokens, the ruler and Routes still use the Map's own squares.
-  const gridStep = (CELL * stride) / zoom, gridPerSquare = (map.perSquare * stride) / zoom;
-  const gridAt = (from: number, to: number, end: number) => {
+  const gridSquares = stride / zoom; // one shown grid square, in the Map's own squares
+  const gridStep = CELL * gridSquares, gridPerSquare = map.perSquare * gridSquares;
+  // It has no edge: lines cover whatever is in view, past the Map's size too.
+  const gridAt = (from: number, to: number) => {
     const out: number[] = [];
-    for (let i = Math.max(0, Math.ceil(from / gridStep)); i * gridStep <= Math.min(to, end) + 1e-6; i++) out.push(i * gridStep);
+    for (let i = Math.ceil(from / gridStep); i * gridStep <= to + 1e-6; i++) out.push(i * gridStep);
     return out;
   };
   // The grid carries on past the Map's size for the ruler: its squares cover whatever is in view.
@@ -174,14 +196,20 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
     const p = pt.matrixTransform(ctm.inverse());
     return { x: Math.floor(p.x / CELL), y: Math.floor(p.y / CELL) }; // snaps to squares, grid shown or not
   };
-  // Ruler: transient, never saved, measures in the Map's unit. `locked` = the end square is chosen.
+  // Ruler: transient, never saved, measures in the Map's unit. `locked` = the end is chosen. Ends are points in squares that snap to the
+  // nearest centre, corner or edge midpoint of the shown grid's squares; without pointer geometry (jsdom) a square's own target gives its centre.
   const [tool, setTool] = useState<Tool>("select");
   const ruler = tool === "ruler";
-  const [rule, setRule] = useState<{ a: Square; b: Square; locked: boolean } | null>(null);
-  // Click start then end, or press on one square and release on another; both snap to squares.
-  const rulerDown = (q: Square) => { if (!rule || rule.locked) setRule({ a: q, b: q, locked: false }); };
-  const rulerOver = (q: Square) => { if (rule && !rule.locked && (q.x !== rule.b.x || q.y !== rule.b.y)) setRule({ ...rule, b: q }); };
-  const rulerEnd = (q: Square) => { if (rule && !rule.locked && (q.x !== rule.a.x || q.y !== rule.a.y)) setRule({ ...rule, b: q, locked: true }); };
+  const [rule, setRule] = useState<{ a: Pt; b: Pt; locked: boolean } | null>(null);
+  const rulerAt = (e: { clientX: number; clientY: number }, q?: Square): Pt | null => {
+    const p = freePoint(e);
+    return p ? snapToHalf(p, gridSquares) : q ? { x: q.x + 0.5, y: q.y + 0.5 } : null;
+  };
+  const same = (p: Pt, q: Pt) => p.x === q.x && p.y === q.y;
+  // Click start then end, or press at one point and release at another.
+  const rulerDown = (q: Pt | null) => { if (q && (!rule || rule.locked)) setRule({ a: q, b: q, locked: false }); };
+  const rulerOver = (q: Pt | null) => { if (q && rule && !rule.locked && !same(q, rule.b)) setRule({ ...rule, b: q }); };
+  const rulerEnd = (q: Pt | null) => { if (q && rule && !rule.locked && !same(q, rule.a)) setRule({ ...rule, b: q, locked: true }); };
   const pickTool = (t: Tool) => { setTool((cur) => (cur === t && t !== "select" ? "select" : t)); setRule(null); setDraft([]); setSelLine(null); setSelMarker(null); setSelToken(null); };
   const measured = rule && formatDistance(distanceUnits(rule.a, rule.b, map.perSquare), map.unit);
 
@@ -189,7 +217,13 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   const labels = lineLabels(map.lines);
   const [draft, setDraft] = useState<Pt[]>([]);
   const [selLine, setSelLine] = useState<string | null>(null);
+  const [selSeg, setSelSeg] = useState<number | null>(null);
+  // Drags in progress, shown live and saved on release: one point of a Line (`moved`) or a whole Area (`shift`).
   const [moved, setMoved] = useState<{ id: string; index: number; at: Pt } | null>(null);
+  const [shift, setShift] = useState<{ id: string; by: Pt } | null>(null);
+  const live = (l: MapLine): MapLine => moved?.id === l.id ? { ...l, points: l.points.map((p, i) => (i === moved.index ? moved.at : p)) }
+    : shift?.id === l.id ? { ...l, points: l.points.map((p) => ({ x: p.x + shift.by.x, y: p.y + shift.by.y })) } : l;
+  const liveLines = map.lines.map(live);
   const selected = map.lines.find((l) => l.id === selLine);
   const [selMarker, setSelMarker] = useState<string | null>(null);
   const marker = map.markers.find((k) => k.id === selMarker);
@@ -197,12 +231,13 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   const areaText = (a: NonNullable<MapLine["area"]>) => areaLabel(a, locations.find((l) => l.id === a.locationId)?.name);
   // Selecting a Shape that is an Area linked to a Location selects that Location too, so the Locations panel follows.
   const pickLine = (id: string) => {
+    if (id !== selLine) setSelSeg(null);
     setSelLine(id); setSelMarker(null); setSelToken(null);
     const loc = map.lines.find((l) => l.id === id)?.area?.locationId;
     if (loc) selectLocation(campaignId, loc);
   };
   const pickArea = (id: string) => { if (justPanned.current) justPanned.current = false; else pickLine(id); }; // the click ending a drag-pan selects nothing
-  // Markers: placed freely (unsnapped) with the Marker tool, dragged and selected with Select. A linked one shows its Location's live name.
+  // Markers: placed freely (unsnapped) with the Marker tool, dragged and selected with Select or Marker. A linked one shows its Location's live name.
   const markerText = (k: MapMarker) => markerLabel(k, locations.find((l) => l.id === k.locationId)?.name);
   const freePoint = (e: { clientX: number; clientY: number }) => pointerSquare(svg.current, e, false);
   const patchMarker = (id: string, fn: (k: MapMarker) => MapMarker) => change((m) => ({ ...m, markers: m.markers.map((k) => (k.id === id ? fn(k) : k)) }));
@@ -217,7 +252,9 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
     void change((m) => ({ ...m, markers: [...m.markers, k] }));
   };
   const pxPerSquare = usePxPerUnit(svg, box.w, box.h) * CELL;
-  const svgPoint = (e: { clientX: number; clientY: number }) => pointerSquare(svg.current, e, map.showGrid);
+  const bar = scaleBar(pxPerSquare / map.perSquare);
+  // Drawing snaps to the grid as shown (its squares change with zoom), so points land on the lines the DM sees.
+  const svgPoint = (e: { clientX: number; clientY: number }) => pointerSquare(svg.current, e, map.showGrid && gridSquares);
   const drawing = (tool === "draw" || tool === "route") && draft.length > 0;
   const finishLine = (closed: boolean) => {
     const points = draft, route = tool === "route";
@@ -232,7 +269,17 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
     else if (selected) { setSelLine(null); void change((m) => ({ ...m, lines: m.lines.filter((l) => l.id !== selected.id) })); }
   };
   // Esc cancels the Line being drawn (instead of leaving for the Dashboard); Enter finishes it; Delete/Backspace remove the selection.
-  useShortcutClaim("Escape", drawing, () => setDraft([]));
+  // "+" zooms in and "-" zooms out (claims, so a second Map panel never conflicts; ignored while typing like every shortcut).
+  useShortcutClaim("Plus", true, () => zoomBy(ZOOM_STEP));
+  useShortcutClaim("Minus", true, () => zoomBy(1 / ZOOM_STEP));
+  // Esc steps back inside the Map before it ever leaves for the Dashboard: cancel the Line being drawn, else drop the selection,
+  // else go back to the Select tool. Only with Select and nothing in progress does Esc reach the Dashboard.
+  const escapable = drawing || tool !== "select" || !!selLine || !!selMarker || !!selToken;
+  useShortcutClaim("Escape", escapable, () => {
+    if (drawing) setDraft([]);
+    else if (selLine || selMarker || selToken) { setSelLine(null); setSelMarker(null); setSelToken(null); setSelSeg(null); }
+    else pickTool("select");
+  });
   useShortcutClaim("Enter", drawing, () => (draft.length >= 2 ? finishLine(false) : setDraft([])));
   const deletable = (!!selected || !!marker || !!tokenSel) && (tool === "select" || (tool === "marker" && !!marker));
   useShortcutClaim("Delete", deletable, deleteSelected);
@@ -247,9 +294,9 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
         <button aria-pressed={tool === "marker"} onClick={() => pickTool("marker")}>Marker</button>
         <button aria-pressed={ruler} onClick={() => pickTool("ruler")}>Ruler</button>
         <span className="row zoom-ctl" role="group" aria-label="Zoom">
-          <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
+          <button aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
           <span className="muted" aria-live="polite">{Math.round(zoom * 100)}%</span>
-          <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
+          <button aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
           <button aria-pressed={view === null} onClick={() => setView(null)} title="Show the whole map">Fit</button>
           {map.showGrid && <span className="muted" aria-label="Grid scale" title="What one grid square stands for at this zoom">1 square = {formatDistance(gridPerSquare, map.unit)}</span>}
         </span>
@@ -258,7 +305,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
       {/* Always one line tall, so the canvas never shifts while drawing or measuring (a shift moves the next click). */}
       <div className="map-status">
         {drawing && <span className="muted" role="status" aria-label="Drawing" title="Enter or double-click to finish, Esc to cancel">Drawing {draft.length} {draft.length === 1 ? "point" : "points"}: {tool === "route" ? "" : "click the first point to close, "}Enter or double-click to finish, Esc to cancel</span>}
-        {rule && <span role="status" aria-label="Measured distance">{distanceSquares(rule.a, rule.b)} squares, {measured}</span>}
+        {rule && <span role="status" aria-label="Measured distance">{+(distanceSquares(rule.a, rule.b) / gridSquares).toFixed(2)} squares, {measured}</span>}
       </div>
       <details className="map-settings">
         <summary>Map settings <span className="muted" aria-label="Map summary">{map.width} × {map.height} squares, {map.perSquare} {map.unit} per square</span></summary>
@@ -289,13 +336,18 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
           <rect x={box.x} y={box.y} width={box.w} height={box.h} className="map-bg" data-testid="map-pan"
             onPointerDown={panStart} onPointerMove={panMove} onPointerUp={() => { if (!panEnd()) { setSelLine(null); setSelMarker(null); setSelToken(null); } }} />
           {bgUrl && <image href={bgUrl} x={bgX * CELL} y={bgY * CELL} width={W * bgScale} height={H * bgScale} preserveAspectRatio="xMinYMin meet" pointerEvents="none" aria-hidden="true" />}
-          {map.showGrid && gridAt(box.x, box.x + box.w, W).map((x) => <line key={`v${x}`} x1={x} y1={0} x2={x} y2={H} className="grid-line" pointerEvents="none" />)}
-          {map.showGrid && gridAt(box.y, box.y + box.h, H).map((y) => <line key={`h${y}`} x1={0} y1={y} x2={W} y2={y} className="grid-line" pointerEvents="none" />)}
-          <rect x={0} y={0} width={W} height={H} className="map-extent" pointerEvents="none" aria-hidden="true" />
-          <AreasLayer lines={map.lines} labelOf={areaText} selectedId={selected?.id} moved={moved} selectable={tool === "select"} onSelect={pickArea}
+          {map.showGrid && gridAt(box.x, box.x + box.w).map((x) => <line key={`v${x}`} x1={x} y1={box.y} x2={x} y2={box.y + box.h} className="grid-line" pointerEvents="none" />)}
+          {map.showGrid && gridAt(box.y, box.y + box.h).map((y) => <line key={`h${y}`} x1={box.x} y1={y} x2={box.x + box.w} y2={y} className="grid-line" pointerEvents="none" />)}
+          <AreasLayer lines={liveLines} labelOf={areaText} selectedId={selected?.id} selectable={tool === "select"} onSelect={pickArea} snap={map.showGrid && gridSquares}
+            onShift={(id, by) => setShift({ id, by })}
+            onShiftEnd={(id, by) => { if (!by) { setShift(null); return; } void patchLine(id, (l) => ({ ...l, points: l.points.map((p) => ({ x: p.x + by.x, y: p.y + by.y })) })).then(() => setShift(null)); }}
             pointAt={freePoint} onPanStart={panStart} onPanMove={panMove} onPanEnd={panEnd} />
-          <LinesLayer lines={map.lines} labels={labels} selectedId={selected?.id} moved={moved} selectable={tool === "select"} onSelect={pickLine} perSquare={map.perSquare} unit={map.unit} />
-          <MarkersLayer markers={map.markers} labelOf={markerText} selectedId={marker?.id} selectable={tool === "select"} svgPoint={freePoint}
+          <LinesLayer lines={liveLines} labels={labels} selectedId={selected?.id} selectable={tool === "select"} onSelect={pickLine}
+            selectedSegment={selSeg} onSegment={setSelSeg} perSquare={map.perSquare} unit={map.unit} />
+          {/* Under the Markers, so in the Marker tool a press on a Marker drags it rather than placing a new one. */}
+          {tool === "marker" && <rect x={box.x} y={box.y} width={box.w} height={box.h} className="map-draw-surface" data-testid="map-marker-surface"
+            onClick={(e) => { const p = freePoint(e); if (p) placeMarker(p); }} />}
+          <MarkersLayer markers={map.markers} labelOf={markerText} selectedId={marker?.id} selectable={tool === "select" || tool === "marker"} svgPoint={freePoint}
             onSelect={pickMarker} onDrop={(id, at) => void patchMarker(id, (k) => ({ ...k, x: at.x, y: at.y }))} />
           {selectedToken && speedFeet !== null && map.unit === "ft" && (() => {
             const r = reachArea(selectedToken, speedFeet, map.perSquare, map);
@@ -313,7 +365,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
               <g key={t.id} className={"map-token" + (selected || t.id === selToken ? " selected" : "") + (defeated ? " defeated" : "")} tabIndex={0} role="button"
                 aria-label={`Token ${label}${defeated ? ", defeated" : ""}`} aria-pressed={linked ? selected : undefined}
                 onClick={() => select(t)}
-                data-col={p.x} data-row={p.y} transform={`translate(${p.x * CELL} ${p.y * CELL})`}
+                data-col={p.x} data-row={p.y} transform={`translate(${(p.x + 0.5) * CELL} ${(p.y + 0.5) * CELL})`}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(t); } else nudge(t, e); }}
                 onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); setDrag({ id: t.id, x: t.x, y: t.y }); }}
                 onPointerMove={(e) => { if (drag?.id === t.id) { const q = square(e); if (q) setDrag({ id: t.id, ...q }); } }}
@@ -330,32 +382,33 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
             const p = drag?.id === PARTY ? drag : map.partyToken;
             return (
               <g className="map-token party-token" tabIndex={0} role="button" aria-label="Party token"
-                data-col={p.x} data-row={p.y} transform={`translate(${p.x * CELL} ${p.y * CELL})`}
+                data-col={p.x} data-row={p.y} transform={`translate(${(p.x + 0.5) * CELL} ${(p.y + 0.5) * CELL})`}
                 onKeyDown={nudgeParty}
                 onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); setDrag({ id: PARTY, ...map.partyToken! }); }}
                 onPointerMove={(e) => { if (drag?.id === PARTY) { const q = square(e); if (q) setDrag({ id: PARTY, ...q }); } }}
                 onPointerUp={() => { if (drag?.id === PARTY) { const to = { x: drag.x, y: drag.y }; setDrag(null); void moveParty(() => to); } }}>
-                <circle cx={CELL / 2} cy={CELL / 2} r={CELL / 2 - 2} fill="#f1c40f" />
-                <circle cx={CELL / 2} cy={CELL / 2} r={CELL / 2 - 1} className="party-ring" fill="none" />
-                <text x={CELL / 2} y={CELL / 2 + 7} textAnchor="middle" className="party-star">★</text>
+                {/* A fixed on-screen size at every zoom, like Markers (--ui counter-scales), centred on its square. */}
+                <g style={{ transform: "scale(var(--ui))" }}>
+                  <circle r={11} fill="#f1c40f" />
+                  <circle r={12} className="party-ring" fill="none" />
+                  <text y={5} textAnchor="middle" className="party-star">★</text>
+                </g>
                 <title>Party</title>
               </g>
             );
           })()}
           {(tool === "draw" || tool === "route") && <DrawLayer box={box} points={draft} pxPerSquare={pxPerSquare} svgPoint={svgPoint} route={tool === "route"}
             onAdd={(p) => setDraft((d) => [...d, p])} onClose={() => finishLine(true)} onFinish={() => finishLine(false)} onCancel={() => setDraft([])} />}
-          {tool === "marker" && <rect x={box.x} y={box.y} width={box.w} height={box.h} className="map-draw-surface" data-testid="map-marker-surface"
-            onClick={(e) => { const p = freePoint(e); if (p) placeMarker(p); }} />}
           {ruler && <rect x={box.x} y={box.y} width={box.w} height={box.h} className="ruler-square"
-            onPointerDown={(e) => { const q = square(e); if (q) rulerDown(q); }} onPointerMove={(e) => { const q = square(e); if (q) rulerOver(q); }}
-            onPointerUp={(e) => { const q = square(e); if (q) rulerEnd(q); }} />}
+            onPointerDown={(e) => rulerDown(rulerAt(e))} onPointerMove={(e) => rulerOver(rulerAt(e))} onPointerUp={(e) => rulerEnd(rulerAt(e))} />}
           {ruler && visibleSquares <= MAX_RULER_SQUARES && Array.from({ length: visibleSquares }, (_, i) => {
             const w = cols.hi - cols.lo, q = { x: cols.lo + (i % w), y: rows.lo + Math.floor(i / w) };
             return <rect key={`${q.x},${q.y}`} x={q.x * CELL} y={q.y * CELL} width={CELL} height={CELL} className="ruler-square" aria-label={`Square ${q.x},${q.y}`}
-              onPointerDown={() => rulerDown(q)} onPointerEnter={() => rulerOver(q)} onPointerUp={() => rulerEnd(q)} onClick={() => rulerEnd(q)} />;
+              onPointerDown={(e) => rulerDown(rulerAt(e, q))} onPointerMove={(e) => rulerOver(rulerAt(e, q))} onPointerEnter={(e) => rulerOver(rulerAt(e, q))}
+              onPointerUp={(e) => rulerEnd(rulerAt(e, q))} onClick={(e) => rulerEnd(rulerAt(e, q))} />;
           })}
           {rule && (() => {
-            const c = (n: number) => n * CELL + CELL / 2;
+            const c = (n: number) => n * CELL;
             return (
               <g className="ruler-mark" pointerEvents="none">
                 <line data-testid="ruler-line" x1={c(rule.a.x)} y1={c(rule.a.y)} x2={c(rule.b.x)} y2={c(rule.b.y)} />
@@ -364,13 +417,20 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
               </g>
             );
           })()}
-          {tool === "select" && selected && <PointHandles line={selected} label={labels.get(selected.id)!} svgPoint={svgPoint}
+          {tool === "select" && selected && <PointHandles line={live(selected)} label={labels.get(selected.id)!} svgPoint={svgPoint}
             onMove={(index, at) => setMoved({ id: selected.id, index, at })}
             onDrop={(index, at) => { setMoved(null); void patchLine(selected.id, (l) => ({ ...l, points: l.points.map((p, i) => (i === index ? at : p)) })); }} />}
         </svg>
+        {bar && (
+          <div className="map-scale" role="img" aria-label={`Scale bar ${formatDistance(bar.amount, map.unit)}`}>
+            <span className="map-scale-bar" style={{ width: bar.px }} />
+            <span>{formatDistance(bar.amount, map.unit)}</span>
+          </div>
+        )}
       </div>
-      {tool === "select" && selected && <LineEditor line={selected} label={labels.get(selected.id)!} length={routeLength((moved?.id === selected.id ? selected.points.map((p, i) => (i === moved.index ? moved.at : p)) : selected.points), map.perSquare, map.unit)} onDelete={deleteSelected}
-        onKind={(i, kind) => void patchLine(selected.id, (l) => ({ ...l, segments: l.segments.map((k, j) => (j === i ? kind : k)) }))} />}
+      {tool === "select" && selected && <LineEditor line={selected} label={labels.get(selected.id)!} length={routeLength(live(selected).points, map.perSquare, map.unit)} onDelete={deleteSelected}
+        segment={selSeg} onSegment={setSelSeg}
+        onKind={(i, kind) => void patchLine(selected.id, (l) => ({ ...l, segments: l.segments.map((k, j) => (i === null || j === i ? kind : k)) }))} />}
       {marker && (tool === "select" || tool === "marker") && <MarkerEditor marker={marker} label={markerText(marker)} locations={locations}
         onChange={(fn) => void patchMarker(marker.id, fn)} onDelete={deleteSelected}
         onCreateLocation={() => void createLocation(campaignId, { name: marker.name.trim() || "Marker", notes: "" }).then((loc) => {

@@ -21,15 +21,16 @@ function Segment({ a, b, kind, index }: { a: Pt; b: Pt; kind: MapLine["segments"
   );
 }
 
-/** The drawn Lines and Shapes. Each is a button (in the Select tool): clicking selects it. `moved` is a point being dragged, shown at its pending place. */
-export function LinesLayer({ lines, labels, selectedId, onSelect, moved, selectable, perSquare, unit }: {
+/** The drawn Lines and Shapes (as shown, with any drag in progress). Each is a button (in the Select tool): clicking selects it.
+ *  The selected Line's segments are buttons too: clicking one picks it for the editor (`selectedSegment`). */
+export function LinesLayer({ lines, labels, selectedId, onSelect, selectedSegment, onSegment, selectable, perSquare, unit }: {
   lines: MapLine[]; labels: Map<string, string>; selectedId?: string; onSelect: (id: string) => void; perSquare: number; unit: string;
-  moved?: { id: string; index: number; at: Pt } | null; selectable: boolean;
+  selectedSegment: number | null; onSegment: (index: number) => void; selectable: boolean;
 }) {
+  const sel = selectable ? lines.find((l) => l.id === selectedId && !l.route) : undefined;
   return (
     <g className="map-lines">
-      {lines.map((raw) => {
-        const l = moved?.id === raw.id ? { ...raw, points: raw.points.map((p, i) => (i === moved.index ? moved.at : p)) } : raw;
+      {lines.map((l) => {
         const label = labels.get(l.id)!;
         const d = l.points.map((p, i) => `${i ? "L" : "M"}${px(p.x)} ${px(p.y)}`).join(" ") + (l.closed ? " Z" : "");
         return (
@@ -44,6 +45,10 @@ export function LinesLayer({ lines, labels, selectedId, onSelect, moved, selecta
           </g>
         );
       })}
+      {sel && segmentsOf(sel).map(([a, b], i) => (
+        <line key={i} x1={px(a.x)} y1={px(a.y)} x2={px(b.x)} y2={px(b.y)} className={"map-seg-hit" + (i === selectedSegment ? " selected" : "")}
+          role="button" tabIndex={-1} aria-label={`Segment ${i + 1} of ${labels.get(sel.id)}`} aria-pressed={i === selectedSegment} onClick={() => onSegment(i)} />
+      ))}
     </g>
   );
 }
