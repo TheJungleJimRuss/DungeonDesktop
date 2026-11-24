@@ -1,5 +1,8 @@
 # Notes archive
 
+## 2026-11-23: Status before spec 0007
+2026-11-23: Spec 0005 Auto character sheet built (docs/specs/0005-auto-character-sheet.md, tickets .agents/issues/auto-character-sheet/issues/ 01-05 done): Player card in Combat (replaces the dice column), attack to-hit = ability + prof + magic, SRD class/species/background dropdowns with Custom, auto fields with per-field manual override and "Reset to auto", level from XP with Award XP (Player card + end-encounter step). Plus a speed ring around the selected Battle Map token (src/battle/speed.ts, useCombatantSpeed.ts). 358 Vitest; full suite has 1-2 load flakes (CombatPlayerCard, CharacterSheets "SRD packs") that pass alone. Browser-checked. Not committed. Older status lines are in NOTES_ARCHIVE.md.
+
 ## 2026-11-23: Status log moved from PROJECT_NOTES (2026-11-17 to 2026-11-23)
 2026-11-17: Spec 0002 fully built (slices 2-5). Slice 4 Social (tickets in .agents/issues/dm-site-slice-4) and slice 5 Battle Map (.agents/issues/dm-site-slice-5) done. 224 Vitest, 12 Playwright, build clean. First commit 3ddee86 on main. Per-ticket history in NOTES_ARCHIVE.md.
 2026-11-17: Follow-ups done: per-token "Link to combatant" select, background images downscaled to 2048 px (src/storage/imageResize.ts, injectable resizer; jsdom falls back to the original), several pinned NPCs (JSON id list per Campaign, old single id still read). 232 Vitest, 13 Playwright, build clean. Not committed.

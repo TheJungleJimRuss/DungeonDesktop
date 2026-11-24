@@ -37,6 +37,7 @@ describe("saved encounters", () => {
     const id = (await listCampaigns())[0].id;
     await addPartyMember(id, { name: "Thia", class: "Fighter", level: 3, ac: 16, maxHp: 28, passivePerception: 12, notes: "" });
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+    await screen.findByRole("button", { name: /end encounter/i });
     await addMonster(user, "goblin", "Goblin Warrior");
     await addMonster(user, "goblin", "Goblin Warrior");
     await screen.findByRole("option", { name: "Thia" });

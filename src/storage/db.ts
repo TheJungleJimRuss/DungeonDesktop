@@ -1,9 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from "idb";
 import { notifyChange } from "../sync/changeBus";
+import { stripLocationPosition, withEncounterMaps } from "./maps";
 
 /** Per-Campaign collections. Later tickets add records to these stores; the
  *  stores already exist so no schema migration is needed to start using them. */
-export const COLLECTIONS = ["party", "npcs", "locations", "sessions", "notes", "customEntries", "encounters", "savedEncounters", "edges", "battleMaps"] as const;
+export const COLLECTIONS = ["party", "npcs", "locations", "sessions", "notes", "customEntries", "encounters", "savedEncounters", "maps"] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 
 export interface CampaignRecord {
@@ -51,12 +52,11 @@ export interface DungeonDB extends DBSchema {
   customEntries: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
   encounters: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
   savedEncounters: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
-  edges: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
-  battleMaps: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
+  maps: { key: string; value: CollectionRecord; indexes: { byCampaign: string } };
 }
 
 export const DB_NAME = "dungeon-desktop";
-export const DB_VERSION = 6;
+export const DB_VERSION = 8;
 
 const WRITES = new Set(["add", "put", "delete", "clear"]);
 
@@ -105,11 +105,36 @@ let dbPromise: Promise<IDBPDatabase<DungeonDB>> | null = null;
 
 export function getDb(): Promise<IDBPDatabase<DungeonDB>> {
   dbPromise ??= openDB<DungeonDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Creates only what is missing, so each version bump (v2 added customEntries, v3 encounters, v4 savedEncounters, v5 edges, v6 battleMaps) upgrades older databases.
+    async upgrade(db, oldVersion, _newVersion, tx) {
+      // Creates only what is missing, so each version bump (v2 added customEntries, v3 encounters, v4 savedEncounters, v5 edges, v6 battleMaps, v7 maps; v8 drops battleMaps again) upgrades older databases.
       if (!db.objectStoreNames.contains("campaigns")) db.createObjectStore("campaigns", { keyPath: "id" });
       for (const name of COLLECTIONS) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: "id" }).createIndex("byCampaign", "campaignId");
+      }
+      if (oldVersion > 0 && oldVersion < 7) {
+        // v7 (ADR 0002): the World Map's edges are gone and Locations no longer carry a map position.
+        const old = db as unknown as IDBPDatabase;
+        if (old.objectStoreNames.contains("edges")) old.deleteObjectStore("edges");
+        let cursor = await tx.objectStore("locations").openCursor();
+        while (cursor) {
+          const rest = stripLocationPosition(cursor.value);
+          if (rest !== cursor.value) await cursor.update(rest);
+          cursor = await cursor.continue();
+        }
+      }
+      if (oldVersion > 0 && oldVersion < 8) {
+        // v8 (spec 0007): the Battle Map store is gone, saved encounters keep no map copy, and an Encounter in progress gets a blank Map to stand on.
+        const old = db as unknown as IDBPDatabase;
+        if (old.objectStoreNames.contains("battleMaps")) old.deleteObjectStore("battleMaps");
+        let saved = await tx.objectStore("savedEncounters").openCursor();
+        while (saved) {
+          if ("map" in saved.value) { const { map: _map, ...rest } = saved.value; await saved.update(rest as typeof saved.value); }
+          saved = await saved.continue();
+        }
+        const encStore = tx.objectStore("encounters");
+        const { encounters, maps } = withEncounterMaps(await encStore.getAll(), (await tx.objectStore("maps").getAll()) as unknown as { campaignId: string; name: string }[]);
+        for (const m of maps) await tx.objectStore("maps").put(m);
+        for (const e of encounters) await encStore.put(e);
       }
     },
   }).then(withChangeNotifications);

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import App from "./App";
 import { COLLECTIONS, getDb } from "./storage/db";
+import { importCampaign, type CampaignExport } from "./storage/portability";
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -46,7 +47,8 @@ describe("Campaign export and import", () => {
     const original = JSON.parse(text).campaign;
     // seed data in every collection, then export again
     const db = await getDb();
-    for (const c of COLLECTIONS) await db.add(c, { id: `${c}-1`, campaignId: original.id, label: `${c} row` });
+    const seed = (c: string) => ({ id: `${c}-1`, campaignId: original.id, label: `${c} row`, ...(c === "encounters" ? { mapId: "maps-1" } : {}) }); // an Encounter always stands on a Map
+    for (const c of COLLECTIONS) await db.add(c, seed(c));
     blobs = [];
     const full = await exportText(user, "Round Trip");
 
@@ -59,7 +61,7 @@ describe("Campaign export and import", () => {
     expect(await screen.findByText("Round Trip")).toBeInTheDocument();
     expect(await db.get("campaigns", original.id)).toEqual(original);
     for (const c of COLLECTIONS) {
-      expect(await db.getAll(c)).toEqual([{ id: `${c}-1`, campaignId: original.id, label: `${c} row` }]);
+      expect(await db.getAll(c)).toEqual([seed(c)]);
     }
   });
 
@@ -114,5 +116,30 @@ describe("Campaign export and import", () => {
     await upload(user, content);
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(screen.getByText(/no campaigns yet/i)).toBeInTheDocument();
+  });
+});
+
+describe("Importing an old export", () => {
+  it("drops Location map positions and gives an in-progress Encounter without a Map a blank one, clear of the Map names already there", async () => {
+    const campaign = { id: "c1", name: "Old", createdAt: 1, updatedAt: 2 } as unknown as CampaignExport["campaign"];
+    const empty = Object.fromEntries(COLLECTIONS.map((c) => [c, []])) as unknown as CampaignExport["collections"];
+    const existing = { id: "m1", campaignId: "c1", name: "Encounter 1", unit: "ft", perSquare: 5, showGrid: true, width: 20, height: 20, lines: [], markers: [], tokens: [], createdAt: 1, updatedAt: 1 };
+    await importCampaign({
+      format: "dungeon-desktop-campaign", version: 1, exportedAt: 3, campaign,
+      collections: {
+        ...empty,
+        locations: [{ id: "l1", campaignId: "c1", name: "Inn", notes: "", x: 3, y: 4 }, { id: "l2", campaignId: "c1", name: "Keep", notes: "" }],
+        maps: [existing],
+        encounters: [{ id: "e1", campaignId: "c1", startedAt: 1, combatants: [] }, { id: "e2", campaignId: "c1", mapId: "m1", startedAt: 1, combatants: [] }],
+      } as unknown as CampaignExport["collections"],
+    });
+    const db = await getDb();
+    expect(await db.getAll("locations")).toEqual([{ id: "l1", campaignId: "c1", name: "Inn", notes: "" }, { id: "l2", campaignId: "c1", name: "Keep", notes: "" }]);
+    const maps = await db.getAll("maps");
+    const e1 = (await db.get("encounters", "e1")) as unknown as { mapId?: string };
+    const made = maps.find((m) => m.id === e1.mapId);
+    expect(made).toMatchObject({ name: "Encounter 2", campaignId: "c1", width: 20, height: 20, tokens: [] });
+    expect(maps).toHaveLength(2);
+    expect(((await db.get("encounters", "e2")) as unknown as { mapId: string }).mapId).toBe("m1");
   });
 });

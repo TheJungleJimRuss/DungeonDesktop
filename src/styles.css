@@ -357,22 +357,9 @@ textarea { max-width:100%; }
 @media (prefers-reduced-motion: reduce) {
   * { transition:none !important; animation:none !important; }
 }
-.world-map { display:flex; flex-direction:column; gap:8px; }
+.map-panel { display:flex; flex-direction:column; gap:8px; }
 .map-canvas { width:100%; height:auto; background:var(--bg); border:1px solid var(--line); border-radius:6px; touch-action:none; }
 .map-canvas { --ui:1; } /* set by the panel: >1 when zoomed out, so text and strokes keep their on-screen size */
-.map-edge { stroke:var(--muted); stroke-width:calc(2px * var(--ui)); }
-.map-edge-label { fill:var(--muted); font-size:calc(12px * var(--ui)); paint-order:stroke; stroke:var(--bg); stroke-width:calc(4px * var(--ui)); stroke-linejoin:round; }
-.map-node { cursor:grab; } .map-node circle { fill:var(--panel); stroke:currentColor; stroke-width:2; }
-.map-node:focus { outline:none; } .map-node:focus circle { stroke-width:4; }
-.map-node text { fill:currentColor; font-size:calc(13px * var(--ui)); }
-.map-node text.map-label { paint-order:stroke; stroke:var(--bg); stroke-width:calc(4px * var(--ui)); stroke-linejoin:round; } /* halo keeps edge lines from cutting through the name */
-.map-star { cursor:pointer; } .map-star text { fill:var(--muted); font-size:calc(15px * var(--ui)); opacity:.7; }
-.map-star-hit { fill:transparent; } .map-star:focus { outline:none; } .map-star:focus .map-star-hit { stroke:var(--accent); stroke-width:2; }
-.map-star.on text, .map-star:hover text { fill:#f5c542; opacity:1; }
-.map-legend { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--muted); }
-.map-legend li { display:flex; align-items:center; gap:5px; }
-.map-legend .swatch { width:11px; height:11px; border-radius:50%; display:inline-block; }
-.map-legend .star-key { color:#f5c542; }
 .loc-filters { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .loc-row { display:flex; gap:4px; align-items:stretch; }
 .loc-row .npc-item { flex:1; }
@@ -386,27 +373,27 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 .shortcut-list { margin:0 0 12px; display:flex; flex-direction:column; gap:4px; }
 .shortcut-list > div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); padding:3px 0; }
 .shortcut-list dt { margin:0; } .shortcut-list dd { margin:0; }
-.map-node text.map-party { fill:var(--accent, currentColor); font-weight:700; }
-.battle-scroll { overflow:hidden; border-radius:6px; }
-.battle-grid { display:block; }
-.battle-scroll .battle-grid { max-height:max(280px, calc(100vh - 270px)); } /* zoom and pan move the viewBox; letterboxed, pointer maths uses the CTM */
-.battle-grid .battle-bg { fill:transparent; cursor:grab; } .battle-grid .battle-bg:active { cursor:grabbing; }
+.map-scroll { overflow:hidden; border-radius:6px; }
+.map-canvas { display:block; }
+.map-scroll .map-canvas { max-height:max(280px, calc(100vh - 270px)); } /* zoom and pan move the viewBox; letterboxed, pointer maths uses the CTM */
+.map-canvas .map-bg { fill:transparent; cursor:grab; } .map-canvas .map-bg:active { cursor:grabbing; }
 .map-settings { display:flex; flex-direction:column; gap:6px; }
 .map-settings > summary { cursor:pointer; font-size:13px; } .map-settings[open] > summary { margin-bottom:6px; }
 .map-settings > .row { flex-wrap:wrap; margin-bottom:6px; }
 .zoom-ctl { gap:2px; margin-left:auto; } .zoom-ctl button { min-width:32px; }
-.battle-grid .grid-line { stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
-.battle-grid .battle-area { fill:none; stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 4; vector-effect:non-scaling-stroke; } /* the map's set size: what Fit shows */
-.battle-grid.has-bg .grid-line { stroke:rgba(0,0,0,.6); stroke-width:1.5; } /* stays visible over any image */
-.battle-token { cursor:grab; } .battle-token:focus { outline:none; } .battle-token:focus circle { stroke:currentColor; stroke-width:4; }
-.battle-token circle { stroke:var(--line); stroke-width:2; } .token-label { fill:#fff; font-size:17px; font-weight:800; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.35); stroke-width:2px; } .token-label.long { font-size:13px; }
-.battle-grid .ruler-square { fill:transparent; cursor:crosshair; }
-.battle-grid .ruler-mark line { stroke:#f39c12; stroke-width:3; stroke-dasharray:6 4; } .battle-grid .ruler-mark circle { fill:#f39c12; }
-.battle-grid .ruler-mark text { fill:currentColor; font-size:14px; font-weight:700; paint-order:stroke; stroke:var(--bg, #fff); stroke-width:4px; }
+.map-canvas .grid-line { stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
+.map-canvas .map-extent { fill:none; stroke:var(--muted); stroke-width:1.5; stroke-dasharray:6 4; vector-effect:non-scaling-stroke; } /* the map's set size: what Fit shows */
+.map-canvas.has-bg .grid-line { stroke:rgba(0,0,0,.6); stroke-width:1.5; } /* stays visible over any image */
+.map-token { cursor:grab; } .map-token:focus { outline:none; } .map-token:focus circle { stroke:currentColor; stroke-width:4; }
+.map-token circle { stroke:var(--line); stroke-width:2; } .token-label { fill:#fff; font-size:17px; font-weight:800; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.35); stroke-width:2px; } .token-label.long { font-size:13px; }
+.map-canvas .ruler-square { fill:transparent; cursor:crosshair; }
+.map-canvas .ruler-mark line { stroke:#f39c12; stroke-width:3; stroke-dasharray:6 4; } .map-canvas .ruler-mark circle { fill:#f39c12; }
+.map-canvas .ruler-mark text { fill:currentColor; font-size:14px; font-weight:700; paint-order:stroke; stroke:var(--bg, #fff); stroke-width:4px; }
 
 .init-row.selected { outline:2px solid var(--accent); } .init-selected { font-weight:bold; }
-.battle-token .token-selected { stroke:var(--accent, #f39c12); stroke-width:3; }
-.battle-token.defeated circle:first-of-type { opacity:.45; } .battle-token .token-defeated-mark { stroke:#fff; stroke-width:4; stroke-linecap:round; pointer-events:none; }
+.map-token .token-selected { stroke:var(--accent, #f39c12); stroke-width:3; }
+.map-token .party-ring { stroke:#b7791f; stroke-width:4; } .map-token .party-star { fill:#7a4b00; font-size:22px; font-weight:800; pointer-events:none; }
+.map-token.defeated circle:first-of-type { opacity:.45; } .map-token .token-defeated-mark { stroke:#fff; stroke-width:4; stroke-linecap:round; pointer-events:none; }
 
 /* Narrow cards: let control rows wrap instead of squeezing or clipping. */
 .pinned-notes .npc-form .row { flex-wrap:wrap; }
@@ -705,7 +692,7 @@ kbd { background:transparent; border:1px solid var(--line); border-radius:4px; }
 .stat-block .sb-name, .stat-block .sb-section h3, .search-custom, .revealed { color:var(--text-strong); }
 .stat-block .sb-section h3 { border-bottom-color:var(--line); }
 .hp-bar { background:rgba(130,150,255,.15); }
-.map-canvas, .battle-scroll { border-radius:var(--r-inner); border-color:var(--line); }
+.map-canvas, .map-scroll { border-radius:var(--r-inner); border-color:var(--line); }
 .skeleton-line { background:linear-gradient(90deg, var(--panel-2) 0%, #262b58 50%, var(--panel-2) 100%); background-size:200% 100%; }
 .skip-link { color:var(--text-strong); }
 .shortcut-list > div, .dice-history li, .pinned-notes .note-list li { border-bottom-color:var(--line); }
@@ -746,16 +733,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .update-prompt { box-shadow:0 0 16px rgba(91,124,255,.2); }
 
 .map-bg { fill:transparent; cursor:move; }
-.map-scroll { overflow:hidden; border-radius:var(--r-inner, 6px); }
-.map-zoom { align-items:center; gap:6px; }
-.map-scroll .map-canvas { display:block; margin:0 auto; }
 input.loc-size { width:64px; }
-.map-node circle.map-hit { fill:transparent; stroke:none; }
-.map-node circle:not(.map-hit) { transition:r .12s ease-out; }
 
-/* Battle Map speed ring: how far the selected token can move this turn. */
-.battle-grid .speed-ring rect { fill:var(--accent, #f39c12); fill-opacity:.07; stroke:var(--accent, #f39c12); stroke-opacity:.55; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }
-.battle-grid .speed-ring text { fill:var(--accent, #f39c12); fill-opacity:.85; font-size:16px; font-weight:700; paint-order:stroke; stroke:var(--bg, #fff); stroke-width:3px; }
+/* Map speed ring: how far the selected token can move this turn. */
+.map-canvas .speed-ring rect { fill:var(--accent, #f39c12); fill-opacity:.07; stroke:var(--accent, #f39c12); stroke-opacity:.55; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }
+.map-canvas .speed-ring text { fill:var(--accent, #f39c12); fill-opacity:.85; font-size:16px; font-weight:700; paint-order:stroke; stroke:var(--bg, #fff); stroke-width:3px; }
 
 /* Auto-filled character sheet fields. */
 .sheet-form .auto-field { display:flex; flex-direction:column; gap:2px; }
@@ -796,3 +778,35 @@ input.loc-size { width:64px; }
 .attack-preview { margin:0; font-size:13px; font-variant-numeric:tabular-nums; }
 .attack-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
 @media (max-width:520px) { .attack-row-label { flex-basis:100%; } }
+
+/* Map: Lines, Shapes, Walls, Doors and the Draw tool. Strokes are in on-screen pixels: --ui (set by the panel) counter-scales with zoom. */
+.map-plain { stroke:var(--text, currentColor); stroke-width:calc(1.5px * var(--ui)); stroke-linecap:round; }
+.map-wall { stroke:var(--text, currentColor); stroke-width:calc(5px * var(--ui)); stroke-linecap:square; }
+.map-door { fill:var(--bg); stroke:var(--accent, #f39c12); stroke-width:calc(1.5px * var(--ui)); }
+.map-line { cursor:pointer; } .map-line:focus { outline:none; }
+.map-line.selected .map-plain, .map-line.selected .map-wall { stroke:var(--accent, #f39c12); }
+.map-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linejoin:round; pointer-events:stroke; }
+.map-route-path { stroke:var(--accent, #f39c12); stroke-width:calc(3px * var(--ui)); stroke-dasharray:calc(10px * var(--ui)) calc(6px * var(--ui)); stroke-linecap:round; stroke-linejoin:round; }
+.map-line.selected .map-route-path { stroke:var(--text, currentColor); }
+.map-route-label { fill:currentColor; font-size:calc(13px * var(--ui)); font-weight:600; paint-order:stroke; stroke:var(--bg); stroke-width:calc(4px * var(--ui)); stroke-linejoin:round; }
+.map-handle { r:calc(6px * var(--ui)); fill:var(--bg); stroke:var(--accent, #f39c12); stroke-width:calc(2px * var(--ui)); cursor:move; }
+.map-draw-surface { fill:transparent; cursor:crosshair; }
+.map-draft-line { stroke:var(--accent, #f39c12); stroke-width:calc(2px * var(--ui)); } .map-draft-line.preview { stroke-dasharray:calc(6px * var(--ui)); opacity:.7; }
+.map-draft-point { r:calc(4px * var(--ui)); fill:var(--accent, #f39c12); } .map-draft-point.first { r:calc(6px * var(--ui)); }
+.map-line-editor { flex-wrap:wrap; }
+.map-area-fill { fill-opacity:.28; cursor:pointer; }
+.map-area.selected .map-area-fill { fill-opacity:.4; }
+.map-area-label { fill:currentColor; font-size:calc(13px * var(--ui)); paint-order:stroke; stroke:var(--bg); stroke-width:calc(4px * var(--ui)); stroke-linejoin:round; }
+.map-area-editor { flex-wrap:wrap; }
+
+/* Map: Markers. The body is drawn in on-screen pixels and counter-scaled by --ui. */
+.map-marker { cursor:grab; } .map-marker:focus { outline:none; }
+.map-marker-badge { fill:var(--panel, var(--bg)); stroke-width:2; }
+.map-marker.selected .map-marker-badge { stroke-width:4; }
+.map-marker:focus .map-marker-badge { stroke-width:4; }
+.map-marker-label { fill:currentColor; font-size:12px; paint-order:stroke; stroke:var(--bg); stroke-width:4px; stroke-linejoin:round; }
+.map-marker-editor { display:flex; flex-direction:column; gap:6px; }
+.map-marker-editor .row { flex-wrap:wrap; }
+.map-icon-btn { padding:3px; line-height:0; }
+.map-marker-note { display:flex; flex-direction:column; gap:2px; } .map-marker-note textarea { width:100%; }
+.map-status { min-height:1.5em; line-height:1.5em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

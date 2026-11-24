@@ -46,6 +46,7 @@ describe("Party HP and end combat", () => {
     await user.keyboard("{Alt>}1{/Alt}");
     const p = await screen.findByRole("region", { name: "Initiative" });
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+    await screen.findByRole("button", { name: /end encounter/i });
     await within(p).findByRole("option", { name: "Thia" });
     await user.selectOptions(within(p).getByRole("combobox", { name: "Add Party member" }), "Thia");
     await waitFor(() => expect(within(row("Thia")).getByLabelText("HP Thia")).toHaveTextContent("HP 20/28"));
@@ -61,6 +62,7 @@ describe("Party HP and end combat", () => {
     await user.click(await screen.findByRole("button", { name: /end without xp/i }));
     await waitFor(async () => expect(currentHpOf((await listParty(id))[0])).toBe(12));
 
+    await within(p).findByText(/no encounter in progress/i);
     await user.keyboard("{Escape}");
     await screen.findByRole("heading", { name: /dashboard/i });
     expect(await within(party()).findByRole("article", { name: /thia player card/i })).toHaveTextContent("HP 12/28");

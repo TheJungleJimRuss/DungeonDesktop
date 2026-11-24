@@ -11,11 +11,30 @@ _Avoid_: "cards" for the Dashboard's panels (a card is one entry's display, such
 
 **Party**: The player characters in a Campaign.
 
-**World Map**: A map of nodes (places such as cities) joined by edges with distances, used to track travel between locations.
+**Map**: A named drawing surface in a Campaign (a world, a city, a dungeon floor); a Campaign has any number. Each Map has a scale (one square = N feet or N miles), a grid that can be shown or hidden, and an optional background image. Lines, Shapes, Areas, Markers and Tokens all live on a Map.
+_Avoid_: World Map, Battle Map (both are now just Maps).
 
-**Battle Map**: A simple grid used to track positions during a fight. There is one per Encounter (adjustable width x height in squares, and feet per square, default 5); a saved encounter keeps a copy of it and loading one restores it.
+**Line**: Straight segments joined point to point and left open. Each segment can be a wall, a door or plain.
 
-**Token**: A named, coloured marker on the Battle Map, placed on a grid square. The DM moves it by dragging (snaps to squares) or with the arrow keys; it is free or linked to a Combatant, chosen per token in the token list (a linked token shows the Combatant's name, is marked when defeated and goes when the Combatant does).
+**Shape**: A Line closed back on its first point. Its segments can be walls or doors like a Line's.
+
+**Wall**: A Line or Shape segment drawn as a barrier. It is only drawn, never enforced on Tokens or sight.
+
+**Door**: A Line or Shape segment drawn as a gap with a door mark.
+
+**Area**: A Shape given a kind (free text such as City or Forest), a color and an optional name, and optionally linked to a Location.
+
+**Marker**: A point on a Map with a name, color, icon and short note, optionally linked to a Location. Unlike a Token, it is placed freely, not on squares.
+_Avoid_: pin, node.
+
+**Route**: A Line drawn with the Route tool. It shows its length in the Map's unit.
+_Avoid_: edge.
+
+**Location**: A place record that NPCs and Scenes link to. It has no position of its own; it appears on Maps through linked Areas and Markers, possibly on several Maps.
+
+**Token**: A named, coloured piece on a Map, placed on a grid square. The DM moves it by dragging (it snaps to squares) or with the arrow keys. It is free or linked to a Combatant. Tokens stay on the Map after the Encounter ends.
+
+**Party Token**: An optional Token (at most one per Map) standing for the whole party. Dropping it inside an Area, or on a Marker, that is linked to a Location sets the party's location.
 
 **Stat Block**: The rules entry describing a creature's abilities, as used in Combat.
 
@@ -23,7 +42,7 @@ _Avoid_: "cards" for the Dashboard's panels (a card is one entry's display, such
 
 **Global Search**: The shortcut-opened (Ctrl or Cmd + K) search over SRD entries (monsters, spells, magic items, equipment, conditions), fuzzy by name, grouped and filterable by type. Opening a result shows it in the Stat Blocks panel (a creature as a Stat Block, the other types as their own cards).
 
-**Encounter**: One fight being tracked in Combat mode. A Campaign has at most one in-progress Encounter; it survives a reload and ends when the DM ends it.
+**Encounter**: One fight being tracked in Combat mode, played on one Map (a blank one is made if the DM picks none); a saved encounter remembers its Map and where its Tokens stood. A Campaign has at most one in-progress Encounter; it survives a reload and ends when the DM ends it.
 
 **Combatant**: One participant in an Encounter: a Party member, a monster (SRD or custom, copies auto-numbered "Goblin 1", "Goblin 2"), or an ad-hoc entry with just a name, initiative and HP.
 

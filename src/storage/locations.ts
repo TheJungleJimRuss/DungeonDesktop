@@ -1,11 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { getDb, type CollectionRecord } from "./db";
 import { onChange } from "../sync/changeBus";
-import type { Edge } from "./edges";
 import { notifyNpcsChanged, type Npc } from "./npcs";
+import type { MapRecord } from "./maps";
+import { unlinkLocationFromLines } from "../map/areas";
+import { unlinkLocationFromMarkers } from "../map/markers";
 
-/** How big a place is: its marker radius on the World Map, in map units. Also decides how far
- *  the map can zoom out before the place turns into a bare point (bigger places hold out longer). */
+/** How big a place is, in map units. Kept on the record but not used by the Map (Markers have their own look). */
 export const DEFAULT_LOCATION_SIZE = 14;
 export const MIN_LOCATION_SIZE = 3;
 export const MAX_LOCATION_SIZE = 200;
@@ -16,7 +17,7 @@ export function locationSizeOf(l: { size?: number | string }): number {
   return Math.min(MAX_LOCATION_SIZE, Math.max(MIN_LOCATION_SIZE, n));
 }
 
-/** What kind of place a location is. Each gets its own color on the World Map. */
+/** What kind of place a location is. Each gets its own color. */
 export const LOCATION_TYPES = [
   { id: "city", label: "City", color: "#5b7cff" },
   { id: "town", label: "Town", color: "#3cc4c4" },
@@ -34,18 +35,14 @@ export function locationTypeOf(l: { type?: string }) {
   return LOCATION_TYPES.find((t) => t.id === l.type) ?? LOCATION_TYPES[LOCATION_TYPES.length - 1];
 }
 
-/** A World Map node, stored in the `locations` collection. `x`/`y` are its World Map
- *  position (unset until dragged). Edges live in their own `edges` collection (storage/edges.ts).
- *  Scenes link by `locationId`. */
+/** A place, stored in the `locations` collection. Scenes and NPCs link by `locationId`. */
 export interface Location extends CollectionRecord {
   name: string;
   notes: string;
   type?: LocationType;
   size?: number;
-  /** Starred locations are marked on the World Map and can be filtered to. */
+  /** Starred locations can be filtered to. */
   starred?: boolean;
-  x?: number;
-  y?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -102,17 +99,10 @@ export async function setLocationStarred(id: string, starred: boolean): Promise<
   changed();
 }
 
-/** Saves a node's World Map position. */
-export async function setLocationPosition(id: string, x: number, y: number): Promise<void> {
-  const db = await getDb();
-  const existing = (await db.get("locations", id)) as Location | undefined;
-  if (existing) await db.put("locations", { ...existing, x, y });
-}
-
-/** Deletes a location (and every edge touching it). Its NPCs are unlinked but keep the old name as free-text tag. */
+/** Deletes a location. Its NPCs are unlinked but keep the old name as free-text tag; so do the Areas and Markers on Maps. */
 export async function deleteLocation(id: string): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["locations", "npcs", "edges", "campaigns"], "readwrite");
+  const tx = db.transaction(["locations", "npcs", "campaigns", "maps"], "readwrite");
   const existing = (await tx.objectStore("locations").get(id)) as Location | undefined;
   if (existing) {
     const campaigns = tx.objectStore("campaigns");
@@ -121,16 +111,19 @@ export async function deleteLocation(id: string): Promise<void> {
       const { partyLocationId: _gone, ...rest } = camp;
       await campaigns.put(rest);
     }
-    const edges = tx.objectStore("edges");
-    for (const e of (await edges.index("byCampaign").getAll(existing.campaignId)) as unknown as Edge[]) {
-      if (e.fromId === id || e.toId === id) await edges.delete(e.id);
-    }
     const npcs = tx.objectStore("npcs");
     for (const n of (await npcs.index("byCampaign").getAll(existing.campaignId)) as Npc[]) {
       if (n.locationId === id) {
         const { locationId: _gone, ...rest } = n;
         await npcs.put({ ...rest, updatedAt: Date.now() });
       }
+    }
+    // Areas and Markers on this Campaign's Maps that link here keep the old name as their own text.
+    const maps = tx.objectStore("maps");
+    for (const m of (await maps.index("byCampaign").getAll(existing.campaignId)) as MapRecord[]) {
+      const lines = unlinkLocationFromLines(m.lines, id, existing.name);
+      const markers = unlinkLocationFromMarkers(m.markers, id, existing.name);
+      if (lines !== m.lines || markers !== m.markers) await maps.put({ ...m, lines, markers, updatedAt: Date.now() });
     }
     await tx.objectStore("locations").delete(id);
   }

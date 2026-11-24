@@ -1,4 +1,4 @@
-import { distanceFeet, distanceSquares } from "./measure";
+import { distanceUnits, distanceSquares, formatDistance } from "./measure";
 
 describe("measure", () => {
   it("counts straight lines in squares", () => {
@@ -12,11 +12,15 @@ describe("measure", () => {
   });
   it("is zero for the same square", () => {
     expect(distanceSquares({ x: 3, y: 3 }, { x: 3, y: 3 })).toBe(0);
-    expect(distanceFeet({ x: 3, y: 3 }, { x: 3, y: 3 }, 5)).toBe(0);
+    expect(distanceUnits({ x: 3, y: 3 }, { x: 3, y: 3 }, 5)).toBe(0);
   });
   it("multiplies by feet per square", () => {
-    expect(distanceFeet({ x: 0, y: 0 }, { x: 4, y: 2 }, 5)).toBe(20);
-    expect(distanceFeet({ x: 0, y: 0 }, { x: 4, y: 2 }, 10)).toBe(40);
-    expect(distanceFeet({ x: 0, y: 0 }, { x: 3, y: 0 }, 2.5)).toBe(7.5);
+    expect(distanceUnits({ x: 0, y: 0 }, { x: 4, y: 2 }, 5)).toBe(20);
+    expect(distanceUnits({ x: 0, y: 0 }, { x: 4, y: 2 }, 10)).toBe(40);
+    expect(distanceUnits({ x: 0, y: 0 }, { x: 3, y: 0 }, 2.5)).toBe(7.5);
+  });
+  it("formats in the unit, trimming float noise", () => {
+    expect(formatDistance(25, "ft")).toBe("25 ft");
+    expect(formatDistance(0.1 * 3, "mi")).toBe("0.3 mi");
   });
 });

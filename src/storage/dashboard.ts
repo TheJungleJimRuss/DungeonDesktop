@@ -7,6 +7,9 @@ import { getDb, type CampaignRecord, type DashboardEntry, type StoredDashboard }
 
 export type { DashboardEntry };
 
+/** Panel ids that were replaced by another panel: saved layouts naming them show the new one. */
+const RENAMED_PANELS: Record<string, string> = { "world-map": "map", "battle-map": "map" };
+
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const whole = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : fallback);
 
@@ -21,7 +24,8 @@ export function normalizeDashboard(raw: unknown, isKnown: (id: string) => boolea
   if (!Array.isArray(list)) return undefined;
   const seen = new Set<string>();
   const items: Record<string, unknown>[] = [];
-  for (const e of list) {
+  for (const raw of list) {
+    const e = isObject(raw) && typeof raw.panelId === "string" && raw.panelId in RENAMED_PANELS ? { ...raw, panelId: RENAMED_PANELS[raw.panelId] } : raw;
     if (!isObject(e) || typeof e.panelId !== "string" || !e.panelId || seen.has(e.panelId) || !isKnown(e.panelId)) continue;
     seen.add(e.panelId);
     items.push(e);

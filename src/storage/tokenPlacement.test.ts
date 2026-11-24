@@ -1,8 +1,8 @@
-import { defaultMap, withCombatantTokens } from "./battleMaps";
+import { newMapRecord, withCombatantTokens } from "./maps";
 
 describe("Add tokens for all combatants", () => {
   it("puts the party down the left side and monsters down the right, apart", () => {
-    const m = withCombatantTokens(defaultMap("c", "e"), [
+    const m = withCombatantTokens(newMapRecord("c", "m"), [
       { id: "p1", kind: "party", name: "Thia" }, { id: "g1", kind: "monster", name: "Goblin 1" },
       { id: "p2", kind: "party", name: "Brakka" }, { id: "g2", kind: "monster", name: "Goblin 2" },
       { id: "l", kind: "lair", name: "Lair actions" },
@@ -15,7 +15,7 @@ describe("Add tokens for all combatants", () => {
     expect(m.tokens).toHaveLength(4);
   });
   it("still finds a square on a tiny map", () => {
-    const m = withCombatantTokens({ ...defaultMap("c", "e"), width: 1, height: 2 }, [
+    const m = withCombatantTokens({ ...newMapRecord("c", "m"), width: 1, height: 2 }, [
       { id: "a", kind: "party", name: "A" }, { id: "b", kind: "monster", name: "B" },
     ]);
     expect(m.tokens.map((t) => [t.x, t.y])).toEqual([[0, 0], [0, 1]]);

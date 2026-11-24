@@ -19,6 +19,7 @@ async function openCombat(user: User) {
   await user.keyboard("{Alt>}1{/Alt}");
   const p = await screen.findByRole("region", { name: "Initiative" });
   await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+  await screen.findByRole("button", { name: /end encounter/i });
   return p;
 }
 const row = (name: string) => screen.getByRole("listitem", { name });

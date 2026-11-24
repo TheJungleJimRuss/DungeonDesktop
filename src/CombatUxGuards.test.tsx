@@ -18,6 +18,7 @@ async function openCombatWithThia(user: User) {
   await user.keyboard("{Alt>}1{/Alt}");
   const p = await screen.findByRole("region", { name: "Initiative" });
   await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+  await screen.findByRole("button", { name: /end encounter/i });
   await within(p).findByRole("option", { name: "Thia" });
   await user.selectOptions(within(p).getByRole("combobox", { name: "Add Party member" }), "Thia");
   await screen.findByRole("listitem", { name: "Thia" });

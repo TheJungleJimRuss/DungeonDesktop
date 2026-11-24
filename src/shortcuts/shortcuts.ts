@@ -14,6 +14,11 @@ export interface Shortcut {
 const registry = new Map<string, Shortcut>();
 const handled = new WeakSet<Event>();
 
+/** Claims: a panel can take a key from the registry while it has something in progress (Esc cancels a Line being drawn
+ *  instead of leaving for the Dashboard). A claim beats the registered shortcut for the same combo, only while it is
+ *  active, and never conflicts with it. The most recent claim wins. */
+const claims: { combo: string; handler: () => void }[] = [];
+
 const MODS = ["Ctrl", "Meta", "Alt", "Shift"] as const;
 
 /** Canonical form: modifiers in fixed order, key last ("alt+1" -> "Alt+1"). */
@@ -63,6 +68,8 @@ export function handleKeydown(e: KeyboardEvent) {
   if (handled.has(e) || e.defaultPrevented || e.isComposing || e.repeat) return;
   if ((isTyping(e.target) && !escapeFromEditor(e)) || dialogOpen()) return;
   const combo = comboOf(e);
+  const claim = [...claims].reverse().find((c) => c.combo === combo);
+  if (claim) { handled.add(e); e.preventDefault(); claim.handler(); return; }
   const s = registry.get(combo) ?? (combo.includes("+") ? undefined : registry.get(`Alt+${combo}`));
   if (!s) return;
   handled.add(e);
@@ -88,4 +95,16 @@ export function useShortcut(combo: string, label: string, handler: () => void) {
 /** Every shortcut registered in this window, for the help dialog. */
 export function listShortcuts(): { combo: string; label: string }[] {
   return [...registry.values()].map(({ combo, label }) => ({ combo, label }));
+}
+
+/** While `active`, this component's handler takes `combo` ahead of the registered shortcut (see `claims`). */
+export function useShortcutClaim(combo: string, active: boolean, handler: () => void) {
+  const ref = useRef(handler);
+  ref.current = handler;
+  useEffect(() => {
+    if (!active) return;
+    const claim = { combo: normalizeCombo(combo), handler: () => ref.current() };
+    claims.push(claim);
+    return () => { claims.splice(claims.indexOf(claim), 1); };
+  }, [combo, active]);
 }

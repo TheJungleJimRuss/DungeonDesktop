@@ -1,4 +1,4 @@
-/** Longest side, in pixels, a stored Battle Map background may have. */
+/** Longest side, in pixels, a stored Map background may have. */
 export const MAX_IMAGE_SIDE = 2048;
 
 export interface ResizedImage { type: string; data: ArrayBuffer; }

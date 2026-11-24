@@ -1,4 +1,4 @@
-import type { StoredImage } from "./battleMaps";
+import { stripLocationPosition, withEncounterMaps, type MapRecord, type StoredImage } from "./maps";
 import { normalizeDashboard } from "./dashboard";
 import { COLLECTIONS, getDb, type CampaignRecord, type CollectionName, type CollectionRecord } from "./db";
 
@@ -24,14 +24,14 @@ export async function exportCampaign(id: string): Promise<CampaignExport | undef
   const collections = {} as Record<CollectionName, CollectionRecord[]>;
   for (const name of COLLECTIONS) collections[name] = await tx.objectStore(name).index("byCampaign").getAll(id);
   await tx.done;
-  for (const name of ["battleMaps", "savedEncounters"] as const) {
-    collections[name] = await Promise.all(collections[name].map((r) => convertImage(name, r, (v) => (isStored(v) ? toDataUrl(v) : v))));
+  for (const name of ["maps"] as const) {
+    collections[name] = await Promise.all(collections[name].map((r) => convertImage(r, (v) => (isStored(v) ? toDataUrl(v) : v))));
   }
   return { format: EXPORT_FORMAT, version: EXPORT_VERSION, exportedAt: Date.now(), campaign, collections };
 }
 
-// Blobs do not survive JSON, so a map's background image travels as a data URL (map rows and the maps inside saved encounters).
-const mapOf = (name: string, row: CollectionRecord) => (name === "battleMaps" ? row : name === "savedEncounters" ? (row as { map?: unknown }).map : undefined) as { background?: { image?: unknown } } | undefined;
+// Old exports may carry `edges` and `battleMaps` collections: only COLLECTIONS names are read, so they are ignored (as is the `map` copy in a saved encounter, dropped on import).
+// Blobs do not survive JSON, so a Map's background image travels as a data URL.
 
 const isStored = (v: unknown): v is StoredImage => typeof v === "object" && v !== null && typeof (v as StoredImage).type === "string" && typeof (v as StoredImage).data?.byteLength === "number";
 function toDataUrl(img: StoredImage): string {
@@ -47,12 +47,11 @@ function fromDataUrl(url: string): StoredImage | undefined {
   return { type: m[1], data: Uint8Array.from(raw, (c) => c.charCodeAt(0)).buffer };
 }
 /** Returns a copy of the row with the background image converted by `convert` (rows without one come back as they are). */
-async function convertImage(name: string, row: CollectionRecord, convert: (v: unknown) => Promise<unknown> | unknown): Promise<CollectionRecord> {
-  const map = mapOf(name, row);
-  const img = map?.background?.image;
-  if (!map || img === undefined) return row;
-  const background = { ...map.background, image: await convert(img) };
-  return (name === "battleMaps" ? { ...row, background } : { ...row, map: { ...map, background } }) as CollectionRecord;
+async function convertImage(row: CollectionRecord, convert: (v: unknown) => Promise<unknown> | unknown): Promise<CollectionRecord> {
+  const map = row as { background?: { image?: unknown } };
+  const img = map.background?.image;
+  if (img === undefined) return row;
+  return { ...row, background: { ...map.background, image: await convert(img) } } as CollectionRecord;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -111,9 +110,16 @@ export async function campaignExists(id: string): Promise<boolean> {
 /** Writes the Campaign, replacing any existing Campaign with the same id (and its collection rows). */
 export async function importCampaign(data: CampaignExport): Promise<CampaignRecord> {
   const collections = { ...data.collections };
-  for (const name of ["battleMaps", "savedEncounters"] as const) {
-    collections[name] = await Promise.all((collections[name] ?? []).map((r) => convertImage(name, r, (v) => (typeof v === "string" ? fromDataUrl(v) : v))));
+  for (const name of ["maps"] as const) {
+    collections[name] = await Promise.all((collections[name] ?? []).map((r) => convertImage(r, (v) => (typeof v === "string" ? fromDataUrl(v) : v))));
   }
+  // Saved encounters used to carry a copy of their Battle Map; it is ignored now (they keep a mapId and token list instead).
+  collections.savedEncounters = (collections.savedEncounters ?? []).map(({ map: _map, ...row }) => row as CollectionRecord);
+  // Older exports: Locations carried a map position, and an Encounter in progress had no Map.
+  collections.locations = (collections.locations ?? []).map(stripLocationPosition);
+  const withMaps = withEncounterMaps((collections.encounters ?? []) as unknown as { campaignId: string; mapId?: string }[], (collections.maps ?? []) as unknown as MapRecord[]);
+  collections.encounters = withMaps.encounters as unknown as CollectionRecord[];
+  collections.maps = [...(collections.maps ?? []), ...(withMaps.maps as unknown as CollectionRecord[])];
   data = { ...data, collections };
   const db = await getDb();
   const tx = db.transaction(["campaigns", ...COLLECTIONS], "readwrite");

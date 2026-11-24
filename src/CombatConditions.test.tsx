@@ -16,6 +16,7 @@ async function openCombat(user: User) {
   await screen.findByRole("heading", { name: /^combat$/i });
   const p = await screen.findByRole("region", { name: "Initiative" });
   await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+  await screen.findByRole("button", { name: /end encounter/i });
   return p;
 }
 async function addAdhoc(user: User, name: string, init: string) {

@@ -5,7 +5,8 @@ import { loadMonsters, type Monster } from "../srd/monsters";
 import { buildIndex, search } from "../srd/search";
 import { currentHpOf, listParty, writeBackPartyHp, type PartyMember } from "../storage/party";
 import { monsterFromEntry, useCustomEntries } from "../storage/customEntries";
-import { endEncounter, saveEncounter, useActiveEncounter } from "../storage/encounters";
+import { endEncounter, saveEncounter, startEncounter, useActiveEncounter } from "../storage/encounters";
+import { useMaps } from "../storage/maps";
 import { DefeatModeToggle, HpControls, rowStateClass, useHpRolls } from "./HpControls";
 import { useChangeVersion } from "../sync/changeBus";
 import { CombatExtras, LairRow, monsterCombatants } from "./CombatExtras";
@@ -17,7 +18,7 @@ import AddSelect from "./AddSelect";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
 import { SaveEncounterControl, SavedEncounterList } from "./SavedEncounters";
 import {
-  abilityMod, addCombatant, isDying, maxHpOf, moveTie, newEncounter, removeCombatant, rewindTurn, setInitiative,
+  abilityMod, addCombatant, isDying, maxHpOf, moveTie, removeCombatant, rewindTurn, setInitiative,
   type Encounter, type NewCombatant,
 } from "../combat/rules";
 
@@ -107,25 +108,45 @@ function AddCombatants({ campaign, inFight, onAdd }: { campaign: PanelProps["cam
 function InitiativeTracker({ campaign }: PanelProps) {
   const enc = useActiveEncounter(campaign.id);
   if (enc === undefined) return null;
-  if (enc === null) {
-    return (
-      <div className="initiative">
-        <p className="muted">No Encounter in progress.</p>
-        <button className="primary" onClick={() => void saveEncounter(newEncounter(campaign.id))}>Start encounter</button>
-        <SavedEncounterList campaignId={campaign.id} />
-      </div>
-    );
-  }
+  if (enc === null) return <NoEncounter campaign={campaign} />;
   return <Tracker campaign={campaign} enc={enc} />;
 }
 
-/** Ending clears the order, HP, conditions and Battle Map, so it asks first. */
+/** Start an Encounter on a picked Map, or (the default) on a blank one made for it. */
+function NoEncounter({ campaign }: { campaign: PanelProps["campaign"] }) {
+  const maps = useMaps(campaign.id);
+  const [mapId, setMapId] = useState("");
+  const [starting, setStarting] = useState(false); // a double click must not make two Maps and two Encounters
+  const start = async () => {
+    if (starting) return;
+    setStarting(true);
+    try { await saveEncounter(await startEncounter(campaign.id, maps?.some((m) => m.id === mapId) ? mapId : undefined)); }
+    finally { setStarting(false); }
+  };
+  return (
+    <div className="initiative">
+      <p className="muted">No Encounter in progress.</p>
+      <div className="row">
+        <label>Map{" "}
+          <select aria-label="Encounter map" value={mapId} onChange={(e) => setMapId(e.target.value)}>
+            <option value="">New blank map</option>
+            {maps?.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </label>
+        <button className="primary" disabled={starting} onClick={() => void start()}>Start encounter</button>
+      </div>
+      <SavedEncounterList campaignId={campaign.id} />
+    </div>
+  );
+}
+
+/** Ending clears the order, HP and conditions, so it asks first. */
 function EndEncounterButton({ onEnd }: { onEnd: () => void }) {
   const [asking, setAsking] = useState(false);
   if (!asking) return <button className="danger" onClick={() => setAsking(true)}>End encounter</button>;
   return (
     <span className="confirm-inline" role="group" aria-label="Confirm end encounter">
-      <span>End encounter? Order, HP, conditions and Battle Map are cleared (party HP is kept).</span>
+      <span>End encounter? Order, HP and conditions are cleared (party HP is kept); its tokens stay on the map.</span>
       <button className="danger" autoFocus onClick={() => { setAsking(false); onEnd(); }}>Yes, end it</button>
       <button onClick={() => setAsking(false)}>Keep fighting</button>
     </span>

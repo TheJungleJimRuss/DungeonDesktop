@@ -44,6 +44,8 @@ export interface Encounter {
   /** The combatant whose turn it is; undefined while the Encounter is empty. */
   activeId?: string;
   startedAt: number;
+  /** The Map this Encounter is played on (a record in `maps`). Absent only on Encounters from before Maps. */
+  mapId?: string;
   /** True once the DM has advanced a turn; before that the top of the order is always active. */
   started?: boolean;
   /** What happens at 0 HP: keep the combatant greyed out (default) or remove it. */

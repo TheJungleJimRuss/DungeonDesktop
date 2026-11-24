@@ -2,8 +2,7 @@ import { useId, type ReactNode } from "react";
 import "../panels/NpcListPanel";
 import "../panels/NameGeneratorPanel";
 import "../panels/LocationListPanel";
-import "../panels/WorldMapPanel";
-import "../panels/BattleMapPanel";
+import "../panels/MapPanel";
 import "../panels/PassivePerceptionPanel";
 import "../panels/PinnedNotesPanel";
 import "../panels/ScratchNotesPanel";
@@ -19,7 +18,8 @@ import "../panels/DiceRollerPanel";
 import "../panels/InitiativeTrackerPanel";
 import PanelErrorBoundary from "./PanelErrorBoundary";
 import { getPanel } from "../panels/registry";
-import type { PanelPlacement } from "../modes/modes";
+import type { ModeId, PanelPlacement } from "../modes/modes";
+import { PanelModeContext } from "./PanelMode";
 import type { Campaign } from "../storage";
 
 /** Frame around one panel. `data-panel-id` identifies the panel. */
@@ -49,12 +49,14 @@ export function PanelFrame({ panelId, campaign, placement, controls }: { panelId
 }
 
 /** Arranges panels on a dense 12-column desktop grid. */
-export default function ModeLayout({ layout, campaign }: { layout: PanelPlacement[]; campaign: Campaign }) {
+export default function ModeLayout({ layout, campaign, modeId }: { layout: PanelPlacement[]; campaign: Campaign; modeId?: ModeId }) {
   return (
-    <div className="mode-grid">
-      {layout.map((pl) => (
-        <PanelFrame key={pl.panelId} panelId={pl.panelId} campaign={campaign} placement={pl} />
-      ))}
-    </div>
+    <PanelModeContext.Provider value={modeId}>
+      <div className="mode-grid">
+        {layout.map((pl) => (
+          <PanelFrame key={pl.panelId} panelId={pl.panelId} campaign={campaign} placement={pl} />
+        ))}
+      </div>
+    </PanelModeContext.Provider>
   );
 }

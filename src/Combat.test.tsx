@@ -44,6 +44,7 @@ describe("combat setup and initiative", () => {
     const p = await openCombat(user);
     expect(within(p).getByText(/no encounter in progress/i)).toBeInTheDocument();
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+    await screen.findByRole("button", { name: /end encounter/i });
 
     await addMonster(user, "goblin", "Goblin Warrior");
     await addMonster(user, "goblin", "Goblin Warrior");
@@ -91,6 +92,7 @@ describe("combat setup and initiative", () => {
     await addPartyMember(id, { name: "Thia", class: "Fighter", level: 3, ac: 16, maxHp: 28, passivePerception: 12, notes: "" });
     await createCustomEntry(id, "monster", "Brine Hag", { ...emptyMonsterData(), hp: 40 });
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+    await screen.findByRole("button", { name: /end encounter/i });
     await screen.findByRole("option", { name: "Thia" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Add Party member" }), "Thia");
     await addMonster(user, "brine", "Brine Hag");

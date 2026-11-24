@@ -21,6 +21,7 @@ async function openCombat(user: User) {
   await user.keyboard("{Alt>}1{/Alt}");
   await screen.findByRole("heading", { name: /^combat$/i });
   await user.click(await screen.findByRole("button", { name: /start encounter/i }));
+  await screen.findByRole("button", { name: /end encounter/i });
 }
 const panel = () => screen.getByRole("region", { name: "Combatant Stat Block" });
 const order = () => within(screen.getByRole("list", { name: /initiative order/i })).getAllByRole("listitem").map((li) => li.getAttribute("aria-label"));

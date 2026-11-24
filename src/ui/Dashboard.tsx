@@ -130,7 +130,7 @@ export default function Dashboard({ campaign, onExit }: { campaign: Campaign; on
         {onDashboard && customizing && <DashboardToolbar entries={entries} editing={editing} />}
         {onDashboard
           ? <DashboardGrid entries={entries} campaign={campaign} editing={customizing ? editing : undefined} />
-          : <ModeLayout layout={layout} campaign={campaign} />}
+          : <ModeLayout layout={layout} campaign={campaign} modeId={current?.id} />}
         {onDashboard && entries.length === 0 && (
           <EmptyState action={!customizing && <button className="primary" onClick={() => setCustomizing(true)}>Choose panels</button>}>
             Your Dashboard is empty. Customize it, then use "Add panel" to choose what to show.

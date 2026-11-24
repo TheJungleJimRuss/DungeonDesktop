@@ -3,7 +3,7 @@ import { combatantForLink, compositionOf, encounterFrom, linkKeyOf, summarize } 
 import type { Encounter } from "../combat/rules";
 import { listParty } from "../storage/party";
 import { saveEncounter } from "../storage/encounters";
-import { getBattleMap, restoreMap, snapshotMap } from "../storage/battleMaps";
+import { createEncounterMap, getMap, restoreTokens, snapshotTokens, updateMap } from "../storage/maps";
 import {
   createSavedEncounter, deleteSavedEncounter, renameSavedEncounter, useSavedEncounters, type SavedEncounter,
 } from "../storage/savedEncounters";
@@ -14,8 +14,8 @@ export function SaveEncounterControl({ campaignId, enc }: { campaignId: string; 
   const members = compositionOf(enc);
   const save = async () => {
     if (!name.trim() || !members.length) return;
-    const stored = await getBattleMap(enc.id);
-    await createSavedEncounter(campaignId, name.trim(), members, stored ? snapshotMap(stored, (id) => linkKeyOf(enc, id)) : undefined);
+    const stored = enc.mapId ? await getMap(enc.mapId) : undefined;
+    await createSavedEncounter(campaignId, name.trim(), members, stored ? { mapId: stored.id, tokens: snapshotTokens(stored, (id) => linkKeyOf(enc, id)) } : undefined);
     setName("");
   };
   return (
@@ -30,9 +30,13 @@ function Row({ campaignId, s }: { campaignId: string; s: SavedEncounter }) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(s.name);
   const load = async () => {
-    const enc = encounterFrom(campaignId, s.members, await listParty(campaignId));
+    const base = encounterFrom(campaignId, s.members, await listParty(campaignId));
+    // The saved Map, or a blank one named after the saved encounter when it is gone.
+    const saved = s.mapId ? await getMap(s.mapId) : undefined;
+    const mapId = saved && saved.campaignId === campaignId ? saved.id : (await createEncounterMap(campaignId, s.name)).id;
+    const enc = { ...base, mapId };
     await saveEncounter(enc);
-    if (s.map) await restoreMap(campaignId, enc.id, s.map, (key) => combatantForLink(enc, key));
+    await updateMap(mapId, (m) => restoreTokens(m, s.tokens ?? [], (key) => combatantForLink(enc, key), enc.combatants));
   };
   const commit = () => {
     const n = draft.trim();

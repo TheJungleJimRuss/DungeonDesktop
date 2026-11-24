@@ -66,6 +66,7 @@ describe("Award XP to party when an Encounter ends", () => {
     await user.keyboard("{Alt>}1{/Alt}");
     const p = within(await screen.findByRole("region", { name: "Initiative" }));
     await user.click(p.getByRole("button", { name: /start encounter/i }));
+    await screen.findByRole("button", { name: /end encounter/i });
     await p.findByRole("option", { name: "Mira" }, T);
     await user.selectOptions(p.getByRole("combobox", { name: "Add Party member" }), "__all__");
     for (const q of ["Goblin", "Home Brew"]) {

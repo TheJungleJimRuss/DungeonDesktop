@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { getDb, type CollectionRecord } from "./db";
 import { useChangeVersion } from "../sync/changeBus";
-import type { Encounter } from "../combat/rules";
-import type { BattleMap } from "./battleMaps";
+import { newEncounter, type Encounter } from "../combat/rules";
+import { createEncounterMap, type MapRecord } from "./maps";
 
 /** At most one in-progress Encounter per Campaign, stored in the `encounters` collection. Ending it deletes the record. */
 type Row = Encounter & CollectionRecord;
@@ -12,24 +12,45 @@ export async function getActiveEncounter(campaignId: string): Promise<Encounter 
   return rows.sort((a, b) => b.startedAt - a.startedAt)[0];
 }
 
-/** Saves the Encounter and drops Battle Map tokens whose Combatant is gone (so removal works from any panel or window). */
+/** A new Encounter on a Map: the picked one, or (with none) a blank Map made for it. Not saved yet; see saveEncounter. */
+export async function startEncounter(campaignId: string, mapId?: string, mapName?: string): Promise<Encounter> {
+  const id = mapId ?? (await createEncounterMap(campaignId, mapName)).id;
+  return { ...newEncounter(campaignId), mapId: id };
+}
+
+/** Saves the Encounter and drops its Map's Tokens whose Combatant is gone (so removal works from any panel or window). */
 export async function saveEncounter(e: Encounter): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["encounters", "battleMaps"], "readwrite");
+  const tx = db.transaction(["encounters", "maps"], "readwrite");
   await tx.objectStore("encounters").put(e as unknown as CollectionRecord);
-  const map = (await tx.objectStore("battleMaps").get(e.id)) as unknown as BattleMap | undefined;
+  const map = e.mapId ? ((await tx.objectStore("maps").get(e.mapId)) as MapRecord | undefined) : undefined;
   const alive = new Set(e.combatants.map((c) => c.id));
   if (map?.tokens.some((t) => t.combatantId && !alive.has(t.combatantId))) {
-    const next = { ...map, tokens: map.tokens.filter((t) => !t.combatantId || alive.has(t.combatantId)) };
-    await tx.objectStore("battleMaps").put(next as unknown as CollectionRecord);
+    const next = { ...map, tokens: map.tokens.filter((t) => !t.combatantId || alive.has(t.combatantId)), updatedAt: Date.now() };
+    await tx.objectStore("maps").put(next as unknown as CollectionRecord);
   }
   await tx.done;
 }
 
+/** Ends the Encounter. Its Tokens stay on the Map: linked ones become free Tokens keeping their last name
+ *  (defeated ones too, even when "remove defeated" hid them during the fight). */
 export async function endEncounter(campaignId: string): Promise<void> {
   const db = await getDb();
-  const rows = await db.getAllFromIndex("encounters", "byCampaign", campaignId);
-  for (const r of rows) { await db.delete("encounters", r.id); await db.delete("battleMaps", r.id); } // the Battle Map is keyed by encounter id
+  const tx = db.transaction(["encounters", "maps"], "readwrite");
+  const rows = (await tx.objectStore("encounters").index("byCampaign").getAll(campaignId)) as unknown as Row[];
+  for (const r of rows) {
+    await tx.objectStore("encounters").delete(r.id);
+    const map = r.mapId ? ((await tx.objectStore("maps").get(r.mapId)) as MapRecord | undefined) : undefined;
+    if (!map?.tokens.some((t) => t.combatantId)) continue;
+    const tokens = map.tokens.flatMap((t) => {
+      if (!t.combatantId) return [t];
+      const c = r.combatants.find((x) => x.id === t.combatantId);
+      const { combatantId: _drop, ...free } = t;
+      return [{ ...free, name: c?.name ?? t.name }];
+    });
+    await tx.objectStore("maps").put({ ...map, tokens, updatedAt: Date.now() } as unknown as CollectionRecord);
+  }
+  await tx.done;
 }
 
 /** Live in-progress Encounter: `undefined` while loading, `null` when none. */
