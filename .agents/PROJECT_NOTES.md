@@ -10,7 +10,7 @@ Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (s
 - Local-first React + Vite + TypeScript static app; IndexedDB; per-Campaign JSON export/import. No server, no accounts.
 - 5e 2024 only; bundled SRD 5.2.1 (CC BY 4.0), monsters first. Source: 5e-bits/5e-database 2024 monsters pinned by commit and SHA-256; rebuild with `npm run build:srd` (scripts/build-srd.mjs) into src/data/srd/*.json, lazy-imported (own chunk), no runtime third-party fetch. Exact attribution wording: ADR 0001 and src/srd/attribution.ts (footer shown in the app).
 - DM-only. No player view. Pop-out Window removed 2026-11-17 (with Pinned NPC); data still syncs across tabs via the change bus.
-- No in-world calendar or clock. Maps (spec 0007): a Campaign has many named Maps, each with its own unit, scale and optional grid; an Encounter plays on one Map (blank one made if none picked). Walls are visual only. Route length comes from the Map scale.
+- No in-world calendar or clock. Maps (spec 0007): a Campaign has many named Maps, each with its own unit, scale and optional grid; an Encounter plays on one Map (blank one made if none picked). Walls are visual only. Route length comes from the Map scale. The shown grid keeps its on-screen size at every zoom and its "1 square = N" label scales with zoom (user request 2026-11-23); Tokens, drawing snap, ruler and Routes still use the Map's own squares.
 - One test seam: whole app on in-memory IndexedDB, driven like a user; Playwright only for what jsdom can't do (pointer drag, offline). Vitest runs files sequentially (fileParallelism false) because assertions flaked under load.
 - Vocabulary in GLOSSARY.md. Spec and tickets are local files (.agents/issues/dm-site/issues/).
 

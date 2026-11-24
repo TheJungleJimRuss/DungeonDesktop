@@ -196,6 +196,22 @@ describe("Map panel", () => {
     expect(again.getByText("150%")).toBeInTheDocument();
   });
 
+  it("keeps the grid's on-screen size when zooming: one grid square stands for less when zoomed in, more when zoomed out", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMapPanel(user);
+    await user.click(await panel.findByRole("button", { name: "New map" }));
+    expect(await panel.findByLabelText("Grid scale")).toHaveTextContent("1 square = 5 ft");
+    const lines = () => document.querySelectorAll(".grid-line").length;
+    const atFit = lines();
+    await user.click(panel.getByRole("button", { name: "Zoom in" }));
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 3.33 ft"));
+    expect(Math.abs(lines() - atFit)).toBeLessThanOrEqual(4); // about as many lines in view, not fewer, wider squares
+    await user.click(panel.getByRole("button", { name: "Zoom out" }));
+    await user.click(panel.getByRole("button", { name: "Zoom out" }));
+    await waitFor(() => expect(panel.getByLabelText("Grid scale")).toHaveTextContent("1 square = 7.5 ft"));
+  });
+
   it("shows the Map panel where saved layouts and old imports named world-map", async () => {
     const user = userEvent.setup();
     render(<App />);

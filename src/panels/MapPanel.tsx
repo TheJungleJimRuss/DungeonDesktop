@@ -78,8 +78,15 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   const vw = W / zoom, vh = H / zoom;
   const box = { x: centre.x - vw / 2, y: centre.y - vh / 2, w: vw, h: vh };
   const stride = 2 ** Math.max(0, Math.ceil(Math.log2(Math.max(map.width, map.height) / MAX_LINES)));
-  const gridAt = (count: number) => { const out: number[] = []; for (let i = 0; i <= count; i += stride) out.push(i); return out; };
   const zoomBy = (k: number) => setView({ zoom: zoom * k, centre });
+  // The shown grid keeps its on-screen size at every zoom; what one of its squares stands for scales with zoom
+  // (zoom in: smaller). Tokens, the ruler and Routes still use the Map's own squares.
+  const gridStep = (CELL * stride) / zoom, gridPerSquare = (map.perSquare * stride) / zoom;
+  const gridAt = (from: number, to: number, end: number) => {
+    const out: number[] = [];
+    for (let i = Math.max(0, Math.ceil(from / gridStep)); i * gridStep <= Math.min(to, end) + 1e-6; i++) out.push(i * gridStep);
+    return out;
+  };
   // The grid carries on past the Map's size for the ruler: its squares cover whatever is in view.
   const cols = { lo: Math.floor(box.x / CELL), hi: Math.ceil((box.x + box.w) / CELL) };
   const rows = { lo: Math.floor(box.y / CELL), hi: Math.ceil((box.y + box.h) / CELL) };
@@ -244,6 +251,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
           <span className="muted" aria-live="polite">{Math.round(zoom * 100)}%</span>
           <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
           <button aria-pressed={view === null} onClick={() => setView(null)} title="Show the whole map">Fit</button>
+          {map.showGrid && <span className="muted" aria-label="Grid scale" title="What one grid square stands for at this zoom">1 square = {formatDistance(gridPerSquare, map.unit)}</span>}
         </span>
         {rule && <button onClick={() => setRule(null)}>Clear measurement</button>}
       </div>
@@ -281,8 +289,8 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
           <rect x={box.x} y={box.y} width={box.w} height={box.h} className="map-bg" data-testid="map-pan"
             onPointerDown={panStart} onPointerMove={panMove} onPointerUp={() => { if (!panEnd()) { setSelLine(null); setSelMarker(null); setSelToken(null); } }} />
           {bgUrl && <image href={bgUrl} x={bgX * CELL} y={bgY * CELL} width={W * bgScale} height={H * bgScale} preserveAspectRatio="xMinYMin meet" pointerEvents="none" aria-hidden="true" />}
-          {map.showGrid && gridAt(map.width).map((i) => <line key={`v${i}`} x1={i * CELL} y1={0} x2={i * CELL} y2={H} className="grid-line" pointerEvents="none" />)}
-          {map.showGrid && gridAt(map.height).map((i) => <line key={`h${i}`} x1={0} y1={i * CELL} x2={W} y2={i * CELL} className="grid-line" pointerEvents="none" />)}
+          {map.showGrid && gridAt(box.x, box.x + box.w, W).map((x) => <line key={`v${x}`} x1={x} y1={0} x2={x} y2={H} className="grid-line" pointerEvents="none" />)}
+          {map.showGrid && gridAt(box.y, box.y + box.h, H).map((y) => <line key={`h${y}`} x1={0} y1={y} x2={W} y2={y} className="grid-line" pointerEvents="none" />)}
           <rect x={0} y={0} width={W} height={H} className="map-extent" pointerEvents="none" aria-hidden="true" />
           <AreasLayer lines={map.lines} labelOf={areaText} selectedId={selected?.id} moved={moved} selectable={tool === "select"} onSelect={pickArea}
             pointAt={freePoint} onPanStart={panStart} onPanMove={panMove} onPanEnd={panEnd} />
