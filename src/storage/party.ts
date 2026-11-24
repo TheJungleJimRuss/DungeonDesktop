@@ -26,6 +26,10 @@ export interface PartyMember {
   subspeciesId?: string;
   /** Its SRD name, e.g. "Draconic Ancestor: Red", kept so cards need no SRD load. */
   subspecies?: string;
+  /** SRD or PHB 2024 subclass id (only meaningful with classId, and its class must match). */
+  subclassId?: string;
+  /** Its name, e.g. "Champion", kept so cards need no SRD load. */
+  subclass?: string;
   backgroundId?: string;
   alignment?: string;
   xp?: number;
@@ -60,6 +64,10 @@ export interface PartyMember {
   coins?: Coins;
   personality?: string;
   backstory?: string;
+  /** Damage types (see DAMAGE_TYPES) this character resists, is immune to or is vulnerable to. Not auto-filled. */
+  damageResistances?: string[];
+  damageImmunities?: string[];
+  damageVulnerabilities?: string[];
 }
 
 /** Names the sheet added last time. Skills, equipment and gold are absent on migrated legacy records, meaning
@@ -81,6 +89,10 @@ export const subspeciesShortName = (name: string) => name.replace(/^[^:]*:\s*/, 
 /** Species as shown on cards: "Dragonborn (Red)" when a type is picked. */
 export const speciesLabel = (m: Pick<PartyMember, "race" | "subspecies">) =>
   m.race && m.subspecies ? `${m.race} (${subspeciesShortName(m.subspecies)})` : m.race;
+
+/** Class as shown on cards: "Fighter (Champion)" when a subclass is picked. */
+export const classLabel = (m: Pick<PartyMember, "class" | "subclass">) =>
+  m.class && m.subclass ? `${m.class} (${m.subclass})` : m.class;
 
 export const currentHpOf = (m: Pick<PartyMember, "maxHp" | "currentHp">) => m.currentHp ?? m.maxHp;
 

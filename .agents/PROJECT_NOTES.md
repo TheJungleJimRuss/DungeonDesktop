@@ -43,7 +43,7 @@ Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (s
 - Attack search (2026-11-23): src/panels/AttackSearch.tsx, presets from src/party/attackPresets.ts (SRD weapons parse `damage`; spells take the first "NdM <Type> damage" in the text). Used in the form's New attack (fills the draft) and the sheet view's Attacks card (adds directly). Spells set `abilityDamage: false` (checkbox "Ability to damage"), so the spell mod goes to hit only.
 - Ending an Encounter with Party combatants opens the "Award XP to party" dialog (src/panels/AwardXpStep.tsx); tests click "End without XP" after "Yes, end it".
 - Player card in Combat duplicates Damage/Heal buttons: scope tracker queries with within(region).
-- Damage types (spec 0008): HpControls has a "Damage type <name>" select; adjustDamage (src/combat/damageTypes.ts) runs before applyDamage (immune skips it, so no death-save failure). Defenses come from the monster stat block or PartyMember damageResistances/Immunities/Vulnerabilities (Character form "Defenses"). The Player card's own HP box has no type select.
+- Damage types (spec 0008): HpControls has a "Damage type <name>" select; adjustDamage (src/combat/damageTypes.ts) runs before applyDamage (immune skips it, so no death-save failure). Defenses come from the monster stat block or PartyMember damageResistances/Immunities/Vulnerabilities (Character form "Defenses"). The Player card HP box has the same type select (adjusts with memberDefenses).
 - Encounter difficulty (spec 0008): src/combat/difficulty.ts (2024 XP budget, hand-typed) + EncounterDifficulty.tsx in the Initiative tracker; party combatants, else whole Party. Fixture "Test Ghoul" is CR 3 monstrosity so CR/type filter tests stay unchanged.
 
 ## Next steps

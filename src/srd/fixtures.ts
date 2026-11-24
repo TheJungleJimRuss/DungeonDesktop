@@ -16,6 +16,7 @@ export const FIXTURE_MONSTERS: Monster[] = [
     lairActions: [{ name: "Tremor", desc: "The ground shakes." }], reactions: [{ name: "Scale Shield", desc: "Reduces damage." }], bonusActions: [{ name: "Hiss", desc: "A loud hiss." }] },
   { ...base, id: "test-wisp", name: "Will-o’-Wisp", type: "undead", cr: 2, xp: 450 },
   { ...base, id: "test-skeleton", name: "Skeleton", type: "undead", cr: 0.25 },
+  { ...base, id: "test-ghoul", name: "Test Ghoul", type: "monstrosity", cr: 3, xp: 700, hp: 22, hpRoll: "5d8", immunities: ["Poison"], resistances: ["Necrotic"], vulnerabilities: ["Radiant"] },
   { ...base, id: "test-owlbear", name: "Owlbear", type: "monstrosity", size: "Large", cr: 3, xp: 700 },
 ];
 
@@ -88,6 +89,8 @@ export const FIXTURE_CHARACTER: CharacterData = {
   subclasses: [
     { id: "test-path", name: "Path Test", class: { id: "test-brute", name: "Savage Test" }, summary: "Fury Without End",
       description: "Brutes of this path **never** tire.", features: [{ id: "test-frenzy", name: "Frenzy Test", level: 3 }] },
+    { id: "test-mage-sub", name: "Rune Test", class: { id: "test-mage", name: "Mage Test" }, summary: "", description: "", source: "PHB 2024",
+      features: [{ id: "", name: "Rune Feature Test", level: 3 }] },
   ],
   classFeatures: [
     { id: "test-rage", name: "Rage Test", class: { id: "test-brute", name: "Savage Test" }, level: 1, description: "You can enter a **Rage** as a Bonus Action." },

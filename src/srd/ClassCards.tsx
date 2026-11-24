@@ -6,7 +6,7 @@ import { Line, RichText } from "./RichText";
 export const classSummary = (c: Class) => `Class · d${c.hitDie}`;
 export const classFeatureSummary = (f: ClassFeature) =>
   f.subclass ? `${f.subclass.name} (${f.class.name}) · level ${f.level}` : `${f.class.name} feature · level ${f.level}`;
-export const subclassSummary = (s: Subclass) => `${s.class.name} subclass`;
+export const subclassSummary = (s: Subclass) => `${s.class.name} subclass${s.source ? ` (${s.source}, not in SRD 5.2.1)` : ""}`;
 
 function useFeatures(): ClassFeature[] {
   const [features, setFeatures] = useState<ClassFeature[]>([]);
@@ -96,6 +96,11 @@ export function SubclassView({ s, onOpen }: { s: Subclass; onOpen?: OpenRef }) {
       <p className="sb-sub"><em>{subclassSummary(s)}</em></p>
       <p className="sb-line"><strong>Class</strong> <Link type="class" r={s.class} onOpen={onOpen} /></p>
       <Line label="Summary" value={s.summary} />
+      {s.source ? (
+        <section className="sb-section" aria-label="Features"><h3>Features</h3>
+          {s.features.map((f) => <p key={`${f.level}-${f.name}`} className="sb-line">Level {f.level}: {f.name}</p>)}
+        </section>
+      ) : (<>
       <section className="sb-section" aria-label="Description"><RichText text={s.description} /></section>
       <section className="sb-section" aria-label="Features"><h3>Features</h3>
         {levels.map((lv) => (
@@ -104,7 +109,7 @@ export function SubclassView({ s, onOpen }: { s: Subclass; onOpen?: OpenRef }) {
             {s.features.filter((f) => f.level === lv).map((r) => { const f = features.find((x) => x.id === r.id); return f && <FeatureDetails key={r.id} f={f} onOpen={onOpen} />; })}
           </div>
         ))}
-      </section>
+      </section></>)}
     </article>
   );
 }

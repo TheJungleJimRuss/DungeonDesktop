@@ -76,7 +76,7 @@ describe("Party tab and character sheets", () => {
     expect(s.queryByLabelText("Attack bonus of Fire Bolt")).not.toBeInTheDocument();
     await user.click(s.getByLabelText("Increase Fire Bolt"));
     await waitFor(() => expect(s.getByText(/\+3 to hit, 2d10\+3 fire/)).toBeInTheDocument());
-    expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(4);
+    await waitFor(() => expect(s.getByLabelText("Quantity of Fire Bolt")).toHaveValue(4));
     const pack = within(s.getByRole("list", { name: "Spell Satchel contents" }));
     expect(pack.getByLabelText("Quantity of Parchment in Spell Satchel")).toHaveValue(5);
     expect(pack.queryByText("Ink")).not.toBeInTheDocument();
@@ -235,7 +235,7 @@ describe("SRD packs", () => {
     const s = within(await p.findByRole("article", { name: /vex character sheet/i }));
     expect(within(s.getByRole("list", { name: "Explorer's Pack contents" })).getByText("Backpack")).toBeInTheDocument();
     await user.type(s.getByLabelText("Add item"), "Explorer's Pack{Enter}");
-    expect(await s.findAllByRole("button", { name: "Collapse Explorer's Pack" })).toHaveLength(2);
+    await waitFor(() => expect(s.getAllByRole("button", { name: "Collapse Explorer's Pack" })).toHaveLength(2));
     expect(s.getAllByLabelText("Quantity of Torch in Explorer's Pack")[1]).toHaveValue(10);
   });
 });

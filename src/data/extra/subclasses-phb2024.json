@@ -1,0 +1,1385 @@
+[
+ {
+  "id": "path-of-the-wild-heart",
+  "name": "Path of the Wild Heart",
+  "class": {
+   "id": "barbarian",
+   "name": "Barbarian"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "path-of-the-wild-heart-animal-speaker",
+    "name": "Animal Speaker",
+    "level": 3
+   },
+   {
+    "id": "path-of-the-wild-heart-rage-of-the-wilds",
+    "name": "Rage of the Wilds",
+    "level": 3
+   },
+   {
+    "id": "path-of-the-wild-heart-aspect-of-the-wilds",
+    "name": "Aspect of the Wilds",
+    "level": 6
+   },
+   {
+    "id": "path-of-the-wild-heart-nature-speaker",
+    "name": "Nature Speaker",
+    "level": 10
+   },
+   {
+    "id": "path-of-the-wild-heart-power-of-the-wilds",
+    "name": "Power of the Wilds",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "path-of-the-world-tree",
+  "name": "Path of the World Tree",
+  "class": {
+   "id": "barbarian",
+   "name": "Barbarian"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "path-of-the-world-tree-vitality-of-the-tree",
+    "name": "Vitality of the Tree",
+    "level": 3
+   },
+   {
+    "id": "path-of-the-world-tree-branches-of-the-tree",
+    "name": "Branches of the Tree",
+    "level": 6
+   },
+   {
+    "id": "path-of-the-world-tree-battering-roots",
+    "name": "Battering Roots",
+    "level": 10
+   },
+   {
+    "id": "path-of-the-world-tree-travel-along-the-tree",
+    "name": "Travel along the Tree",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "path-of-the-zealot",
+  "name": "Path of the Zealot",
+  "class": {
+   "id": "barbarian",
+   "name": "Barbarian"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "path-of-the-zealot-divine-fury",
+    "name": "Divine Fury",
+    "level": 3
+   },
+   {
+    "id": "path-of-the-zealot-warrior-of-the-gods",
+    "name": "Warrior of the Gods",
+    "level": 3
+   },
+   {
+    "id": "path-of-the-zealot-fanatical-focus",
+    "name": "Fanatical Focus",
+    "level": 6
+   },
+   {
+    "id": "path-of-the-zealot-zealous-presence",
+    "name": "Zealous Presence",
+    "level": 10
+   },
+   {
+    "id": "path-of-the-zealot-rage-of-the-gods",
+    "name": "Rage of the Gods",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "college-of-dance",
+  "name": "College of Dance",
+  "class": {
+   "id": "bard",
+   "name": "Bard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "college-of-dance-dazzling-footwork",
+    "name": "Dazzling Footwork",
+    "level": 3
+   },
+   {
+    "id": "college-of-dance-inspiring-movement",
+    "name": "Inspiring Movement",
+    "level": 6
+   },
+   {
+    "id": "college-of-dance-tandem-footwork",
+    "name": "Tandem Footwork",
+    "level": 6
+   },
+   {
+    "id": "college-of-dance-leading-evasion",
+    "name": "Leading Evasion",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "college-of-glamour",
+  "name": "College of Glamour",
+  "class": {
+   "id": "bard",
+   "name": "Bard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "college-of-glamour-beguiling-magic",
+    "name": "Beguiling Magic",
+    "level": 3
+   },
+   {
+    "id": "college-of-glamour-mantle-of-inspiration",
+    "name": "Mantle of Inspiration",
+    "level": 3
+   },
+   {
+    "id": "college-of-glamour-mantle-of-majesty",
+    "name": "Mantle of Majesty",
+    "level": 6
+   },
+   {
+    "id": "college-of-glamour-unbreakable-majesty",
+    "name": "Unbreakable Majesty",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "college-of-valor",
+  "name": "College of Valor",
+  "class": {
+   "id": "bard",
+   "name": "Bard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "college-of-valor-combat-inspiration",
+    "name": "Combat Inspiration",
+    "level": 3
+   },
+   {
+    "id": "college-of-valor-martial-training",
+    "name": "Martial Training",
+    "level": 3
+   },
+   {
+    "id": "college-of-valor-extra-attack",
+    "name": "Extra Attack",
+    "level": 6
+   },
+   {
+    "id": "college-of-valor-battle-magic",
+    "name": "Battle Magic",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "light-domain",
+  "name": "Light Domain",
+  "class": {
+   "id": "cleric",
+   "name": "Cleric"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "light-domain-light-domain-spells",
+    "name": "Light Domain Spells",
+    "level": 3
+   },
+   {
+    "id": "light-domain-radiance-of-the-dawn",
+    "name": "Radiance of the Dawn",
+    "level": 3
+   },
+   {
+    "id": "light-domain-warding-flare",
+    "name": "Warding Flare",
+    "level": 3
+   },
+   {
+    "id": "light-domain-improved-warding-flare",
+    "name": "Improved Warding Flare",
+    "level": 6
+   },
+   {
+    "id": "light-domain-corona-of-light",
+    "name": "Corona of Light",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "trickery-domain",
+  "name": "Trickery Domain",
+  "class": {
+   "id": "cleric",
+   "name": "Cleric"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "trickery-domain-blessing-of-the-trickster",
+    "name": "Blessing of the Trickster",
+    "level": 3
+   },
+   {
+    "id": "trickery-domain-invoke-duplicity",
+    "name": "Invoke Duplicity",
+    "level": 3
+   },
+   {
+    "id": "trickery-domain-trickery-domain-spells",
+    "name": "Trickery Domain Spells",
+    "level": 3
+   },
+   {
+    "id": "trickery-domain-tricksters-transposition",
+    "name": "Trickster's Transposition",
+    "level": 6
+   },
+   {
+    "id": "trickery-domain-improved-duplicity",
+    "name": "Improved Duplicity",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "war-domain",
+  "name": "War Domain",
+  "class": {
+   "id": "cleric",
+   "name": "Cleric"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "war-domain-guided-strike",
+    "name": "Guided Strike",
+    "level": 3
+   },
+   {
+    "id": "war-domain-war-domain-spells",
+    "name": "War Domain Spells",
+    "level": 3
+   },
+   {
+    "id": "war-domain-war-priest",
+    "name": "War Priest",
+    "level": 3
+   },
+   {
+    "id": "war-domain-war-gods-blessing",
+    "name": "War God's Blessing",
+    "level": 6
+   },
+   {
+    "id": "war-domain-avatar-of-battle",
+    "name": "Avatar of Battle",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "circle-of-the-moon",
+  "name": "Circle of the Moon",
+  "class": {
+   "id": "druid",
+   "name": "Druid"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "circle-of-the-moon-circle-forms",
+    "name": "Circle Forms",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-moon-circle-of-the-moon-spells",
+    "name": "Circle of the Moon Spells",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-moon-improved-circle-forms",
+    "name": "Improved Circle Forms",
+    "level": 6
+   },
+   {
+    "id": "circle-of-the-moon-moonlight-step",
+    "name": "Moonlight Step",
+    "level": 10
+   },
+   {
+    "id": "circle-of-the-moon-lunar-form",
+    "name": "Lunar Form",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "circle-of-the-sea",
+  "name": "Circle of the Sea",
+  "class": {
+   "id": "druid",
+   "name": "Druid"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "circle-of-the-sea-circle-of-the-sea-spells",
+    "name": "Circle of the Sea Spells",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-sea-wrath-of-the-sea",
+    "name": "Wrath of the Sea",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-sea-aquatic-affinity",
+    "name": "Aquatic Affinity",
+    "level": 6
+   },
+   {
+    "id": "circle-of-the-sea-stormborn",
+    "name": "Stormborn",
+    "level": 10
+   },
+   {
+    "id": "circle-of-the-sea-oceanic-gift",
+    "name": "Oceanic Gift",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "circle-of-the-stars",
+  "name": "Circle of the Stars",
+  "class": {
+   "id": "druid",
+   "name": "Druid"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "circle-of-the-stars-star-map",
+    "name": "Star Map",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-stars-starry-form",
+    "name": "Starry Form",
+    "level": 3
+   },
+   {
+    "id": "circle-of-the-stars-cosmic-omen",
+    "name": "Cosmic Omen",
+    "level": 6
+   },
+   {
+    "id": "circle-of-the-stars-twinkling-constellations",
+    "name": "Twinkling Constellations",
+    "level": 10
+   },
+   {
+    "id": "circle-of-the-stars-full-of-stars",
+    "name": "Full of Stars",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "battle-master",
+  "name": "Battle Master",
+  "class": {
+   "id": "fighter",
+   "name": "Fighter"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "battle-master-combat-superiority",
+    "name": "Combat Superiority",
+    "level": 3
+   },
+   {
+    "id": "battle-master-student-of-war",
+    "name": "Student of War",
+    "level": 3
+   },
+   {
+    "id": "battle-master-know-your-enemy",
+    "name": "Know Your Enemy",
+    "level": 7
+   },
+   {
+    "id": "battle-master-improved-combat-superiority",
+    "name": "Improved Combat Superiority",
+    "level": 10
+   },
+   {
+    "id": "battle-master-relentless",
+    "name": "Relentless",
+    "level": 15
+   },
+   {
+    "id": "battle-master-ultimate-combat-superiority",
+    "name": "Ultimate Combat Superiority",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "eldritch-knight",
+  "name": "Eldritch Knight",
+  "class": {
+   "id": "fighter",
+   "name": "Fighter"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "eldritch-knight-spellcasting",
+    "name": "Spellcasting",
+    "level": 3
+   },
+   {
+    "id": "eldritch-knight-war-bond",
+    "name": "War Bond",
+    "level": 3
+   },
+   {
+    "id": "eldritch-knight-war-magic",
+    "name": "War Magic",
+    "level": 7
+   },
+   {
+    "id": "eldritch-knight-eldritch-strike",
+    "name": "Eldritch Strike",
+    "level": 10
+   },
+   {
+    "id": "eldritch-knight-arcane-charge",
+    "name": "Arcane Charge",
+    "level": 15
+   },
+   {
+    "id": "eldritch-knight-improved-war-magic",
+    "name": "Improved War Magic",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "psi-warrior",
+  "name": "Psi Warrior",
+  "class": {
+   "id": "fighter",
+   "name": "Fighter"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "psi-warrior-psionic-power",
+    "name": "Psionic Power",
+    "level": 3
+   },
+   {
+    "id": "psi-warrior-telekinetic-adept",
+    "name": "Telekinetic Adept",
+    "level": 7
+   },
+   {
+    "id": "psi-warrior-guarded-mind",
+    "name": "Guarded Mind",
+    "level": 10
+   },
+   {
+    "id": "psi-warrior-bulwark-of-force",
+    "name": "Bulwark of Force",
+    "level": 15
+   },
+   {
+    "id": "psi-warrior-telekinetic-master",
+    "name": "Telekinetic Master",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "warrior-of-mercy",
+  "name": "Warrior of Mercy",
+  "class": {
+   "id": "monk",
+   "name": "Monk"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "warrior-of-mercy-hand-of-harm",
+    "name": "Hand of Harm",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-mercy-hand-of-healing",
+    "name": "Hand of Healing",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-mercy-implements-of-mercy",
+    "name": "Implements of Mercy",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-mercy-physicians-touch",
+    "name": "Physician's Touch",
+    "level": 6
+   },
+   {
+    "id": "warrior-of-mercy-flurry-of-healing-and-harm",
+    "name": "Flurry of Healing and Harm",
+    "level": 11
+   },
+   {
+    "id": "warrior-of-mercy-hand-of-ultimate-mercy",
+    "name": "Hand of Ultimate Mercy",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "warrior-of-shadow",
+  "name": "Warrior of Shadow",
+  "class": {
+   "id": "monk",
+   "name": "Monk"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "warrior-of-shadow-shadow-arts",
+    "name": "Shadow Arts",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-shadow-shadow-step",
+    "name": "Shadow Step",
+    "level": 6
+   },
+   {
+    "id": "warrior-of-shadow-improved-shadow-step",
+    "name": "Improved Shadow Step",
+    "level": 11
+   },
+   {
+    "id": "warrior-of-shadow-cloak-of-shadows",
+    "name": "Cloak of Shadows",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "warrior-of-the-elements",
+  "name": "Warrior of the Elements",
+  "class": {
+   "id": "monk",
+   "name": "Monk"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "warrior-of-the-elements-elemental-attunement",
+    "name": "Elemental Attunement",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-the-elements-manipulate-elements",
+    "name": "Manipulate Elements",
+    "level": 3
+   },
+   {
+    "id": "warrior-of-the-elements-elemental-burst",
+    "name": "Elemental Burst",
+    "level": 6
+   },
+   {
+    "id": "warrior-of-the-elements-stride-of-the-elements",
+    "name": "Stride of the Elements",
+    "level": 11
+   },
+   {
+    "id": "warrior-of-the-elements-elemental-epitome",
+    "name": "Elemental Epitome",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "oath-of-glory",
+  "name": "Oath of Glory",
+  "class": {
+   "id": "paladin",
+   "name": "Paladin"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "oath-of-glory-inspiring-smite",
+    "name": "Inspiring Smite",
+    "level": 3
+   },
+   {
+    "id": "oath-of-glory-oath-of-glory-spells",
+    "name": "Oath of Glory Spells",
+    "level": 3
+   },
+   {
+    "id": "oath-of-glory-peerless-athlete",
+    "name": "Peerless Athlete",
+    "level": 3
+   },
+   {
+    "id": "oath-of-glory-aura-of-alacrity",
+    "name": "Aura of Alacrity",
+    "level": 7
+   },
+   {
+    "id": "oath-of-glory-glorious-defense",
+    "name": "Glorious Defense",
+    "level": 15
+   },
+   {
+    "id": "oath-of-glory-living-legend",
+    "name": "Living Legend",
+    "level": 20
+   }
+  ]
+ },
+ {
+  "id": "oath-of-the-ancients",
+  "name": "Oath of the Ancients",
+  "class": {
+   "id": "paladin",
+   "name": "Paladin"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "oath-of-the-ancients-natures-wrath",
+    "name": "Nature's Wrath",
+    "level": 3
+   },
+   {
+    "id": "oath-of-the-ancients-oath-of-the-ancients-spells",
+    "name": "Oath of the Ancients Spells",
+    "level": 3
+   },
+   {
+    "id": "oath-of-the-ancients-aura-of-warding",
+    "name": "Aura of Warding",
+    "level": 7
+   },
+   {
+    "id": "oath-of-the-ancients-undying-sentinel",
+    "name": "Undying Sentinel",
+    "level": 15
+   },
+   {
+    "id": "oath-of-the-ancients-elder-champion",
+    "name": "Elder Champion",
+    "level": 20
+   }
+  ]
+ },
+ {
+  "id": "oath-of-vengeance",
+  "name": "Oath of Vengeance",
+  "class": {
+   "id": "paladin",
+   "name": "Paladin"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "oath-of-vengeance-oath-of-vengeance-spells",
+    "name": "Oath of Vengeance Spells",
+    "level": 3
+   },
+   {
+    "id": "oath-of-vengeance-vow-of-enmity",
+    "name": "Vow of Enmity",
+    "level": 3
+   },
+   {
+    "id": "oath-of-vengeance-relentless-avenger",
+    "name": "Relentless Avenger",
+    "level": 7
+   },
+   {
+    "id": "oath-of-vengeance-soul-of-vengeance",
+    "name": "Soul of Vengeance",
+    "level": 15
+   },
+   {
+    "id": "oath-of-vengeance-avenging-angel",
+    "name": "Avenging Angel",
+    "level": 20
+   }
+  ]
+ },
+ {
+  "id": "beast-master",
+  "name": "Beast Master",
+  "class": {
+   "id": "ranger",
+   "name": "Ranger"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "beast-master-primal-companion",
+    "name": "Primal Companion",
+    "level": 3
+   },
+   {
+    "id": "beast-master-exceptional-training",
+    "name": "Exceptional Training",
+    "level": 7
+   },
+   {
+    "id": "beast-master-bestial-fury",
+    "name": "Bestial Fury",
+    "level": 11
+   },
+   {
+    "id": "beast-master-share-spells",
+    "name": "Share Spells",
+    "level": 15
+   }
+  ]
+ },
+ {
+  "id": "fey-wanderer",
+  "name": "Fey Wanderer",
+  "class": {
+   "id": "ranger",
+   "name": "Ranger"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "fey-wanderer-dreadful-strikes",
+    "name": "Dreadful Strikes",
+    "level": 3
+   },
+   {
+    "id": "fey-wanderer-fey-wanderer-spells",
+    "name": "Fey Wanderer Spells",
+    "level": 3
+   },
+   {
+    "id": "fey-wanderer-otherworldly-glamour",
+    "name": "Otherworldly Glamour",
+    "level": 3
+   },
+   {
+    "id": "fey-wanderer-beguiling-twist",
+    "name": "Beguiling Twist",
+    "level": 7
+   },
+   {
+    "id": "fey-wanderer-fey-reinforcements",
+    "name": "Fey Reinforcements",
+    "level": 11
+   },
+   {
+    "id": "fey-wanderer-misty-wanderer",
+    "name": "Misty Wanderer",
+    "level": 15
+   }
+  ]
+ },
+ {
+  "id": "gloom-stalker",
+  "name": "Gloom Stalker",
+  "class": {
+   "id": "ranger",
+   "name": "Ranger"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "gloom-stalker-dread-ambusher",
+    "name": "Dread Ambusher",
+    "level": 3
+   },
+   {
+    "id": "gloom-stalker-gloom-stalker-spells",
+    "name": "Gloom Stalker Spells",
+    "level": 3
+   },
+   {
+    "id": "gloom-stalker-umbral-sight",
+    "name": "Umbral Sight",
+    "level": 3
+   },
+   {
+    "id": "gloom-stalker-iron-mind",
+    "name": "Iron Mind",
+    "level": 7
+   },
+   {
+    "id": "gloom-stalker-stalkers-flurry",
+    "name": "Stalker's Flurry",
+    "level": 11
+   },
+   {
+    "id": "gloom-stalker-shadowy-dodge",
+    "name": "Shadowy Dodge",
+    "level": 15
+   }
+  ]
+ },
+ {
+  "id": "arcane-trickster",
+  "name": "Arcane Trickster",
+  "class": {
+   "id": "rogue",
+   "name": "Rogue"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "arcane-trickster-spellcasting",
+    "name": "Spellcasting",
+    "level": 3
+   },
+   {
+    "id": "arcane-trickster-mage-hand-legerdemain",
+    "name": "Mage Hand Legerdemain",
+    "level": 3
+   },
+   {
+    "id": "arcane-trickster-magical-ambush",
+    "name": "Magical Ambush",
+    "level": 9
+   },
+   {
+    "id": "arcane-trickster-versatile-trickster",
+    "name": "Versatile Trickster",
+    "level": 13
+   },
+   {
+    "id": "arcane-trickster-spell-thief",
+    "name": "Spell Thief",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "assassin",
+  "name": "Assassin",
+  "class": {
+   "id": "rogue",
+   "name": "Rogue"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "assassin-assassinate",
+    "name": "Assassinate",
+    "level": 3
+   },
+   {
+    "id": "assassin-assassins-tools",
+    "name": "Assassin's Tools",
+    "level": 3
+   },
+   {
+    "id": "assassin-infiltration-expertise",
+    "name": "Infiltration Expertise",
+    "level": 9
+   },
+   {
+    "id": "assassin-envenom-weapons",
+    "name": "Envenom Weapons",
+    "level": 13
+   },
+   {
+    "id": "assassin-death-strike",
+    "name": "Death Strike",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "soulknife",
+  "name": "Soulknife",
+  "class": {
+   "id": "rogue",
+   "name": "Rogue"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "soulknife-psionic-power",
+    "name": "Psionic Power",
+    "level": 3
+   },
+   {
+    "id": "soulknife-psychic-blades",
+    "name": "Psychic Blades",
+    "level": 3
+   },
+   {
+    "id": "soulknife-soul-blades",
+    "name": "Soul Blades",
+    "level": 9
+   },
+   {
+    "id": "soulknife-psychic-veil",
+    "name": "Psychic Veil",
+    "level": 13
+   },
+   {
+    "id": "soulknife-rend-mind",
+    "name": "Rend Mind",
+    "level": 17
+   }
+  ]
+ },
+ {
+  "id": "aberrant-sorcery",
+  "name": "Aberrant Sorcery",
+  "class": {
+   "id": "sorcerer",
+   "name": "Sorcerer"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "aberrant-sorcery-psionic-spells",
+    "name": "Psionic Spells",
+    "level": 3
+   },
+   {
+    "id": "aberrant-sorcery-telepathic-speech",
+    "name": "Telepathic Speech",
+    "level": 3
+   },
+   {
+    "id": "aberrant-sorcery-psionic-sorcery",
+    "name": "Psionic Sorcery",
+    "level": 6
+   },
+   {
+    "id": "aberrant-sorcery-psychic-defenses",
+    "name": "Psychic Defenses",
+    "level": 6
+   },
+   {
+    "id": "aberrant-sorcery-revelation-in-flesh",
+    "name": "Revelation in Flesh",
+    "level": 14
+   },
+   {
+    "id": "aberrant-sorcery-warping-implosion",
+    "name": "Warping Implosion",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "clockwork-sorcery",
+  "name": "Clockwork Sorcery",
+  "class": {
+   "id": "sorcerer",
+   "name": "Sorcerer"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "clockwork-sorcery-clockwork-spells",
+    "name": "Clockwork Spells",
+    "level": 3
+   },
+   {
+    "id": "clockwork-sorcery-restore-balance",
+    "name": "Restore Balance",
+    "level": 3
+   },
+   {
+    "id": "clockwork-sorcery-bastion-of-law",
+    "name": "Bastion of Law",
+    "level": 6
+   },
+   {
+    "id": "clockwork-sorcery-trance-of-order",
+    "name": "Trance of Order",
+    "level": 14
+   },
+   {
+    "id": "clockwork-sorcery-clockwork-cavalcade",
+    "name": "Clockwork Cavalcade",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "wild-magic-sorcery",
+  "name": "Wild Magic Sorcery",
+  "class": {
+   "id": "sorcerer",
+   "name": "Sorcerer"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "wild-magic-sorcery-wild-magic-surge",
+    "name": "Wild Magic Surge",
+    "level": 3
+   },
+   {
+    "id": "wild-magic-sorcery-tides-of-chaos",
+    "name": "Tides of Chaos",
+    "level": 3
+   },
+   {
+    "id": "wild-magic-sorcery-bend-luck",
+    "name": "Bend Luck",
+    "level": 6
+   },
+   {
+    "id": "wild-magic-sorcery-controlled-chaos",
+    "name": "Controlled Chaos",
+    "level": 14
+   },
+   {
+    "id": "wild-magic-sorcery-tamed-surge",
+    "name": "Tamed Surge",
+    "level": 18
+   }
+  ]
+ },
+ {
+  "id": "archfey-patron",
+  "name": "Archfey Patron",
+  "class": {
+   "id": "warlock",
+   "name": "Warlock"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "archfey-patron-archfey-spells",
+    "name": "Archfey Spells",
+    "level": 3
+   },
+   {
+    "id": "archfey-patron-steps-of-the-fey",
+    "name": "Steps of the Fey",
+    "level": 3
+   },
+   {
+    "id": "archfey-patron-misty-escape",
+    "name": "Misty Escape",
+    "level": 6
+   },
+   {
+    "id": "archfey-patron-beguiling-defenses",
+    "name": "Beguiling Defenses",
+    "level": 10
+   },
+   {
+    "id": "archfey-patron-bewitching-magic",
+    "name": "Bewitching Magic",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "celestial-patron",
+  "name": "Celestial Patron",
+  "class": {
+   "id": "warlock",
+   "name": "Warlock"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "celestial-patron-celestial-spells",
+    "name": "Celestial Spells",
+    "level": 3
+   },
+   {
+    "id": "celestial-patron-healing-light",
+    "name": "Healing Light",
+    "level": 3
+   },
+   {
+    "id": "celestial-patron-radiant-soul",
+    "name": "Radiant Soul",
+    "level": 6
+   },
+   {
+    "id": "celestial-patron-celestial-resilience",
+    "name": "Celestial Resilience",
+    "level": 10
+   },
+   {
+    "id": "celestial-patron-searing-vengeance",
+    "name": "Searing Vengeance",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "great-old-one-patron",
+  "name": "Great Old One Patron",
+  "class": {
+   "id": "warlock",
+   "name": "Warlock"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "great-old-one-patron-awakened-mind",
+    "name": "Awakened Mind",
+    "level": 3
+   },
+   {
+    "id": "great-old-one-patron-great-old-one-spells",
+    "name": "Great Old One Spells",
+    "level": 3
+   },
+   {
+    "id": "great-old-one-patron-psychic-spells",
+    "name": "Psychic Spells",
+    "level": 3
+   },
+   {
+    "id": "great-old-one-patron-clairvoyant-combatant",
+    "name": "Clairvoyant Combatant",
+    "level": 6
+   },
+   {
+    "id": "great-old-one-patron-eldritch-hex",
+    "name": "Eldritch Hex",
+    "level": 10
+   },
+   {
+    "id": "great-old-one-patron-thought-shield",
+    "name": "Thought Shield",
+    "level": 10
+   },
+   {
+    "id": "great-old-one-patron-create-thrall",
+    "name": "Create Thrall",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "abjurer",
+  "name": "Abjurer",
+  "class": {
+   "id": "wizard",
+   "name": "Wizard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "abjurer-abjuration-savant",
+    "name": "Abjuration Savant",
+    "level": 3
+   },
+   {
+    "id": "abjurer-arcane-ward",
+    "name": "Arcane Ward",
+    "level": 3
+   },
+   {
+    "id": "abjurer-projected-ward",
+    "name": "Projected Ward",
+    "level": 6
+   },
+   {
+    "id": "abjurer-spell-breaker",
+    "name": "Spell Breaker",
+    "level": 10
+   },
+   {
+    "id": "abjurer-spell-resistance",
+    "name": "Spell Resistance",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "diviner",
+  "name": "Diviner",
+  "class": {
+   "id": "wizard",
+   "name": "Wizard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "diviner-divination-savant",
+    "name": "Divination Savant",
+    "level": 3
+   },
+   {
+    "id": "diviner-portent",
+    "name": "Portent",
+    "level": 3
+   },
+   {
+    "id": "diviner-expert-divination",
+    "name": "Expert Divination",
+    "level": 6
+   },
+   {
+    "id": "diviner-the-third-eye",
+    "name": "The Third Eye",
+    "level": 10
+   },
+   {
+    "id": "diviner-greater-portent",
+    "name": "Greater Portent",
+    "level": 14
+   }
+  ]
+ },
+ {
+  "id": "illusionist",
+  "name": "Illusionist",
+  "class": {
+   "id": "wizard",
+   "name": "Wizard"
+  },
+  "source": "PHB 2024",
+  "summary": "",
+  "description": "",
+  "features": [
+   {
+    "id": "illusionist-illusion-savant",
+    "name": "Illusion Savant",
+    "level": 3
+   },
+   {
+    "id": "illusionist-improved-illusions",
+    "name": "Improved Illusions",
+    "level": 3
+   },
+   {
+    "id": "illusionist-phantasmal-creatures",
+    "name": "Phantasmal Creatures",
+    "level": 6
+   },
+   {
+    "id": "illusionist-illusory-self",
+    "name": "Illusory Self",
+    "level": 10
+   },
+   {
+    "id": "illusionist-illusory-reality",
+    "name": "Illusory Reality",
+    "level": 14
+   }
+  ]
+ }
+]

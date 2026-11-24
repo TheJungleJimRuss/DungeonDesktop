@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { listCampaigns } from "./storage";
@@ -90,5 +90,38 @@ describe("Class, Background and Species dropdowns", () => {
     const [m] = await listParty(id);
     expect(m).toMatchObject({ speciesId: "test-drake", subspeciesId: "test-drake-red", subspecies: "Ancestor Test: Red" });
     expect(m.features).toContain("Flame Breath Test");
+  });
+
+  it("a class offers its own subclasses; picking one fills Features, shows on the card, and changing class clears it", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const id = await open(user, "Srd5");
+    const p = await goParty(user, "Srd5");
+    await user.click(p.getByRole("button", { name: /add character/i }));
+    await user.type(p.getByLabelText("Name"), "Brakk");
+    expect(p.queryByRole("combobox", { name: "Subclass" })).not.toBeInTheDocument();
+    await user.selectOptions(await p.findByRole("combobox", { name: "Class" }), "Savage Test");
+    const sub = await p.findByRole("combobox", { name: "Subclass" });
+    expect(within(sub).getAllByRole("option").map((o) => o.textContent)).toEqual(["—", "Path Test"]);
+    expect(p.getByText("Subclass features start at level 3")).toBeInTheDocument();
+    await user.selectOptions(sub, "Path Test");
+    await user.clear(p.getByLabelText("Level"));
+    await user.type(p.getByLabelText("Level"), "3");
+    expect(p.queryByText("Subclass features start at level 3")).not.toBeInTheDocument();
+    const traits = () => p.getAllByRole("textbox", { name: /^Trait \d+/ }).map((t) => (t as HTMLInputElement).value);
+    await waitFor(() => expect(traits()).toContain("Frenzy Test"));
+    await user.click(p.getByRole("button", { name: /save member/i }));
+    expect(await p.findByRole("article", { name: /brakk character sheet/i })).toHaveTextContent("Savage Test (Path Test) 3");
+    expect((await listParty(id))[0]).toMatchObject({ subclassId: "test-path", subclass: "Path Test" });
+
+    await user.click(p.getByRole("button", { name: /^edit brakk sheet$/i }));
+    await user.selectOptions(p.getByLabelText("Class"), "Mage Test");
+    expect(within(p.getByRole("combobox", { name: "Subclass" })).getAllByRole("option").map((o) => o.textContent)).toEqual(["—", "Rune Test (PHB)"]);
+    expect(p.getByRole("combobox", { name: "Subclass" })).toHaveValue("");
+    await user.click(p.getByRole("button", { name: /save member/i }));
+    await p.findByRole("article", { name: /brakk character sheet/i });
+    const [m] = await listParty(id);
+    expect(m.subclassId).toBeUndefined();
+    expect(m.subclass).toBeUndefined();
   });
 });

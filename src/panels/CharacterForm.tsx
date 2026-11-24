@@ -1,9 +1,11 @@
+import AttackSearch from "./AttackSearch";
 import { passivePerceptionOf } from "../party/passive";
 import { useSrdEquipment } from "../ui/useSrdEquipment";
 import type { PartyMember } from "../storage/party";
 import { useEffect, useState, type FormEvent } from "react";
 import { asLanguages, asList, subspeciesShortName, type PartyMemberInput } from "../storage/party";
 import { GUARD } from "../ui/unsaved";
+import { DAMAGE_TYPES as DEFENSE_TYPES } from "../combat/damageTypes";
 import SrdSelect from "../ui/SrdSelect";
 import { loadCharacterData, type CharacterData } from "../srd/character";
 import { matchSrd } from "../srd/match";
@@ -152,7 +154,7 @@ const numValue = (x: number | undefined) => (x === undefined || Number.isNaN(x) 
 function attackBreakdown(a: Attack, ctx: AttackContext): string {
   if (!a.ability) return "Typed numbers (older attack)";
   const ab = a.ability === "spell" ? (ctx.spellcastingAbility?.toUpperCase() ?? "Spell") : a.ability === "finesse" ? "Finesse" : a.ability.toUpperCase();
-  const parts = a.ability === "none" ? ["No ability"] : [`${ab} ${signed(attackAbilityMod(ctx, a))}`];
+  const parts = a.ability === "none" ? ["No ability"] : [`${ab} ${signed(attackAbilityMod(ctx, a))}${a.abilityDamage === false ? " to hit" : ""}`];
   if (a.proficient !== false) parts.push(`Prof ${signed(attackProficiency(ctx, a))} to hit`);
   if (num(a.magic)) parts.push(`Magic ${signed(num(a.magic))}`);
   if (num(a.bonus)) parts.push(`Extra ${signed(num(a.bonus))} dmg`);
@@ -208,6 +210,12 @@ function AttackFields({ a, set, ctx, of }: { a: Attack; set: (patch: Partial<Att
           </select>
         </label>
         <label>Extra damage<input aria-label={L("Extra damage")} type="number" value={numValue(a.bonus)} onChange={(e) => set({ bonus: e.target.valueAsNumber })} /></label>
+        {a.ability && a.ability !== "none" && (
+          <label className="attack-check" title="Adds the ability modifier to damage (most spells don't)">
+            <input type="checkbox" aria-label={L("Ability to damage", "for")} checked={a.abilityDamage !== false} onChange={(e) => set({ abilityDamage: e.target.checked })} />
+            Ability to damage
+          </label>
+        )}
       </div>
     </>
   );
@@ -263,6 +271,7 @@ function AttackEditor({ items, onChange, ctx }: { items: Attack[]; onChange: (it
       )}
       <fieldset className="attack-new">
         <legend>New attack</legend>
+        <AttackSearch onPick={(attack) => setD({ ...attack })} />
         <div className="attack-row">
           <label className="attack-name-field">Attack name<input value={d.name} placeholder="e.g. Longsword" onChange={(e) => setD({ ...d, name: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} /></label>
@@ -307,7 +316,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
   // `v` holds what the DM typed; `w` is what the sheet shows: v with every non-manual auto field recomputed.
   const w: PartyMemberInput = srd ? applyAuto(v, srd) : v;
   // Class, species, background or level changed: put what they give into the ordinary, editable lists.
-  const autoKey = JSON.stringify([!!srd, v.classId, v.speciesId, v.subspeciesId, v.backgroundId, w.level]);
+  const autoKey = JSON.stringify([!!srd, v.classId, v.subclassId, v.speciesId, v.subspeciesId, v.backgroundId, w.level]);
   useEffect(() => { if (srd) setV((x) => mergeAutoLists(x, srd)); }, [autoKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const autoOn = srd ? activeAutoFields(v, srd) : [];
   const isAuto = (f: AutoField) => autoOn.includes(f);
@@ -363,6 +372,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
 
   // The species' types (Draconic Ancestor, Elven Lineage, …); the label is the shared prefix of their names.
   const subOptions = (v.speciesId && srd?.subspecies.filter((x) => x.species.id === v.speciesId)) || [];
+  const subclassOptions = (v.classId && srd?.subclasses.filter((x) => x.class.id === v.classId)) || [];
   const subLabel = subOptions[0]?.name.includes(":") ? subOptions[0].name.split(":")[0].trim() : "Type";
 
   /** Names that match an SRD entry (older records, typed text) are saved with its canonical name and id. */
@@ -378,7 +388,7 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     const sp = resolveSrd(v.race, v.speciesId, srd?.species);
     // An older record that only now matches an SRD entry keeps the numbers it already holds.
     const fresh = (!v.classId && cls.id) || (!v.speciesId && sp.id) || (!v.backgroundId && bg.id);
-    const picked = { ...v, class: cls.text, classId: cls.id, background: bg.text, backgroundId: bg.id, race: sp.text, speciesId: sp.id, ...(sp.id ? {} : { subspeciesId: undefined, subspecies: undefined }), ...(fresh ? { manual: protectExisting(v) } : {}) };
+    const picked = { ...v, class: cls.text, classId: cls.id, background: bg.text, backgroundId: bg.id, race: sp.text, speciesId: sp.id, ...(sp.id ? {} : { subspeciesId: undefined, subspecies: undefined }), ...(cls.id ? {} : { subclassId: undefined, subclass: undefined }), ...(fresh ? { manual: protectExisting(v) } : {}) };
     const a = srd ? applyAuto({ ...picked, abilities: { ...DEFAULT_ABILITIES, ...picked.abilities } }, srd) : picked;
     const maxHp = n(a.maxHp, 0);
     onSave({
@@ -395,7 +405,19 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
     <form {...GUARD} className="sheet-form" onSubmit={submit} aria-label="Character sheet form">
       <fieldset><legend>Identity</legend>
         {text("name", "Name")}
-        <SrdSelect label="Class" entries={srd?.classes} text={v.class} id={v.classId} onChange={(t, id) => setV((x) => ({ ...x, class: t, classId: id }))} />
+        <SrdSelect label="Class" entries={srd?.classes} text={v.class} id={v.classId} onChange={(t, id) => setV((x) => ({ ...x, class: t, classId: id, ...(id === x.classId ? {} : { subclassId: undefined, subclass: undefined }) }))} />
+        {subclassOptions.length > 0 && (
+          <label>Subclass
+            <select value={v.subclassId ?? ""} onChange={(e) => {
+              const pick = subclassOptions.find((x) => x.id === e.target.value);
+              setV((x) => ({ ...x, subclassId: pick?.id, subclass: pick?.name }));
+            }}>
+              <option value="">—</option>
+              {subclassOptions.map((o) => <option key={o.id} value={o.id}>{o.name}{o.source ? " (PHB)" : ""}</option>)}
+            </select>
+          </label>
+        )}
+        {subclassOptions.length > 0 && w.level < 3 && <small className="muted">Subclass features start at level 3</small>}
         {num("level", "Level", "level")}
         <SrdSelect label="Species" entries={srd?.species} text={v.race ?? ""} id={v.speciesId}
           onChange={(t, id) => setV((x) => ({ ...x, race: t, speciesId: id, ...(id === x.speciesId ? {} : { subspeciesId: undefined, subspecies: undefined }) }))} />
@@ -417,6 +439,19 @@ export default function CharacterForm({ initial, onSave, onCancel }: { initial: 
         {num("ac", "AC")}{num("maxHp", "Max HP", "maxHp")}{num("currentHp", "Current HP")}
         {text("speed", "Speed", "speed")}{text("hitDice", "Hit Dice", "hitDice")}
         <label className="check"><input type="checkbox" checked={!!v.inspiration} onChange={(e) => set("inspiration", e.target.checked)} />Heroic Inspiration</label>
+      </fieldset>
+      <fieldset className="defenses"><legend>Defenses</legend>
+        {([["damageResistances", "Resistances"], ["damageImmunities", "Immunities"], ["damageVulnerabilities", "Vulnerabilities"]] as const).map(([key, label]) => (
+          <fieldset key={key} className="defense-list"><legend>{label}</legend>
+            {DEFENSE_TYPES.map((t) => {
+              const cur = v[key] ?? [];
+              return (
+                <label key={t} className="check"><input type="checkbox" aria-label={`${label}: ${t}`} checked={cur.includes(t)}
+                  onChange={(e) => set(key, e.target.checked ? [...cur, t] : cur.filter((x) => x !== t))} />{t}</label>
+              );
+            })}
+          </fieldset>
+        ))}
       </fieldset>
       <fieldset className="abilities"><legend>Ability scores and saving throws {mark("saves", "Saving throws")}</legend>
         {ABILITIES.map((a) => (

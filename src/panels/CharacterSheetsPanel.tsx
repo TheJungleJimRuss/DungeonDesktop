@@ -1,8 +1,10 @@
+import AttackSearch from "./AttackSearch";
 import { passivePerceptionOf } from "../party/passive";
+import { defensesLine } from "../combat/damageTypes";
 import { useCallback, useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
-import { addPartyMember, asLanguages, asList, currentHpOf, listParty, speciesLabel, removePartyMember, updatePartyMember, type PartyMember, type PartyMemberInput } from "../storage/party";
+import { addPartyMember, asLanguages, asList, currentHpOf, listParty, speciesLabel, classLabel, removePartyMember, updatePartyMember, type PartyMember, type PartyMemberInput } from "../storage/party";
 import CharacterForm from "./CharacterForm";
 import CoinPurse from "./CoinPurse";
 import XpAward from "./XpAward";
@@ -121,7 +123,7 @@ function Sheet({ m }: { m: PartyMember }) {
       <header>
         <h3>{m.name}</h3>
         <p className="muted">
-          {[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`, m.background, m.alignment].filter(Boolean).join(" · ")}
+          {[speciesLabel(m), `${classLabel(m) || "Adventurer"} ${m.level}`, m.background, m.alignment].filter(Boolean).join(" · ")}
           {m.playerName ? ` · played by ${m.playerName}` : ""}
         </p>
         <XpAward m={m} editableTotal />
@@ -136,6 +138,7 @@ function Sheet({ m }: { m: PartyMember }) {
         <div><dt>Hit Dice</dt><dd>{m.hitDice || "—"}</dd></div>
         <div><dt>Inspiration</dt><dd>{m.inspiration ? "Yes" : "No"}</dd></div>
       </dl>
+      {defensesLine(m) && <p className="muted" aria-label={`Defenses ${m.name}`}>{defensesLine(m)}</p>}
 
       <div className="sheet-abilities">
         {ABILITIES.map((a) => (
@@ -209,8 +212,9 @@ function Sheet({ m }: { m: PartyMember }) {
             </li>
           ))}
         </ul>
+        <AttackSearch label="Find weapon or spell" onPick={(a) => patch({ attacks: [...attacks, { ...a }] })} />
         <AddInline label="attack" onAdd={(t) => patch({ attacks: [...attacks, { name: t, ability: "str", proficient: true, count: 0, die: 0, bonus: 0, type: "" }] })} />
-        <p className="muted hint">Set damage dice with Edit sheet.</p>
+        <p className="muted hint">Found weapons and spells come with dice; for a custom attack set dice with Edit sheet.</p>
       </section>
       <Items title="Spells" noun="spell" items={m.spells} onChange={(spells) => patch({ spells })} />
       <Items title="Features and traits" noun="trait" items={m.features} onChange={(features) => patch({ features })} />
@@ -255,7 +259,7 @@ function RosterCard({ m, selected, onSelect, onDelete }: { m: PartyMember; selec
       <span className="roster-delete"><RemoveBtn label={m.name} onClick={onDelete} /></span>
       <button type="button" className="roster-pick" aria-pressed={selected} onClick={onSelect}>
         <span className="name">{m.name}</span>
-        <span className="muted">{[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`].filter(Boolean).join(" · ")}</span>
+        <span className="muted">{[speciesLabel(m), `${classLabel(m) || "Adventurer"} ${m.level}`].filter(Boolean).join(" · ")}</span>
       </button>
       <div className="roster-vitals">
         <span title="Armor Class">AC <strong>{m.ac}</strong></span>

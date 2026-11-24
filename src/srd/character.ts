@@ -21,7 +21,8 @@ export interface Class {
   skillChoices: string; startingEquipment: string; multiclass: string; levels: ClassLevel[]; subclasses: NameRef[];
 }
 /** A subclass's features come from the class-feature list (the ones that name it), grouped by level when the data loads. */
-export interface Subclass { id: string; name: string; class: NameRef; summary: string; description: string; features: (NameRef & { level: number })[] }
+export interface Subclass { id: string; name: string; class: NameRef; summary: string; description: string; features: (NameRef & { level: number })[];
+  /** Set on the hand-written non-SRD entries ("PHB 2024"); absent on SRD ones. */ source?: string }
 export interface ClassFeature { id: string; name: string; class: NameRef; subclass?: NameRef; level: number; description: string }
 export type RuleKind = "skill" | "language" | "damage-type" | "weapon-property" | "weapon-mastery" | "alignment" | "ability-score";
 export interface Rule {
@@ -41,11 +42,11 @@ export interface CharacterData {
 
 export type CharacterSource = () => Promise<CharacterData>;
 const bundled: CharacterSource = async () => {
-  const [feats, backgrounds, rules, species, subspecies, traits, classes, classLevels, subclasses, classFeatures, extraBackgrounds] = await Promise.all([
+  const [feats, backgrounds, rules, species, subspecies, traits, classes, classLevels, subclasses, classFeatures, extraBackgrounds, extraSubclasses] = await Promise.all([
     import("../data/srd/feats.json"), import("../data/srd/backgrounds.json"), import("../data/srd/rules.json"),
     import("../data/srd/species.json"), import("../data/srd/subspecies.json"), import("../data/srd/traits.json"),
     import("../data/srd/classes.json"), import("../data/srd/class-levels.json"), import("../data/srd/subclasses.json"), import("../data/srd/class-features.json"),
-    import("../data/extra/backgrounds-phb2024.json"),
+    import("../data/extra/backgrounds-phb2024.json"), import("../data/extra/subclasses-phb2024.json"),
   ]);
   const features = classFeatures.default as ClassFeature[];
   const levels = new Map((classLevels.default as { id: string; levels: ClassLevel[] }[]).map((c) => [c.id, c.levels]));
@@ -53,9 +54,12 @@ const bundled: CharacterSource = async () => {
     feats: feats.default as Feat[], backgrounds: [...(backgrounds.default as Background[]), ...(extraBackgrounds.default as Background[])].sort((a, b) => a.name.localeCompare(b.name)), rules: rules.default as Rule[],
     species: species.default as Species[], subspecies: subspecies.default as Subspecies[], traits: traits.default as Trait[],
     classes: (classes.default as Omit<Class, "levels">[]).map((c) => ({ ...c, levels: levels.get(c.id) ?? [] })),
-    subclasses: (subclasses.default as Omit<Subclass, "features">[]).map((sc) => ({
-      ...sc, features: features.filter((f) => f.subclass?.id === sc.id).map((f) => ({ id: f.id, name: f.name, level: f.level })).sort((a, b) => a.level - b.level),
-    })),
+    subclasses: [
+      ...(subclasses.default as Omit<Subclass, "features">[]).map((sc) => ({
+        ...sc, features: features.filter((f) => f.subclass?.id === sc.id).map((f) => ({ id: f.id, name: f.name, level: f.level })).sort((a, b) => a.level - b.level),
+      })),
+      ...(extraSubclasses.default as Subclass[]),
+    ].sort((a, b) => Number(!!a.source) - Number(!!b.source) || a.name.localeCompare(b.name)),
     classFeatures: features,
   };
 };

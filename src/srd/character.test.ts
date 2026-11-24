@@ -182,11 +182,28 @@ describe("conversion of class data", () => {
   });
 });
 
+describe("bundled subclasses (SRD + PHB 2024)", () => {
+  it("has 48, four per class, unique ids, SRD first, and every PHB feature has a name and a level 3-20", async () => {
+    setCharacterSource(null);
+    const c = await loadCharacterData();
+    expect(c.subclasses).toHaveLength(48);
+    expect(new Set(c.subclasses.map((s) => s.id)).size).toBe(48);
+    for (const k of c.classes) expect(c.subclasses.filter((s) => s.class.id === k.id), k.name).toHaveLength(4);
+    const phb = c.subclasses.filter((s) => s.source);
+    expect(phb).toHaveLength(36);
+    expect(c.subclasses.slice(0, 12).every((s) => !s.source)).toBe(true);
+    for (const s of phb) {
+      expect(s.source).toBe("PHB 2024");
+      for (const f of s.features) { expect(f.name, s.id).toBeTruthy(); expect(f.level, `${s.id} ${f.name}`).toBeGreaterThanOrEqual(3); expect(f.level, `${s.id} ${f.name}`).toBeLessThanOrEqual(20); }
+    }
+  });
+});
+
 describe("bundled SRD class data", () => {
   it("has every class, subclass and feature, unique ids, resolvable refs, and each entry found by its own name", async () => {
     setCharacterSource(null);
     const c = await loadCharacterData();
-    expect([c.classes.length, c.subclasses.length, c.classFeatures.length]).toEqual([12, 12, 232]);
+    expect([c.classes.length, c.subclasses.length, c.classFeatures.length]).toEqual([12, 48, 232]);
     expect(c.classFeatures.filter((f) => f.subclass)).toHaveLength(58);
     for (const list of [c.classes, c.subclasses, c.classFeatures] as { id: string; name: string }[][]) expect(new Set(list.map((x) => x.id)).size).toBe(list.length);
     const [cls, sub, feat] = [new Set(c.classes.map((x) => x.id)), new Set(c.subclasses.map((x) => x.id)), new Set(c.classFeatures.map((x) => x.id))];
@@ -199,7 +216,7 @@ describe("bundled SRD class data", () => {
     for (const s of c.subclasses) {
       expect(cls.has(s.class.id), s.id).toBe(true);
       expect(s.features.length, s.name).toBeGreaterThan(0);
-      for (const f of s.features) expect(c.classFeatures.find((x) => x.id === f.id)?.subclass?.id).toBe(s.id);
+      if (!s.source) for (const f of s.features) expect(c.classFeatures.find((x) => x.id === f.id)?.subclass?.id).toBe(s.id);
     }
     for (const f of c.classFeatures) {
       expect(cls.has(f.class.id), f.id).toBe(true);

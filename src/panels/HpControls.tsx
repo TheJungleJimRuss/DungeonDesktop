@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { loadMonsters } from "../srd/monsters";
-import { monsterFromEntry, useCustomEntries } from "../storage/customEntries";
+import { CUSTOM_PREFIX, getCustomEntry, monsterFromEntry, useCustomEntries } from "../storage/customEntries";
+import { getDb } from "../storage/db";
+import { adjustDamage, DAMAGE_TYPES, memberDefenses, type Defenses } from "../combat/damageTypes";
 import { requestRoll } from "../dice/roller";
 import {
   applyDamage, applyHealing, isBloodied, isDefeated, isDying, isStable, maxHpOf, recordDeathSave, setDefeatMode, setMaxHp, setTempHp, tempHpOf,
@@ -22,6 +24,24 @@ export function useHpRolls(campaignId: string): Record<string, string> {
     return () => { live = false; };
   }, [customs]);
   return rolls;
+}
+
+/** Damage defenses of a combatant: monster stat block (SRD or custom) or Party sheet; none for ad-hoc. */
+async function defensesOf(c: Combatant): Promise<Defenses> {
+  const none: Defenses = { resistances: [], immunities: [], vulnerabilities: [] };
+  try {
+    if (c.monsterId) {
+      const m = c.monsterId.startsWith(CUSTOM_PREFIX)
+        ? await getCustomEntry(c.monsterId.slice(CUSTOM_PREFIX.length)).then((e) => (e && e.kind === "monster" ? monsterFromEntry(e) : undefined))
+        : (await loadMonsters()).find((x) => x.id === c.monsterId);
+      return m ? { resistances: m.resistances, immunities: m.immunities, vulnerabilities: m.vulnerabilities } : none;
+    }
+    if (c.partyId) {
+      const m = (await (await getDb()).get("party", c.partyId)) as Parameters<typeof memberDefenses>[0] | undefined;
+      return memberDefenses(m ?? {});
+    }
+  } catch { /* fall through: no adjustment */ }
+  return none;
 }
 
 export const rowStateClass = (c: Combatant) =>
@@ -71,10 +91,21 @@ function MaxHpInput({ c, onCommit }: { c: Combatant; onCommit: (n: number) => vo
 /** HP readout and quick damage / healing / temporary HP entry for one combatant. */
 export function HpControls({ c, update, hpRoll }: { c: Combatant; update: Update; hpRoll?: string }) {
   const [amount, setAmount] = useState("");
+  const [dmgType, setDmgType] = useState("");
+  const [note, setNote] = useState("");
   const typed = Number(amount);
   const valid = amount.trim() !== "" && Number.isFinite(typed) && typed > 0;
   const apply = (fn: (e: Encounter, id: string, n: number) => Encounter, n: number) => update((e) => fn(e, c.id, n));
-  const entered = (fn: typeof applyDamage) => { if (valid) { apply(fn, typed); setAmount(""); } };
+  const entered = (fn: typeof applyDamage) => { if (valid) { apply(fn, typed); setAmount(""); setNote(""); } };
+  const dealDamage = async () => {
+    if (!valid) return;
+    const type = dmgType, n = typed;
+    setAmount(""); setDmgType(""); setNote("");
+    if (!type) { apply(applyDamage, n); return; }
+    const r = adjustDamage(n, type, await defensesOf(c));
+    setNote(r.reason ?? "");
+    if (r.amount > 0) apply(applyDamage, r.amount);
+  };
   const nudge = (d: number) => setAmount(String(Math.max(0, (Number.isFinite(typed) ? typed : 0) + d)));
   const temp = tempHpOf(c);
   const rollHp = () => {
@@ -92,13 +123,18 @@ export function HpControls({ c, update, hpRoll }: { c: Combatant; update: Update
       {isBloodied(c) && <span className="hp-flag bloodied-flag">Bloodied</span>}
       <input id={`amt-${c.id}`} className="init-input" type="number" min={1} placeholder="Amt" aria-label={`Amount ${c.name}`} value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); entered(applyDamage); } }} />
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void dealDamage(); } }} />
       <button type="button" aria-label={`Amount minus 5 ${c.name}`} onClick={() => nudge(-5)}>-5</button>
       <button type="button" aria-label={`Amount plus 5 ${c.name}`} onClick={() => nudge(5)}>+5</button>
-      <button className="danger" disabled={!valid} onClick={() => entered(applyDamage)} aria-label={`Damage ${c.name}`}>Damage</button>
+      <select className="init-input" aria-label={`Damage type ${c.name}`} value={dmgType} onChange={(e) => setDmgType(e.target.value)}>
+        <option value="">—</option>
+        {DAMAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      <button className="danger" disabled={!valid} onClick={() => void dealDamage()} aria-label={`Damage ${c.name}`}>Damage</button>
       <button disabled={!valid} onClick={() => entered(applyHealing)} aria-label={`Heal ${c.name}`}>Heal</button>
       <button disabled={!valid} onClick={() => entered(setTempHp)} aria-label={`Set temp HP ${c.name}`}>Temp HP</button>
       <label className="muted">Max <MaxHpInput c={c} onCommit={(n) => apply(setMaxHp, n)} /></label>
+      {note && <span className="muted" role="status">{note}</span>}
       {hpRoll && <button aria-label={`Roll HP ${c.name}`} title={hpRoll} onClick={rollHp}>Roll HP</button>}
     </span>
   );

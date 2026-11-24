@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import { useChangeVersion } from "../sync/changeBus";
-import { asLanguages, asList, currentHpOf, listParty, speciesLabel, updatePartyMember, type PartyMember } from "../storage/party";
+import { asLanguages, asList, currentHpOf, listParty, speciesLabel, classLabel, updatePartyMember, type PartyMember } from "../storage/party";
 import { passivePerceptionOf } from "../party/passive";
+import { adjustDamage, DAMAGE_TYPES, defensesLine, memberDefenses } from "../combat/damageTypes";
 import {
   ABILITIES, ABILITY_NAMES, DEFAULT_ABILITIES, SKILLS, SPELL_LEVELS, abilityMod, applyHpChange, asAttacks, asEquipment,
   attackLabel, attackSummary, proficiencyBonus, countLabel, isPack, saveBonus, signed, skillBonus, spellAttackBonus, spellSaveDc, type SkillLevel,
@@ -58,13 +59,19 @@ function SpellList({ spells, onChange }: { spells: string[]; onChange: (next: st
 
 function Overview({ m }: { m: PartyMember }) {
   const [amount, setAmount] = useState("1");
+  const [dmgType, setDmgType] = useState("");
+  const [note, setNote] = useState("");
   const hp = currentHpOf(m);
   const insight = passiveSkill(m, "insight");
   const investigation = passiveSkill(m, "investigation");
   const change = (sign: 1 | -1) => {
     const n = Math.floor(Number(amount));
     if (!Number.isFinite(n) || n <= 0) return;
-    void updatePartyMember(m.id, { currentHp: applyHpChange(hp, m.maxHp, sign * n) });
+    // Damage goes through the member's resistances / immunities / vulnerabilities when a type is picked; Heal ignores it.
+    const r = sign < 0 ? adjustDamage(n, dmgType || undefined, memberDefenses(m)) : { amount: n };
+    setNote(r.reason ?? "");
+    if (sign < 0) setDmgType("");
+    if (r.amount > 0) void updatePartyMember(m.id, { currentHp: applyHpChange(hp, m.maxHp, sign * r.amount) });
   };
   const languages = asLanguages(m.languages).join(", ");
   return (
@@ -77,13 +84,19 @@ function Overview({ m }: { m: PartyMember }) {
         {insight !== null && <span>Passive Insight {insight}</span>}
         {investigation !== null && <span>Passive Investigation {investigation}</span>}
       </div>
+      {defensesLine(m) && <p className="muted" aria-label={`Defenses ${m.name}`}>{defensesLine(m)}</p>}
       <div className="roster-hp-controls">
         <input type="number" min={1} value={amount} aria-label={`HP change ${m.name}`} onChange={(e) => setAmount(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); change(-1); } }} />
+        <select aria-label={`Damage type ${m.name}`} value={dmgType} onChange={(e) => setDmgType(e.target.value)}>
+          <option value="">—</option>
+          {DAMAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
         <button type="button" className="danger" aria-label={`Damage ${m.name}`} onClick={() => change(-1)}>Damage</button>
         <button type="button" aria-label={`Heal ${m.name}`} onClick={() => change(1)}>Heal</button>
         <button type="button" aria-pressed={!!m.inspiration} aria-label={`Inspiration ${m.name}`} title="Inspiration"
           onClick={() => void updatePartyMember(m.id, { inspiration: !m.inspiration })}>★ Inspiration</button>
+        {note && <span className="muted" role="status">{note}</span>}
       </div>
       <XpAward m={m} />
       <dl>
@@ -220,7 +233,7 @@ function PlayerCard({ m }: { m: PartyMember }) {
     <article className="player-card npc-view" aria-label={`${m.name} player card`}>
       <h3>{firstName(m.name)}</h3>
       <p className="muted">
-        {[speciesLabel(m), `${m.class || "Adventurer"} ${m.level}`, m.background].filter(Boolean).join(" · ")}
+        {[speciesLabel(m), `${classLabel(m) || "Adventurer"} ${m.level}`, m.background].filter(Boolean).join(" · ")}
         {m.playerName ? ` · played by ${firstName(m.playerName)}` : ""}
       </p>
       <div className="player-tabs" role="group" aria-label="Player card sections">

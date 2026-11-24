@@ -8,8 +8,12 @@ import { polygonCentroid, snapToStep, type Pt } from "./geometry";
  *  smallest Area under the pointer (`pointAt` gives the unsnapped point; without one, the clicked fill). Dragging the selected Area moves the
  *  whole Shape (`onShift` live, `onShiftEnd` on release; by whole shown-grid squares when `snap` gives their size); dragging any other fill pans the Map.
  *  In other tools the fills let clicks through (Draw still adds points). */
-export function AreasLayer({ lines, labelOf, selectedId, selectable, snap, pointAt, onSelect, onShift, onShiftEnd, onPanStart, onPanMove, onPanEnd }: {
+export function AreasLayer({ lines, labelOf, selectedId, selectable, snap, fits, covers, pointAt, onSelect, onShift, onShiftEnd, onPanStart, onPanMove, onPanEnd }: {
   lines: MapLine[]; labelOf: (area: NonNullable<MapLine["area"]>) => string; selectedId?: string; selectable: boolean; snap: number | false;
+  /** True when the whole Area is inside the shown view; only then can it be dragged (otherwise a press pans the Map). */
+  fits: (area: MapLine) => boolean;
+  /** True when the Area fills the whole shown view: it then becomes plain background (no hit target, no label). */
+  covers: (area: MapLine) => boolean;
   pointAt: (e: { clientX: number; clientY: number }) => Pt | null; onSelect: (id: string) => void;
   onShift: (id: string, by: Pt) => void; onShiftEnd: (id: string, by: Pt | null) => void;
   /** A press on a fill that moves pans the Map (as from empty space); one that does not move is a click and selects. `onPanEnd` says whether it moved. */
@@ -18,7 +22,8 @@ export function AreasLayer({ lines, labelOf, selectedId, selectable, snap, point
   const drag = useRef<{ id: string; from: Pt; by: Pt | null } | null>(null);
   const justDragged = useRef(false);
   const down = (id: string) => (e: React.PointerEvent) => {
-    const from = id === selectedId ? pointAt(e) : null;
+    const area = lines.find((l) => l.id === id);
+    const from = id === selectedId && area && fits(area) ? pointAt(e) : null;
     if (!from) { onPanStart(e); return; }
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     drag.current = { id, from, by: null };
@@ -48,6 +53,7 @@ export function AreasLayer({ lines, labelOf, selectedId, selectable, snap, point
         const c = polygonCentroid(l.points);
         const d = l.points.map((p, i) => `${i ? "L" : "M"}${p.x * CELL} ${p.y * CELL}`).join(" ") + " Z";
         const text = labelOf(l.area);
+        if (covers(l)) return <path key={l.id} d={d} className="map-area-fill map-area-backdrop" fill={l.area.color} data-area={l.id} pointerEvents="none" />;
         return (
           <g key={l.id} className={"map-area" + (l.id === selectedId ? " selected" : "")}>
             <path d={d} className="map-area-fill" fill={l.area.color} data-area={l.id} role={selectable ? "button" : undefined} aria-label={selectable ? `Area ${text}` : undefined}

@@ -90,6 +90,8 @@ export interface Attack {
   ability?: AttackAbility;
   /** Add proficiency bonus to hit; absent = true when ability is set. */
   proficient?: boolean;
+  /** Add the ability modifier to damage; absent = true. Spells from the SRD search set it false. */
+  abilityDamage?: boolean;
   /** Magic bonus added to both to-hit and damage. */
   magic?: number;
   /** How many of this weapon the character carries; absent = 1. */
@@ -134,9 +136,9 @@ export function attackToHit(ctx: AttackContext, a: Attack): number | null {
   return attackAbilityMod(ctx, a) + attackProficiency(ctx, a) + (a.magic ?? 0);
 }
 
-/** Damage added on top of the dice: ability mod + magic + flat bonus (no proficiency). Legacy attacks: flat bonus only. */
+/** Damage added on top of the dice: ability mod (unless abilityDamage is false) + magic + flat bonus (no proficiency). Legacy attacks: flat bonus only. */
 export const attackDamageBonus = (a: Attack, ctx?: AttackContext) =>
-  a.bonus + (ctx && a.ability ? attackAbilityMod(ctx, a) + (a.magic ?? 0) : 0);
+  a.bonus + (ctx && a.ability ? (a.abilityDamage === false ? 0 : attackAbilityMod(ctx, a)) + (a.magic ?? 0) : 0);
 
 /** Dice expression for the roller, e.g. "2d6+3"; null when the attack has no damage. Pass ctx to include ability mod and magic. */
 export function attackExpression(a: Attack, ctx?: AttackContext): string | null {

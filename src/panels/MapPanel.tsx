@@ -20,7 +20,7 @@ import { routeLength } from "../map/routes";
 import { partyLocationInSquare } from "../map/party";
 import { scaleBar } from "../map/scale";
 import { CELL, lineLabels, newLine, pointerSquare, usePxPerUnit } from "../map/lines";
-import { snapToHalf, type Pt } from "../map/geometry";
+import { pointInPolygon, snapToHalf, type Pt } from "../map/geometry";
 import { LinesLayer, PointHandles } from "../map/LinesLayer";
 import { DrawLayer } from "../map/DrawLayer";
 import { LineEditor } from "../map/LineEditor";
@@ -339,6 +339,8 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
           {map.showGrid && gridAt(box.x, box.x + box.w).map((x) => <line key={`v${x}`} x1={x} y1={box.y} x2={x} y2={box.y + box.h} className="grid-line" pointerEvents="none" />)}
           {map.showGrid && gridAt(box.y, box.y + box.h).map((y) => <line key={`h${y}`} x1={box.x} y1={y} x2={box.x + box.w} y2={y} className="grid-line" pointerEvents="none" />)}
           <AreasLayer lines={liveLines} labelOf={areaText} selectedId={selected?.id} selectable={tool === "select"} onSelect={pickArea} snap={map.showGrid && gridSquares}
+            fits={(l) => l.points.every((p) => p.x * CELL >= box.x && p.x * CELL <= box.x + box.w && p.y * CELL >= box.y && p.y * CELL <= box.y + box.h)}
+            covers={(l) => [[box.x, box.y], [box.x + box.w, box.y], [box.x, box.y + box.h], [box.x + box.w, box.y + box.h]].every(([x, y]) => pointInPolygon({ x: x / CELL, y: y / CELL }, l.points))}
             onShift={(id, by) => setShift({ id, by })}
             onShiftEnd={(id, by) => { if (!by) { setShift(null); return; } void patchLine(id, (l) => ({ ...l, points: l.points.map((p) => ({ x: p.x + by.x, y: p.y + by.y })) })).then(() => setShift(null)); }}
             pointAt={freePoint} onPanStart={panStart} onPanMove={panMove} onPanEnd={panEnd} />

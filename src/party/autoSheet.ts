@@ -71,15 +71,31 @@ export function computeAuto(member: PartyMemberInput, srd: CharacterData): Parti
   }
   if (species) out.speed = `${species.speed} ft.`;
 
+  // A subclass only counts for its own class. Once picked, it replaces the class's "<Class> Subclass" placeholder feature.
+  const subclass = cls && member.subclassId ? srd.subclasses.find((s) => s.id === member.subclassId && s.class.id === cls.id) : undefined;
   const features = [
-    ...(cls?.levels.filter((r) => r.level <= level).flatMap((r) => r.featureIds.map(feat)) ?? []),
+    ...(cls?.levels.filter((r) => r.level <= level).flatMap((r) => r.featureIds.filter((id) => !(subclass && id.endsWith("-subclass"))).map(feat)) ?? []),
+    ...(subclass?.features.filter((f) => f.level <= level).map((f) => f.name) ?? []),
     bg?.feat.name, ...[...(species?.traits ?? []), ...(sub?.traits ?? [])]
       .filter((t) => traitMinLevel(srd.traits.find((x) => x.id === t.id)?.description) <= level)
       .map((t) => t.name),
   ].filter((x): x is string => !!x);
   out.autoFeatures = uniq(features);
-  out.autoProficiencies = uniq([...(cls?.proficiencies ?? []), ...(bg?.tools ?? [])]);
+  if (out.maxHp !== undefined) out.maxHp += hpBonusPerLevel([...out.autoFeatures, ...ownEntries(member.features, member.autoAdded?.features)]) * level;
+  // "Choose one kind of Gaming Set (see …)": the background grants a tool the DM picks, so list the kind until they do.
+  const chosenTools = (bg?.proficiencyChoices ?? []).map((c) => c.match(/^Choose one kind of (.+?)(?:\s*\(|$)/i)?.[1]).filter((x): x is string => !!x).map((k) => `${k} (choose one kind)`);
+  out.autoProficiencies = uniq([...(cls?.proficiencies ?? []), ...(bg?.tools ?? []), ...chosenTools]);
   return out;
+}
+
+/** Features that raise the Hit Point maximum every level (2024): Dwarven Toughness +1, the Tough feat +2. */
+const HP_PER_LEVEL: Record<string, number> = { "dwarven toughness": 1, tough: 2 };
+function hpBonusPerLevel(features: string[]): number {
+  return [...new Set(features.map((f) => f.trim().toLowerCase()))].reduce((sum, f) => sum + (HP_PER_LEVEL[f] ?? 0), 0);
+}
+/** Entries the DM typed in themselves: everything not generated last time. */
+function ownEntries(list: string[] | undefined, generated: string[] | undefined): string[] {
+  return (list ?? []).filter((x) => !(generated ?? []).includes(x));
 }
 
 /** A background's option A kit: "(A) 2 Daggers, Thieves' Tools, …, 16 GP; or (B) 50 GP" → items and gold. */
@@ -87,7 +103,8 @@ export function backgroundKit(equipment: string[]): { items: EquipmentEntry[]; g
   const a = equipment.join(" ").match(/\(A\)\s*(.*?)\s*;\s*or\s*\(B\)/i)?.[1];
   const items: EquipmentEntry[] = [];
   let gp = 0;
-  for (const part of (a ?? "").split(/,\s*/).map((x) => x.trim()).filter(Boolean)) {
+  // "Gaming Set (same as above)" points back at the tool proficiency choice; the item is just "Gaming Set".
+  for (const part of (a ?? "").split(/,\s*/).map((x) => x.replace(/\s*\(same as above\)/i, "").trim()).filter(Boolean)) {
     const coin = part.match(/^(\d+)\s*GP$/i);
     if (coin) { gp += Number(coin[1]); continue; }
     const qty = part.match(/^(\d+)\s+(.+)$/);

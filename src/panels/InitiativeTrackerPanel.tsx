@@ -15,6 +15,7 @@ import { advanceTurnWithConditions } from "../combat/conditions";
 import AwardXpStep from "./AwardXpStep";
 import AddNpcCombatants from "./AddNpcCombatants";
 import AddSelect from "./AddSelect";
+import EncounterDifficulty from "./EncounterDifficulty";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
 import { SaveEncounterControl, SavedEncounterList } from "./SavedEncounters";
 import {
@@ -253,6 +254,7 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
       </ol>
       <div className="init-side">
         <AddCombatants campaign={campaign} inFight={inFight} onAdd={addAll} />
+        <EncounterDifficulty campaignId={campaign.id} enc={enc} />
         <SaveEncounterControl campaignId={campaign.id} enc={enc} />
       </div>
     </div>

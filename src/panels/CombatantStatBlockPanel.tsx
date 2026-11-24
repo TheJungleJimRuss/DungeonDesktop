@@ -3,7 +3,7 @@ import { registerPanel, type PanelProps } from "./registry";
 import { getMonster, type Monster } from "../srd/monsters";
 import StatBlock from "../srd/StatBlock";
 import { monsterFromEntry, useCustomEntries, CUSTOM_PREFIX } from "../storage/customEntries";
-import { listParty, type PartyMember } from "../storage/party";
+import { classLabel, listParty, type PartyMember } from "../storage/party";
 import { useActiveEncounter } from "../storage/encounters";
 import { useChangeVersion } from "../sync/changeBus";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
@@ -20,7 +20,7 @@ function PartySheet({ campaignId, c }: { campaignId: string; c: Combatant }) {
       <h3 className="sb-name">{c.name}</h3>
       {m ? (
         <>
-          <p className="sb-sub"><em>Level {m.level} {m.class}</em></p>
+          <p className="sb-sub"><em>Level {m.level} {classLabel(m)}</em></p>
           <p className="sb-line"><strong>AC</strong> {m.ac}</p>
           <p className="sb-line"><strong>HP</strong> {c.hp} (max {m.maxHp})</p>
           {m.abilities && (

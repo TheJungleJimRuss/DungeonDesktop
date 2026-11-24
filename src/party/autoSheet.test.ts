@@ -148,6 +148,32 @@ describe("computeAuto / applyAuto", () => {
   });
 });
 
+describe("HP bonuses and choose-one tools (playtest B2, B3)", () => {
+  const dwarf = { id: "dwarf", name: "Dwarf", type: "Humanoid", size: "Medium", speed: 30, traits: [{ id: "dwarven-toughness", name: "Dwarven Toughness" }], subspecies: [] };
+  const soldier = { id: "soldier", name: "Soldier", abilityScores: [], feat: { id: "savage-attacker", name: "Savage Attacker" }, skills: ["Athletics"], tools: [],
+    equipment: ["Choose A or B: (A) Spear, Gaming Set (same as above), 14 GP; or (B) 50 GP"], proficiencyChoices: ["Choose one kind of Gaming Set (see \"Equipment\")"] };
+  const farmer = { ...soldier, id: "farmer", name: "Farmer", feat: { id: "", name: "Tough" }, proficiencyChoices: [] };
+  const d: CharacterData = { ...data, species: [...data.species, dwarf], backgrounds: [...data.backgrounds, soldier, farmer],
+    traits: [...data.traits, { id: "dwarven-toughness", name: "Dwarven Toughness", description: "Your Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level.", species: [{ id: "dwarf", name: "Dwarf" }] }] };
+  const brakka = { ...base, classId: "fighter", level: 3, abilities: withAbilities(14) };
+
+  it("Dwarven Toughness adds 1 HP per level", () => {
+    expect(computeAuto({ ...brakka, speciesId: "dwarf" }, d).maxHp).toBe(31);
+  });
+
+  it("the Tough feat adds 2 HP per level, from a background or typed in by hand", () => {
+    expect(computeAuto({ ...brakka, backgroundId: "farmer" }, d).maxHp).toBe(34);
+    expect(computeAuto({ ...brakka, features: ["Tough"] }, d).maxHp).toBe(34);
+    expect(computeAuto({ ...brakka, speciesId: "dwarf", backgroundId: "farmer" }, d).maxHp).toBe(37);
+  });
+
+  it("kit drops the '(same as above)' note; the choose-one tool shows in Proficiencies", () => {
+    const m = applyAuto({ ...brakka, backgroundId: "soldier" }, d);
+    expect(m.equipment?.map((e) => e.name)).toEqual(["Spear", "Gaming Set"]);
+    expect(m.proficiencies).toContain("Gaming Set (choose one kind)");
+  });
+});
+
 describe("level from XP", () => {
   const mage = { ...base, class: "Mage Test", classId: "test-mage", abilities: withAbilities(10) };
   it("auto level follows XP, and HP, slots and hit dice follow the new level", () => {
@@ -167,5 +193,37 @@ describe("level from XP", () => {
     expect(applyAuto({ ...mage, level: 4 }, srd).level).toBe(4);
     expect(applyAuto({ ...mage, level: 4, xp: NaN }, srd).level).toBe(4);
     expect("level" in computeAuto({ ...mage, level: 4 }, srd)).toBe(false);
+  });
+});
+
+describe("subclass features", () => {
+  const champ = { id: "champion", name: "Champion", class: { id: "fighter", name: "Fighter" }, summary: "", description: "",
+    features: [{ id: "c1", name: "Improved Critical", level: 3 }, { id: "c2", name: "Remarkable Athlete", level: 7 }] };
+  const sage = { id: "sage-sub", name: "Battle Master", class: { id: "fighter", name: "Fighter" }, summary: "", description: "", source: "PHB 2024",
+    features: [{ id: "", name: "Combat Superiority", level: 3 }] };
+  const wild = { id: "wild", name: "Wild Path", class: { id: "warlock", name: "Warlock" }, summary: "", description: "", features: [{ id: "", name: "Wild Feature", level: 3 }] };
+  const fighterSub: Class = { ...fighter, levels: [
+    { level: 1, profBonus: 2, columns: {}, featureIds: ["second-wind"] },
+    { level: 3, profBonus: 2, columns: {}, featureIds: ["fighter-subclass"] } ] };
+  const d: CharacterData = { ...data, classes: [fighterSub, warlock], subclasses: [champ, sage, wild],
+    classFeatures: [...data.classFeatures, { id: "fighter-subclass", name: "Fighter Subclass", class: { id: "fighter", name: "Fighter" }, level: 3, description: "" }] };
+  const f = (level: number, subclassId?: string) => ({ ...base, class: "Fighter", classId: "fighter", level, subclassId });
+
+  it("adds subclass features only from their level and drops the placeholder", () => {
+    expect(applyAuto(f(2, "champion"), d).features).toEqual(["Second Wind"]);
+    expect(applyAuto(f(3, "champion"), d).features).toEqual(["Second Wind", "Improved Critical"]);
+    expect(applyAuto(f(7, "champion"), d).features).toEqual(["Second Wind", "Improved Critical", "Remarkable Athlete"]);
+    expect(applyAuto(f(3), d).features).toEqual(["Second Wind", "Fighter Subclass"]);
+  });
+
+  it("switching subclass swaps untouched features and keeps an edited one", () => {
+    const a = applyAuto(f(7, "champion"), d);
+    const edited = { ...a, features: a.features!.map((x) => (x === "Remarkable Athlete" ? "Remarkable Athlete (house rule)" : x)) };
+    const b = applyAuto({ ...edited, subclassId: "sage-sub" }, d);
+    expect(b.features).toEqual(["Second Wind", "Remarkable Athlete (house rule)", "Combat Superiority"]);
+  });
+
+  it("ignores a subclass of another class", () => {
+    expect(applyAuto(f(7, "wild"), d).features).toEqual(["Second Wind", "Fighter Subclass"]);
   });
 });
