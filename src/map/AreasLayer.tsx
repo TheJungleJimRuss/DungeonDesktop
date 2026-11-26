@@ -9,7 +9,9 @@ import { AREA_MIN_PX, areaLabelOpacity, boundsOf, fadeBySize, pointInArea, point
  *  smallest Area under the pointer (`pointAt` gives the unsnapped point; without one, the clicked fill). Dragging the selected Area moves the
  *  whole Shape (`onShift` live, `onShiftEnd` on release; by whole shown-grid squares when `snap` gives their size); dragging any other fill pans the Map.
  *  In other tools the fills let clicks through (Draw still adds points). An Area's Holes are cut out of its fill (one evenodd path), so a click
- *  there is not on the Area: it selects a smaller Area under it, else acts like a click on empty Map (`onEmpty`). */
+ *  there is not on the Area: it selects a smaller Area under it, else acts like a click on empty Map (`onEmpty`).
+ *  A locked Area (unless selected) is skipped by a single click, which picks an unlocked Area under the pointer or acts as a click on empty Map;
+ *  a double-click picks the smallest Area under the pointer, locked or not. */
 export function AreasLayer({ lines, pxPerSquare, full, labelOf, labelAt, selectedId, selectable, snap, fits, covers, pointAt, onSelect, onEmpty, onShift, onShiftEnd, onPanStart, onPanMove, onPanEnd }: {
   lines: MapLine[];
   /** Screen pixels per square: an Area a few pixels across fades out (fill and name), not rendered and not hit at 0; its name hides first, when it no longer fits. */
@@ -34,6 +36,13 @@ export function AreasLayer({ lines, pxPerSquare, full, labelOf, labelAt, selecte
   const drag = useRef<{ id: string; from: Pt; by: Pt | null } | null>(null);
   const faded = (l: MapLine) => { const b = boundsOf(l.points); return !full.has(l.id) && fadeBySize(Math.max(b.x1 - b.x0, b.y1 - b.y0) * pxPerSquare, AREA_MIN_PX) <= 0; };
   const hittable = lines.filter((l) => !faded(l)); // a faded Area is not clickable, so the smallest-Area pick skips it
+  const clickable = hittable.filter((l) => !l.area?.locked || l.id === selectedId); // a single click passes through locked Areas
+  const pick = (l: MapLine, e: React.MouseEvent, among: MapLine[]) => {
+    const p = pointAt(e);
+    if (!p) { if (among.includes(l)) onSelect(l.id); else onEmpty(); return; }
+    const hit = areaAt(among, p);
+    if (hit) onSelect(hit.id); else if (l.area?.holes?.some((h) => pointInPolygon(p, h)) || !among.includes(l)) onEmpty(); else onSelect(l.id);
+  };
   const justDragged = useRef(false);
   const down = (id: string) => (e: React.PointerEvent) => {
     const area = lines.find((l) => l.id === id);
@@ -83,7 +92,8 @@ export function AreasLayer({ lines, pxPerSquare, full, labelOf, labelAt, selecte
           <g key={l.id} className={"map-area" + (l.id === selectedId ? " selected" : "")}>
             <path d={d} className="map-area-fill" fill={l.area.color} fillRule="evenodd" opacity={fade} data-area={l.id} role={selectable ? "button" : undefined} aria-label={selectable ? `Area ${text}` : undefined}
               tabIndex={-1} pointerEvents={selectable ? undefined : "none"} onPointerDown={down(l.id)} onPointerMove={move} onPointerUp={up}
-              onClick={(e) => { if (justDragged.current) { justDragged.current = false; return; } const p = pointAt(e); if (!p) { onSelect(l.id); return; } const hit = areaAt(hittable, p); if (hit) onSelect(hit.id); else if (l.area?.holes?.some((h) => pointInPolygon(p, h))) onEmpty(); else onSelect(l.id); }} />
+              onClick={(e) => { if (justDragged.current) { justDragged.current = false; return; } pick(l, e, clickable); }}
+              onDoubleClick={(e) => pick(l, e, hittable)} />
             {labelFade > 0 && <OnTop><ScreenSized x={c.x * U} y={c.y * U} opacity={labelFade}><text className="map-area-label" textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{text}</text></ScreenSized></OnTop>}
           </g>
         );

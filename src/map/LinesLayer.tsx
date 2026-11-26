@@ -21,7 +21,8 @@ function Segment({ a, b, u, kind, index, opacity }: { a: Pt; b: Pt; u: number; k
   );
 }
 
-/** The drawn Lines and Shapes (as shown, with any drag in progress). Each is a button (in the Select tool): clicking selects it.
+/** The drawn Lines and Shapes (as shown, with any drag in progress). Each is a button (in the Select tool): clicking selects it
+ *  (a locked Area's outline, unless selected, needs a double-click; Enter still selects it).
  *  The selected Line's segments are buttons too: clicking one picks it for the editor (`selectedSegment`). */
 export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSelect, selectedSegment, onSegment, onSplit, selectable }: {
   lines: MapLine[]; labels: Map<string, string>; selectedId?: string;
@@ -52,7 +53,7 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
         return (
           <g key={l.id} className={"map-line" + (l.route ? " map-route" : "") + (l.id === selectedId ? " selected" : "")} role="button" aria-label={label} aria-pressed={l.id === selectedId}
             tabIndex={selectable ? 0 : -1} pointerEvents={selectable ? undefined : "none"}
-            onClick={() => onSelect(l.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(l.id); } }}>
+            onClick={() => { if (!l.area?.locked || l.id === selectedId) onSelect(l.id); }} onDoubleClick={() => { if (l.area?.locked) onSelect(l.id); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(l.id); } }}>
             {l.route
               ? <path d={d} className="map-route-path" fill="none" opacity={routeF} pointerEvents="none" />
               : segs.map(([a, c], i) => (op[i] > 0 ? <Segment key={i} a={a} b={c} u={u} kind={l.segments[i] ?? "plain"} index={i} opacity={op[i]} /> : null))}

@@ -9,8 +9,8 @@ export interface MapPoint { x: number; y: number; }
 export interface MapLine {
   id: string; points: MapPoint[]; closed: boolean; segments: SegmentKind[]; route?: true;
   /** Present when the Shape is an Area. `holes`: parts cut out of it (rings of points in squares, strictly inside the outline, not overlapping); absent = none. */
-  /** `priority`: how far out its label stays (absent: normal). */
-  area?: { kind: string; color: string; name?: string; locationId?: string; holes?: MapPoint[][]; priority?: AreaPriority };
+  /** `priority`: how far out its label stays (absent: normal). `locked`: a single click passes through it; only a double-click selects it (absent: unlocked). */
+  area?: { kind: string; color: string; name?: string; locationId?: string; holes?: MapPoint[][]; priority?: AreaPriority; locked?: true };
 }
 export interface MapMarker { id: string; x: number; y: number; name: string; color: string; icon: string; note: string; locationId?: string;
   /** Pixels per square when it was placed (absent: battle scale, 32). */ placedAt?: number;

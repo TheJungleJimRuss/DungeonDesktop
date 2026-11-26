@@ -246,3 +246,37 @@ describe("Marker Priority", () => {
     await waitFor(async () => expect((await listMaps(id))[0].markers[0].placedAt).toBeCloseTo(32 / 2.25, 3));
   });
 });
+
+describe("Area lock", () => {
+  const locked = (id: string, x: number): MapLine => ({ ...area(id, x, 0, 3), area: { kind: "Area", color: "#3498db", name: id, locked: true } });
+  const editor = (panel: ReturnType<typeof within>, name: string) => panel.queryByRole("group", { name: `Area of ${name}` });
+
+  it("a single click passes through a locked Area; a double-click selects it", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMap(user, () => ({ lines: [locked("Lake", 0), { ...area("Hut", 4, 0, 3), area: { kind: "Area", color: "#3498db", name: "Hut" } }] }));
+    const lake = await panel.findByRole("button", { name: "Area Lake" });
+    await user.click(panel.getByRole("button", { name: "Area Hut" }));
+    const hutLabel = panel.getByRole("group", { name: /^Area of / }).getAttribute("aria-label")!;
+    fireEvent.click(lake);
+    expect(panel.queryByRole("group", { name: /^Area of / })).toBeNull(); // acts as a click on empty Map: deselects
+    fireEvent.dblClick(lake);
+    const lakeLabel = panel.getByRole("group", { name: /^Area of / }).getAttribute("aria-label")!;
+    expect(lakeLabel).not.toBe(hutLabel);
+    fireEvent.click(lake); // once selected, a click keeps it
+    expect(editor(panel, lakeLabel.slice("Area of ".length))).toBeInTheDocument();
+  });
+
+  it("locks and unlocks an Area from its editor", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user, () => ({ lines: [area("A", 0, 0, 3)] }));
+    await user.click(await panel.findByRole("button", { name: /^Area / }));
+    const box = panel.getByRole("checkbox", { name: "Area locked" });
+    expect(box).not.toBeChecked();
+    await user.click(box);
+    await waitFor(async () => expect((await listMaps(id))[0].lines[0].area?.locked).toBe(true));
+    await user.click(panel.getByRole("checkbox", { name: "Area locked" }));
+    await waitFor(async () => expect((await listMaps(id))[0].lines[0].area).not.toHaveProperty("locked"));
+  });
+});

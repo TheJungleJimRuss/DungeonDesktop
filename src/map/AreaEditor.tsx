@@ -40,6 +40,8 @@ export function AreaEditor({ label, area, locations, onChange, onCreateLocation,
         onChange={(e) => { const priority = e.target.value as AreaPriority; onChange((a) => { if (!a) return a; const { priority: _old, ...rest } = a; return priority === "normal" ? rest : { ...rest, priority }; }); }}>
         {PRIORITIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select></label>
+      <label title="A locked Area ignores single clicks (they reach what is under it); double-click it to select it"><input type="checkbox" aria-label="Area locked" checked={!!area.locked}
+        onChange={(e) => { const locked = e.target.checked; onChange((a) => { if (!a) return a; const { locked: _old, ...rest } = a; return locked ? { ...rest, locked: true } : rest; }); }} /> Locked</label>
       {holeSelected && <button onClick={onRemoveHole} title="Fill this Hole back in (Delete)">Remove hole</button>}
       {!subtracting && <button onClick={onSubtract} title="Cut another Shape or Area out of this Area">Subtract shape</button>}
       <button onClick={() => onChange(() => undefined)}>Unmake area</button>
