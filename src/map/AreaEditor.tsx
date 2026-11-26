@@ -8,8 +8,12 @@ const CREATE = "__create";
 
 /** Under the canvas, for a selected closed Line: Make area, or its kind, color, name, Location link and Unmake area.
  *  Text inputs commit on blur/Enter (committing per keystroke remounts the input and drops focus). */
-export function AreaEditor({ label, area, locations, onChange, onCreateLocation }: {
+export function AreaEditor({ label, area, locations, onChange, onCreateLocation, subtracting, onSubtract, holeSelected, onRemoveHole }: {
   label: string; area?: Area; locations: Location[]; onChange: (change: (area: Area | undefined) => Area | undefined) => void; onCreateLocation: () => void;
+  /** True while Subtract shape waits for a cutter (the button hides); `onSubtract` starts it. */
+  subtracting: boolean; onSubtract: () => void;
+  /** True while one of the Area's Holes is selected: "Remove hole" (`onRemoveHole`) shows. */
+  holeSelected: boolean; onRemoveHole: () => void;
 }) {
   if (!area) return <div className="row map-area-editor"><button onClick={() => onChange(() => ({ kind: DEFAULT_AREA_KIND, color: DEFAULT_AREA_COLOR }))}>Make area</button></div>;
   // Changes are functions of the stored Area, so quick successive commits (tabbing through fields) never overwrite each other.
@@ -31,6 +35,8 @@ export function AreaEditor({ label, area, locations, onChange, onCreateLocation 
         {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
         <option value={CREATE}>Create location</option>
       </select></label>
+      {holeSelected && <button onClick={onRemoveHole} title="Fill this Hole back in (Delete)">Remove hole</button>}
+      {!subtracting && <button onClick={onSubtract} title="Cut another Shape or Area out of this Area">Subtract shape</button>}
       <button onClick={() => onChange(() => undefined)}>Unmake area</button>
     </div>
   );

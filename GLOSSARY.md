@@ -22,7 +22,14 @@ _Avoid_: World Map, Battle Map (both are just Maps); scale map, region map.
 
 **Door**: A Line or Shape segment drawn as a gap with a door mark.
 
-**Area**: A Shape given a kind (free text such as City or Forest), a color and an optional name, and optionally linked to a Location.
+**Area**: A Shape given a kind (free text such as City or Forest), a color and an optional name, and optionally linked to a Location. It can have Holes. Unmaking an Area drops its Holes.
+
+**Subtract shape**: Cutting the inside of another Shape or Area (the cutter, which stays on the Map) out of an Area. A cut fully inside makes a Hole; a cut across the edge makes a Notch. A cut that would split the Area in two, remove all of it, or leave a Hole or the outline touching an edge at a single point is refused.
+_Avoid_: erase, boolean
+
+**Hole**: A part cut out of an Area, fully inside its outline: no fill there, and a click there is not on the Area. A Hole has no walls or doors; its points can be dragged and it can be removed.
+
+**Notch**: A bite out of an Area's outline, made by a cut or Hole that crosses the edge. It rewrites the outline (the new segments are plain), so the DM confirms it first.
 
 **Marker**: A point on a Map with a name, color, icon and short note, optionally linked to a Location. Unlike a Token, it is placed freely, not on squares. It remembers the zoom it was placed at and fades out once the view zooms out past its Priority.
 _Avoid_: pin, node.

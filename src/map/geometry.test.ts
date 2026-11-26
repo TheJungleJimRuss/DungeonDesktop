@@ -1,4 +1,4 @@
-import { markerOpacity, boundsIntersect, boundsOf, fadeBySize, labelWidthPx, segmentScreenLength, distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, polylineLength, snapToCorner, snapToHalf, snapToStep } from "./geometry";
+import { markerOpacity, boundsIntersect, boundsOf, fadeBySize, labelWidthPx, segmentScreenLength, distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, labelPoint, pointInArea, ringPath, filledArea, polylineLength, snapToCorner, snapToHalf, snapToStep } from "./geometry";
 
 describe("map geometry", () => {
   it("snaps to the nearest grid corner", () => {
@@ -63,6 +63,48 @@ describe("map geometry", () => {
   it("finds a polygon's centroid, falling back to the mean of the points", () => {
     expect(polygonCentroid([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }])).toEqual({ x: 2, y: 1 });
     expect(polygonCentroid([{ x: 0, y: 0 }, { x: 2, y: 2 }])).toEqual({ x: 1, y: 1 });
+  });
+
+  it("puts a label inside the shape, even when the centroid falls outside it", () => {
+    const rect = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 2 }, { x: 0, y: 2 }];
+    expect(labelPoint(rect)).toEqual({ x: 2, y: 1 }); // centroid kept when it sits well inside
+    // A C shape (a loop that isn't closed in the middle): its centroid is in the empty gap.
+    const c = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 8 }, { x: 10, y: 8 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
+    expect(pointInPolygon(polygonCentroid(c), c)).toBe(false);
+    const p = labelPoint(c);
+    expect(pointInPolygon(p, c)).toBe(true);
+    expect(p.x).toBeLessThan(2); // in the thick left bar
+    expect(labelPoint([{ x: 0, y: 0 }, { x: 2, y: 2 }])).toEqual({ x: 1, y: 1 });
+  });
+});
+
+describe("Areas with Holes", () => {
+  const sq = (x: number, y: number, s: number) => [{ x, y }, { x: x + s, y }, { x: x + s, y: y + s }, { x, y: y + s }];
+  it("a point is in the Area when inside the outline and in no Hole", () => {
+    const holes = [sq(2, 2, 2), sq(6, 6, 2)];
+    expect(pointInArea({ x: 1, y: 1 }, sq(0, 0, 10), holes)).toBe(true);
+    expect(pointInArea({ x: 3, y: 3 }, sq(0, 0, 10), holes)).toBe(false);
+    expect(pointInArea({ x: 7, y: 7 }, sq(0, 0, 10), holes)).toBe(false);
+    expect(pointInArea({ x: 11, y: 1 }, sq(0, 0, 10), holes)).toBe(false);
+    expect(pointInArea({ x: 3, y: 3 }, sq(0, 0, 10))).toBe(true);
+  });
+
+  it("an Area's size is its outline minus its Holes", () => {
+    expect(filledArea(sq(0, 0, 10), [sq(2, 2, 2), sq(6, 6, 3)])).toBe(100 - 4 - 9);
+    expect(filledArea(sq(0, 0, 10))).toBe(100);
+    expect(filledArea(sq(0, 0, 10), [])).toBe(100);
+  });
+
+  it("draws a ring as one closed SVG subpath, scaled", () => {
+    expect(ringPath(sq(1, 2, 3), 10)).toBe("M10 20 L40 20 L40 50 L10 50 Z");
+  });
+
+  it("puts the label on the filled part, not in a Hole", () => {
+    const outline = sq(0, 0, 10), hole = sq(2, 2, 6);
+    const p = labelPoint(outline, [hole]);
+    expect(pointInArea(p, outline, [hole])).toBe(true);
+    expect(labelPoint(outline)).toEqual({ x: 5, y: 5 }); // the same outline without Holes keeps its centroid (the cache tells them apart)
+    expect(labelPoint(outline, [hole])).toEqual(p);
   });
 });
 

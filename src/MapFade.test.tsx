@@ -147,15 +147,16 @@ describe("Marker Priority", () => {
     expect(has(panel, "Old")).not.toBeInTheDocument();
   });
 
-  it("fades a selected Marker like any other, and drops the selection once it has faded out", async () => {
+  it("keeps a selected Marker shown and selected while the others fade out", async () => {
     const user = userEvent.setup();
     render(<App />);
-    const { panel } = await openMap(user, () => ({ markers: [pm("Nrm", 0)] }));
+    const { panel } = await openMap(user, () => ({ markers: [pm("Nrm", 0), pm("Other", 3)] }));
     await user.click(await panel.findByRole("button", { name: "Marker Nrm" }));
     expect(panel.getByRole("combobox", { name: "Priority" })).toBeInTheDocument(); // its editor is open
     await zoomOut(user, panel, 9); // ratio ~38: past Normal's 15x
-    expect(has(panel, "Nrm")).not.toBeInTheDocument();
-    await waitFor(() => expect(panel.queryByRole("combobox", { name: "Priority" })).not.toBeInTheDocument());
+    expect(has(panel, "Other")).toBeNull();
+    expect(has(panel, "Nrm")).toBeInTheDocument();
+    expect(panel.getByRole("combobox", { name: "Priority" })).toBeInTheDocument(); // still selected
   });
 
   it("records the zoom on a new Marker and persists Priority and Set to this zoom", async () => {

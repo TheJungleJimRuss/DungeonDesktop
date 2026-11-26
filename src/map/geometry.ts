@@ -40,6 +40,16 @@ export function polygonArea(poly: Pt[]): number {
   return Math.abs(s) / 2;
 }
 
+/** Is `p` on an Area's fill: inside the outline and in none of its Holes. */
+export function pointInArea(p: Pt, outline: Pt[], holes?: Pt[][]): boolean {
+  return pointInPolygon(p, outline) && !holes?.some((h) => pointInPolygon(p, h));
+}
+
+/** An Area's filled size: its outline's area minus its Holes' (Holes lie inside the outline and don't overlap). */
+export function filledArea(outline: Pt[], holes?: Pt[][]): number {
+  return Math.max(0, polygonArea(outline) - (holes ?? []).reduce((s, h) => s + polygonArea(h), 0));
+}
+
 export function distanceToSegment(p: Pt, a: Pt, b: Pt): number {
   const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
   const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
@@ -68,6 +78,50 @@ export function polygonCentroid(poly: Pt[]): Pt {
     a += f; cx += (poly[j].x + poly[i].x) * f; cy += (poly[j].y + poly[i].y) * f;
   }
   return a === 0 ? mean() : { x: cx / (3 * a), y: cy / (3 * a) };
+}
+
+/** Distance from `p` to the nearest edge of a closed polygon. */
+function edgeDistance(p: Pt, poly: Pt[]): number {
+  let d = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) d = Math.min(d, distanceToSegment(p, poly[j], poly[i]));
+  return d;
+}
+/** Where to put an Area's label: on its fill (inside the outline, in no Hole) and well clear of its edges and Holes' edges. The centroid when it
+ *  sits comfortably on the fill; otherwise (C shapes, rings, L shapes, a Hole in the middle) the filled point farthest from any edge, found by a
+ *  coarse grid search refined around the best cell. Cached per points array (and Holes array). */
+const labelCache = new WeakMap<Pt[], { holes?: Pt[][]; at: Pt }>();
+export function labelPoint(poly: Pt[], holes?: Pt[][]): Pt {
+  const hit = labelCache.get(poly);
+  if (hit && hit.holes === holes) return hit.at;
+  const at = findLabelPoint(poly, holes?.length ? holes : undefined);
+  labelCache.set(poly, { holes, at });
+  return at;
+}
+function findLabelPoint(poly: Pt[], holes?: Pt[][]): Pt {
+  const centroid = polygonCentroid(poly);
+  if (poly.length < 3) return centroid;
+  const b = boundsOf(poly);
+  const clearance = (q: Pt) => Math.min(edgeDistance(q, poly), ...(holes ?? []).map((h) => edgeDistance(q, h)));
+  let best = centroid, bestD = pointInArea(centroid, poly, holes) ? clearance(centroid) : -1;
+  const centroidD = bestD;
+  let cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, w = b.x1 - b.x0, h = b.y1 - b.y0;
+  const N = 24;
+  for (let round = 0; round < 4 && w > 0 && h > 0; round++) {
+    for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
+      const q = { x: cx - w / 2 + (w * i) / N, y: cy - h / 2 + (h * j) / N };
+      if (!pointInArea(q, poly, holes)) continue;
+      const d = clearance(q);
+      if (d > bestD) { bestD = d; best = q; }
+    }
+    cx = best.x; cy = best.y; w = (w * 4) / N; h = (h * 4) / N;
+  }
+  // Keep the familiar centroid unless the best spot is much roomier.
+  return centroidD >= bestD * 0.5 ? centroid : best;
+}
+
+/** An SVG path for a closed ring (`M x y L … Z`), each point scaled by `U` units per square. */
+export function ringPath(points: Pt[], U: number): string {
+  return points.map((p, i) => `${i ? "L" : "M"}${p.x * U} ${p.y * U}`).join(" ") + " Z";
 }
 
 /** Opacity 0..1 for something `screenPx` pixels big: 0 at or below `minPx`, ramping linearly across `band` px above it (default `minPx`, so it is

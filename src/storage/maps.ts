@@ -8,7 +8,8 @@ export interface MapPoint { x: number; y: number; }
 /** A drawn Line (later tickets). `segments[i]` describes points i to i+1; a closed Line has one more (last back to first). */
 export interface MapLine {
   id: string; points: MapPoint[]; closed: boolean; segments: SegmentKind[]; route?: true;
-  area?: { kind: string; color: string; name?: string; locationId?: string };
+  /** Present when the Shape is an Area. `holes`: parts cut out of it (rings of points in squares, strictly inside the outline, not overlapping); absent = none. */
+  area?: { kind: string; color: string; name?: string; locationId?: string; holes?: MapPoint[][] };
 }
 export interface MapMarker { id: string; x: number; y: number; name: string; color: string; icon: string; note: string; locationId?: string;
   /** Pixels per square when it was placed (absent: battle scale, 32). */ placedAt?: number;

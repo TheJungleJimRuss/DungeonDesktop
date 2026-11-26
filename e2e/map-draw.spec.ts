@@ -14,15 +14,18 @@ test("draws an open Line (double-click), a closed Shape (first point) and drags 
   await page.mouse.click(...at(2, 2, 0.2));
   await page.mouse.click(...at(6, 2, -0.15));
   await page.mouse.dblclick(...at(6, 5, 0.1));
-  await expect(map.getByRole("button", { name: "Line 1" })).toBeVisible();
+  await expect(map.getByRole("button", { name: "Line 1", exact: true })).toBeVisible();
   await expect.poll(async () => (await storedLines(page)).length).toBe(1);
   expect((await storedLines(page))[0]).toMatchObject({ closed: false, points: [P(2, 2), P(6, 2), P(6, 5)], segments: ["plain", "plain"] });
 
+  // finishing goes back to Select; L picks Draw again
+  await expect(map.getByRole("button", { name: "Select", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("l");
   // closed Shape: click the first point again. The editor under the canvas may have scrolled the page: measure again.
   at = await grid(map);
   for (const [c, r] of [[10, 10], [15, 10], [15, 14]]) await page.mouse.click(...at(c, r));
   await page.mouse.click(...at(10, 10, 0.1));
-  await expect(map.getByRole("button", { name: "Shape 1" })).toBeVisible();
+  await expect(map.getByRole("button", { name: "Shape 1", exact: true })).toBeVisible();
   await expect.poll(async () => (await storedLines(page)).length).toBe(2);
   expect((await storedLines(page))[1]).toMatchObject({ closed: true, points: [P(10, 10), P(15, 10), P(15, 14)], segments: ["plain", "plain", "plain"] });
 
@@ -72,7 +75,7 @@ test("draws a Route, labels its length, and dragging a point updates the label",
   await page.mouse.click(...at(2, 2));
   await page.mouse.click(...at(6, 2));
   await page.mouse.dblclick(...at(6, 5)); // 4 + 3 squares x 5 ft
-  const route = map.getByRole("button", { name: "Route 1" });
+  const route = map.getByRole("button", { name: "Route 1", exact: true });
   await expect(route).toBeVisible();
   await expect(route.locator(".map-route-label")).toHaveText("35 ft");
   await expect.poll(async () => (await storedLines(page)).length).toBe(1);
@@ -111,4 +114,30 @@ test("drags a selected Area by its fill: the whole Shape moves by whole squares"
   await page.mouse.up();
   await expect.poll(async () => (await storedLines(page))[0].points).toEqual([P(7, 6), P(11, 6), P(11, 9), P(7, 9)]);
   await expect(map.getByRole("group", { name: "Edit Shape 1" })).toBeVisible(); // still selected
+});
+
+test("a C-shaped Area puts its name on the shape, not in the empty middle", async ({ page }) => {
+  const map = await openMap(page, "Area Label Camp");
+  const at = await grid(map);
+
+  await map.getByRole("button", { name: "Draw", exact: true }).click();
+  // A C shape: its centroid is in the open gap on the right.
+  const pts = [[2, 2], [12, 2], [12, 4], [4, 4], [4, 10], [12, 10], [12, 12], [2, 12]];
+  for (const [c, r] of pts) await page.mouse.click(...at(c, r));
+  await page.mouse.click(...at(2, 2));
+  await map.getByRole("button", { name: "Select", exact: true }).click();
+  await page.mouse.click(...at(2, 7)); // on the left edge
+  await map.getByRole("button", { name: "Make area" }).click();
+  await expect.poll(async () => !!(await storedLines(page))[0].area).toBe(true);
+
+  const label = map.locator(".map-area-label");
+  await expect(label).toBeVisible();
+  const box = (await label.boundingBox())!;
+  const fill = map.locator(".map-area-fill").first();
+  const inside = await fill.evaluate((el, p) => {
+    const path = el as SVGPathElement, m = path.getScreenCTM()!.inverse();
+    const q = new DOMPoint(p.x, p.y).matrixTransform(m);
+    return path.isPointInFill(q);
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  expect(inside).toBe(true);
 });

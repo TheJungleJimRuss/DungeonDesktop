@@ -107,11 +107,19 @@ describe("Tokens on a Map", () => {
     await user.click(panel.getByLabelText("Square 6,3"));
     expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("5 squares, 25 ft");
     expect(panel.getByTestId("ruler-line")).toBeInTheDocument();
+    // finishing a measurement goes back to Select; the measurement stays until cleared
+    expect(ruler).toHaveAttribute("aria-pressed", "false");
+    expect(panel.getByRole("button", { name: "Select" })).toHaveAttribute("aria-pressed", "true");
 
-    // a third click starts a new measurement; diagonals cost one square each
+    // M picks the Ruler again; a new measurement replaces the old one; diagonals cost one square each. Shift keeps the Ruler.
+    await user.keyboard("m");
+    expect(ruler).toHaveAttribute("aria-pressed", "true");
+    await user.keyboard("{Shift>}");
     await user.click(panel.getByLabelText("Square 0,0"));
     await user.click(panel.getByLabelText("Square 3,3"));
+    await user.keyboard("{/Shift}");
     expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("3 squares, 15 ft");
+    expect(ruler).toHaveAttribute("aria-pressed", "true");
 
     // squares anywhere count, once zoomed out to show them
     await user.click(panel.getByRole("button", { name: "Zoom out" }));
@@ -120,10 +128,11 @@ describe("Tokens on a Map", () => {
     // the count is in shown grid squares (zoomed out, each stands for more), the distance in feet (or miles from 1,000 ft)
     expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent(/squares, 20 ft/);
 
-    await user.click(panel.getByRole("button", { name: "Clear measurement" }));
-    expect(panel.queryByTestId("ruler-line")).not.toBeInTheDocument();
-    await user.click(panel.getByRole("button", { name: "Ruler" }));
+    expect(ruler).toHaveAttribute("aria-pressed", "false");
     expect(panel.queryByLabelText("Square 0,0")).not.toBeInTheDocument();
+    // Esc clears the measurement before it steps back any further
+    await user.keyboard("{Escape}");
+    expect(panel.queryByTestId("ruler-line")).not.toBeInTheDocument();
   });
 
   it("zooms in and out and Fit all goes back to battle scale on an empty Map", async () => {

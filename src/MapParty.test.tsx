@@ -112,6 +112,22 @@ describe("Party Token", () => {
     await waitFor(async () => expect(await partyAt(id)).toBe((await listMaps(id))[0].lines[1].area!.locationId));
   });
 
+  it("dropped inside an Area's Hole it is not in that Area", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const ring: MapLine = { ...area("ring", 1, 1, 6, ""), area: { kind: "Moat", color: "#00f", holes: [sq(2, 2, 4)] } }; // filled 20, smaller than the Cave
+    const { id, panel } = await openMap(user, ({ keep, cave }) => ({ lines: [area("cave", 0, 0, 10, cave), { ...ring, area: { ...ring.area!, locationId: keep } }] }));
+    const { cave: caveLoc, keep: keepLoc } = { cave: (await listMaps(id))[0].lines[0].area!.locationId, keep: (await listMaps(id))[0].lines[1].area!.locationId };
+    await addParty(user, panel);
+    await user.keyboard("{ArrowRight}");
+    await waitFor(async () => expect(await partyAt(id)).toBe(caveLoc));
+    await user.keyboard("{ArrowDown}"); // square (1,1): on the Moat's fill
+    await waitFor(async () => expect(await partyAt(id)).toBe(keepLoc));
+    await user.keyboard("{ArrowRight}{ArrowDown}"); // square (2,2): in the Hole, so only the Cave
+    await waitFor(async () => expect((await listMaps(id))[0].partyToken).toEqual({ x: 2, y: 2 }));
+    await waitFor(async () => expect(await partyAt(id)).toBe(caveLoc));
+  });
+
   it("lets a Marker beat the Area under it", async () => {
     const user = userEvent.setup();
     render(<App />);

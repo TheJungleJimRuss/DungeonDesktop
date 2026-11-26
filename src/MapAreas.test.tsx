@@ -142,6 +142,54 @@ describe("Areas", () => {
     expect(await panel.findByRole("status", { name: "Drawing" })).toHaveTextContent("Drawing 1 point");
   });
 
+  const pts = (p: [number, number][]) => p.map(([x, y]) => ({ x, y }));
+  const holed = (id: string, outline: [number, number][], holes: [number, number][][], a: NonNullable<MapLine["area"]>): MapLine =>
+    ({ ...line(id, outline, true), area: { ...a, holes: holes.map(pts) } });
+
+  it("draws an Area with Holes as one evenodd path; a click in a Hole selects nothing there, a smaller Area in the Hole is selectable; an Area without holes still loads", async () => {
+    identitySvg();
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMap(user, [holed("ring", sq(2, 2, 10), [sq(4, 4, 4)], { kind: "Moat", color: "#00f" }), { ...line("isle", sq(5, 5, 2), true), area: { kind: "Isle", color: "#0a0" } }]);
+    const ring = await panel.findByRole("button", { name: "Area Moat" });
+    expect(ring).toHaveAttribute("fill-rule", "evenodd");
+    expect(ring.getAttribute("d")!.match(/M/g)).toHaveLength(2); // outline + one Hole ring
+    expect(panel.getByRole("button", { name: "Area Isle" }).getAttribute("d")!.match(/M/g)).toHaveLength(1);
+
+    fireEvent.click(ring, { clientX: 3 * 40, clientY: 3 * 40 }); // on the fill
+    expect(await panel.findByRole("group", { name: "Edit Shape 1" })).toBeInTheDocument();
+    fireEvent.click(ring, { clientX: 4.5 * 40, clientY: 4.5 * 40 }); // in the Hole, on nothing: deselects like empty Map
+    await waitFor(() => expect(panel.queryByRole("group", { name: /Edit Shape/ })).not.toBeInTheDocument());
+    fireEvent.click(ring, { clientX: 6 * 40, clientY: 6 * 40 }); // in the Hole, on the Isle
+    expect(await panel.findByRole("group", { name: "Edit Shape 2" })).toBeInTheDocument();
+  });
+
+  it("dragging an Area moves its Holes with it; Unmake area drops them", async () => {
+    identitySvg();
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user, [holed("a", sq(1, 1, 4), [sq(2, 2, 1)], { kind: "Room", color: "#f00" })]);
+    await user.click(await panel.findByRole("button", { name: "Shape 1" }));
+    const fill = await panel.findByRole("button", { name: "Area Room" });
+    await user.pointer([{ keys: "[MouseLeft>]", target: fill, coords: { clientX: 60, clientY: 60 } }, { coords: { clientX: 140, clientY: 60 } }, { keys: "[/MouseLeft]" }]);
+    await waitFor(async () => expect((await stored(id)).lines[0].points).toEqual(pts(sq(3, 1, 4))));
+    expect((await stored(id)).lines[0].area?.holes).toEqual([pts(sq(4, 2, 1))]);
+
+    await user.click(await panel.findByRole("button", { name: "Unmake area" }));
+    await waitFor(async () => expect((await stored(id)).lines[0].area).toBeUndefined());
+    await user.click(await panel.findByRole("button", { name: "Make area" }));
+    await waitFor(async () => expect((await stored(id)).lines[0].area).toBeDefined());
+    expect((await stored(id)).lines[0].area?.holes).toBeUndefined();
+  });
+
+  it("areaAt skips an Area where the point is in its Hole and counts each Area's size without its Holes", () => {
+    const ring = holed("ring", sq(0, 0, 10), [sq(1, 1, 8)], { kind: "A", color: "#000" }); // filled 36
+    const block = { ...line("block", sq(0, 0, 7), true), area: { kind: "B", color: "#000" } }; // 49
+    expect(areaAt([ring, block], { x: 0.5, y: 0.5 })?.id).toBe("ring");
+    expect(areaAt([ring, block], { x: 3, y: 3 })?.id).toBe("block");
+    expect(areaAt([ring], { x: 3, y: 3 })).toBeUndefined();
+  });
+
   it("areaAt picks the smallest containing Area and ignores plain Shapes and open Lines", () => {
     const lines = [area("big", 10, { kind: "A", color: "#000" }), area("small", 3, { kind: "B", color: "#000" }), line("plain", sq(2, 2, 2), true), line("open", [[0, 0], [9, 9]], false)];
     expect(areaAt(lines, { x: 3, y: 3 })?.id).toBe("small");

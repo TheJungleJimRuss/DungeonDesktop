@@ -70,8 +70,10 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
 }
 
 /** Draggable handles on the selected Line's points; the drag is reported live and saved on release. */
-export function PointHandles({ line, label, pxPerSquare, svgPoint, onMove, onDrop }: {
+export function PointHandles({ line, label, pointLabel, pxPerSquare, svgPoint, onMove, onDrop }: {
   line: MapLine; label: string; pxPerSquare: number; svgPoint: (e: { clientX: number; clientY: number }) => Pt | null;
+  /** Each handle's name (default "Point <n> of <label>"). */
+  pointLabel?: (index: number) => string;
   onMove: (index: number, at: Pt) => void; onDrop: (index: number, at: Pt) => void;
 }) {
   const [active, setActive] = useState<number | null>(null);
@@ -79,7 +81,7 @@ export function PointHandles({ line, label, pxPerSquare, svgPoint, onMove, onDro
   return (
     <g className="map-handles">
       {line.points.map((p, i) => (
-        <circle key={i} className="map-handle" cx={px(p.x)} cy={px(p.y)} role="button" tabIndex={-1} aria-label={`Point ${i + 1} of ${label}`}
+        <circle key={i} className="map-handle" cx={px(p.x)} cy={px(p.y)} role="button" tabIndex={-1} aria-label={pointLabel ? pointLabel(i) : `Point ${i + 1} of ${label}`}
           onPointerDown={(e) => { e.stopPropagation(); (e.currentTarget as Element).setPointerCapture?.(e.pointerId); setActive(i); }}
           onPointerMove={(e) => { if (active === i) { const q = svgPoint(e); if (q) onMove(i, q); } }}
           onPointerUp={(e) => { if (active === i) { const q = svgPoint(e); setActive(null); if (q) onDrop(i, q); } }} />

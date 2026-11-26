@@ -415,6 +415,7 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 .skip-link { position:absolute; left:8px; top:-48px; z-index:100; background:var(--accent); color:#120d26; padding:6px 12px; border-radius:4px; font-weight:600; text-decoration:none; }
 .skip-link:focus { top:8px; }
 .panel-area:focus { outline:none; }
+.shortcut-dialog { max-height:calc(100vh - 32px); overflow:auto; } .shortcut-dialog h3 { margin:4px 0 6px; font-size:14px; }
 .shortcut-list { margin:0 0 12px; display:flex; flex-direction:column; gap:4px; }
 .shortcut-list > div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid var(--line); padding:3px 0; }
 .shortcut-list dt { margin:0; } .shortcut-list dd { margin:0; }
@@ -428,9 +429,14 @@ button.star-btn { min-width:36px; } button.star-btn[aria-pressed="true"] { color
 .map-find { position:relative; } .map-find input { width:11rem; }
 .map-find-results { position:absolute; top:100%; left:0; z-index:20; min-width:14rem; margin:2px 0 0; padding:4px; list-style:none; background:var(--panel); border:1px solid var(--line-strong, var(--line)); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.35); }
 .map-find-results li { padding:2px 0; } .map-find-results button { width:100%; text-align:left; }
-.map-toolbar { flex-wrap:wrap; } /* the zoom group drops to its own line, whole, when the panel is narrow */
+.map-toolbar { flex-wrap:wrap; }
+.map-toolbar .tool-key { margin-left:6px; padding:0 4px; font-size:11px; line-height:1.4; opacity:.6; border:1px solid var(--line); border-radius:3px; font-family:inherit; }
+.map-toolbar [aria-pressed="true"] .tool-key { opacity:.9; } /* the zoom group drops to its own line, whole, when the panel is narrow */
 .zoom-ctl { gap:2px; margin-left:auto; white-space:nowrap; flex-wrap:nowrap; } .zoom-ctl button { min-width:32px; }
-.zoom-ctl [aria-live] { min-width:5ch; text-align:center; font-variant-numeric:tabular-nums; } /* a steady width, so + and - stay put while the readout changes */
+/* Steady widths, so the buttons stay put while the readouts change: the group is right-aligned, so any width change before or after them moves them.
+   The zoom readout runs "31.3x" to "0.00000123x" (11 chars; smaller goes to "1.19e-8x"); the grid scale "1 square = 5 ft" to "1 square = 200000 mi". */
+.zoom-ctl [aria-live] { min-width:11.5ch; text-align:center; font-variant-numeric:tabular-nums; }
+.zoom-ctl [aria-label="Grid scale"] { display:inline-block; min-width:21ch; text-align:left; font-variant-numeric:tabular-nums; }
 .map-canvas .grid-line { stroke:var(--line); stroke-width:1; vector-effect:non-scaling-stroke; }
 .map-token { cursor:grab; } .map-token:focus { outline:none; } .map-token:focus circle { stroke:currentColor; stroke-width:4; }
 .map-token circle { stroke:var(--line); stroke-width:2; } .token-label { fill:#fff; font-size:17px; font-weight:800; pointer-events:none; paint-order:stroke; stroke:rgba(0,0,0,.35); stroke-width:2px; } .token-label.long { font-size:13px; }
@@ -842,6 +848,10 @@ input.loc-size { width:64px; }
 .map-seg-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linecap:round; pointer-events:stroke; cursor:pointer; }
 .map-seg-hit:hover, .map-seg-hit.selected { stroke:color-mix(in srgb, var(--accent, #f39c12) 45%, transparent); }
 .map-area.selected .map-area-fill { cursor:move; }
+.map-hole-edge { stroke:var(--accent, #f39c12); stroke-width:calc(1.5px * var(--ui)); stroke-dasharray:calc(4px * var(--ui)) calc(3px * var(--ui)); }
+.map-hole.selected .map-hole-edge { stroke-width:calc(3px * var(--ui)); stroke-dasharray:none; }
+.map-hole-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linejoin:round; pointer-events:stroke; cursor:pointer; }
+.map-hole-hit:hover, .map-hole.selected .map-hole-hit { stroke:color-mix(in srgb, var(--accent, #f39c12) 35%, transparent); }
 .map-hit { stroke:transparent; stroke-width:calc(14px * var(--ui)); stroke-linejoin:round; pointer-events:stroke; }
 .map-route-path { stroke:var(--accent, #f39c12); stroke-width:calc(3px * var(--ui)); stroke-dasharray:calc(10px * var(--ui)) calc(6px * var(--ui)); stroke-linecap:round; stroke-linejoin:round; }
 .map-line.selected .map-route-path { stroke:var(--text, currentColor); }
@@ -856,6 +866,7 @@ input.loc-size { width:64px; }
 .map-area-fill.map-area-backdrop { fill-opacity:.28; cursor:inherit; }
 .map-area-label { fill:currentColor; font-size:13px; paint-order:stroke; stroke:var(--bg); stroke-width:4px; stroke-linejoin:round; }
 .map-area-editor { flex-wrap:wrap; }
+.map-notch-preview { fill:var(--accent, #f39c12); fill-opacity:.15; stroke:var(--accent, #f39c12); stroke-width:calc(3px * var(--ui)); stroke-dasharray:calc(8px * var(--ui)) calc(5px * var(--ui)); stroke-linejoin:round; } /* "Cut notch?" preview */
 
 /* Map: Markers. The body is drawn in on-screen pixels and counter-scaled by --ui. */
 .map-marker { cursor:grab; } .map-marker:focus { outline:none; }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { listCampaigns } from "./storage";
@@ -126,10 +126,45 @@ describe("Lines and Shapes on a Map", () => {
     await user.keyboard("{Enter}");
     await waitFor(async () => expect((await stored(id)).lines).toHaveLength(1));
     expect((await stored(id)).lines[0]).toMatchObject({ closed: false, points: [{ x: 2, y: 1 }, { x: 4, y: 1 }], segments: ["plain"] });
+    // finishing goes back to Select with the new Line selected
+    await waitFor(() => expect(panel.getByRole("button", { name: "Select" })).toHaveAttribute("aria-pressed", "true"));
+    expect(panel.getByRole("button", { name: "Draw" })).toHaveAttribute("aria-pressed", "false");
+    expect(panel.getByRole("group", { name: /^Edit / })).toBeInTheDocument();
 
-    await click(200, 200); await click(320, 200); await click(320, 320); await click(201, 199); // back on the first point
+    await user.keyboard("l"); // L picks Draw again
+    const surface2 = await panel.findByTestId("map-draw");
+    const click2 = (x: number, y: number) => user.pointer({ target: surface2, keys: "[MouseLeft]", coords: { clientX: x, clientY: y } });
+    await click2(200, 200); await click2(320, 200); await click2(320, 320); await click2(201, 199); // back on the first point
     await waitFor(async () => expect((await stored(id)).lines).toHaveLength(2));
     expect((await stored(id)).lines[1]).toMatchObject({ closed: true, points: [{ x: 5, y: 5 }, { x: 8, y: 5 }, { x: 8, y: 8 }], segments: ["plain", "plain", "plain"] });
+  });
+
+  it("Shift keeps the tool after finishing; the tool keys switch tools and Esc steps back to Select", async () => {
+    identitySvg();
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user);
+    const pressed = (name: string) => panel.getByRole("button", { name }).getAttribute("aria-pressed");
+    for (const [key, name] of [["r", "Route"], ["p", "Marker"], ["m", "Ruler"], ["l", "Draw"], ["v", "Select"]]) {
+      await user.keyboard(key);
+      expect(pressed(name)).toBe("true");
+    }
+    await user.keyboard("l");
+    expect(panel.getByLabelText("Tool hint")).toHaveTextContent(/hold Shift/);
+    const surface = await panel.findByTestId("map-draw");
+    const click = (x: number, y: number) => user.pointer({ target: surface, keys: "[MouseLeft]", coords: { clientX: x, clientY: y } });
+    await click(82, 41); await click(158, 43);
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    await waitFor(async () => expect((await stored(id)).lines).toHaveLength(1));
+    expect(pressed("Draw")).toBe("true");
+    await user.keyboard("{Escape}");
+    expect(pressed("Select")).toBe("true");
+    // the Marker tool places one Marker, then it is back to Select with that Marker selected
+    await user.keyboard("p");
+    fireEvent.click(await panel.findByTestId("map-marker-surface"), { clientX: 100, clientY: 100 });
+    expect(await panel.findByRole("button", { name: "Marker Marker 1" })).toHaveAttribute("aria-pressed", "true");
+    expect(pressed("Select")).toBe("true");
+    expect(panel.queryByTestId("map-marker-surface")).not.toBeInTheDocument();
   });
 
   it("Snap to grid off: drawing lands on the unsnapped point; the setting persists", async () => {
