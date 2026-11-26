@@ -3,6 +3,7 @@ import { reachArea, walkSpeedFeet } from "./speed";
 describe("walkSpeedFeet", () => {
   it.each([
     ["30 ft.", 30], ["40 ft., Fly 80 ft., Swim 40 ft.", 40], ["Walk 25 ft.", 25], ["0 ft., Fly 30 ft.", 0],
+    ["30", 30], [" 35 ", 35], ["Walk 20", 20], ["30, Fly 60 ft.", 30], ["30 m", null],
     ["Fly 60 ft.", null], ["", null], [undefined, null], ["fast", null],
   ])("%s → %s", (text, feet) => expect(walkSpeedFeet(text)).toBe(feet));
 });

@@ -1,11 +1,12 @@
 # Project notes
 
 ## Status
+2026-11-25: Specs 0009-0011 committed (df7c937). Speed ring is now a circle centred on the token; walkSpeedFeet reads a bare number ("30") as feet. 620 tests pass (MapSpot can flake under full-suite load, passes alone). Pushed to GitHub.
 2026-11-25: Spec 0011 Paste stat block built (tickets .agents/issues/paste-stat-block/ 01-04), code-reviewed (both axes) and review fixes applied, 615 tests pass, browser-checked. Not committed.
 2026-11-25: Spec 0010 custom monster editor built (per-item fields + attack builder; tickets .agents/issues/custom-monster-editor/ 01-03 done), browser-checked, not committed. Spec 0009 tickets 01-05 (Endless Map, smooth zoom, fade by size, Marker Priority, Encounter spot + Find fit rules) built, not committed; 06 open. Earlier: spec 0007 Unified Map built (docs/specs/0007-unified-map.md, ADR 0002, tickets .agents/issues/unified-map/issues/ 01-07 done): World Map and Battle Map replaced by named Maps (src/storage/maps.ts, src/panels/MapPanel.tsx, src/map/) with Lines/Shapes/walls/doors, Areas, Markers, Routes, Tokens and an optional Party Token; DB v8 deletes old map data. Code-reviewed, browser-checked. Not committed. Older status lines are in NOTES_ARCHIVE.md.
 
 ## Current goal
-Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (see Next steps) and pick the next spec.
+Specs 0002-0011 done and committed. Settle open questions (see Next steps) and pick the next spec.
 
 ## Active decisions
 - Local-first React + Vite + TypeScript static app; IndexedDB; per-Campaign JSON export/import. No server, no accounts.
@@ -54,7 +55,7 @@ Specs 0002-0005 done. Commit the uncommitted work, then settle open questions (s
 - Screen-constant map text: font-size caps at 5000px, so wrap it in `ScreenSized` (`scale(var(--ui))` transform), never `calc(13px*var(--ui))`.
 
 ## Next steps
-- Commit the uncommitted work (specs 0009, 0010, 0011). Open 0011 smells: the two editors duplicate paste wiring and set form.dataset.dirty directly (a usePaste hook / markDirty in unsaved.ts would fix it).
+- Open 0011 smells: the two editors duplicate paste wiring and set form.dataset.dirty directly (a usePaste hook / markDirty in unsaved.ts would fix it).
 - Spec 0009 Scalable Map (docs/specs/0009-scalable-map.md, ADR 0003) approved; tickets 01-06 done: endless Map, fixed 5 ft base square, smooth zoom with crossfading grid, fade by size, Marker Priority, Party Token never fades, Encounter spot, images removed, v9 deletes old Maps.
 - Spec 0007 open questions: no way to clear the party location now the Locations select is gone (Party Token only sets it); deleting a Location renames a linked Marker to the Location's name while Areas keep their own; Map delete is blocked for the Encounter's Map in the UI only.
 - Spec 0005 limits: XP from monsters already removed ("Remove defeated") isn't counted; speed ring ignores fly/swim, used movement and speed-0 conditions.

@@ -424,8 +424,8 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
             const r = reachArea(selectedToken, speedFeet);
             return (
               <g className="speed-ring" data-testid="speed-ring" pointerEvents="none" aria-label={`Speed ${speedFeet} ft, ${r.squares} squares`}>
-                <rect x={(r.x - A.x) * U + 2} y={(r.y - A.y) * U + 2} width={r.w * U - 4} height={r.h * U - 4} rx={U / 2} />
-                <text x={(r.x - A.x) * U + 10} y={(r.y - A.y) * U + 22}>{speedFeet} ft</text>
+                <circle cx={(r.x - A.x + r.w / 2) * U} cy={(r.y - A.y + r.h / 2) * U} r={Math.max(0, (r.w / 2) * U - 2)} />
+                <text x={(r.x - A.x + r.w / 2) * U} y={(r.y - A.y) * U + 22} textAnchor="middle">{speedFeet} ft</text>
               </g>
             );
           })()}

@@ -4,7 +4,8 @@ import { FEET_PER_SQUARE } from "../map/scale";
 /** Walking speed in feet from text like "30 ft.", "30 ft., Fly 60 ft." or "Walk 25 ft."; null when none is given. */
 export function walkSpeedFeet(text: string | undefined): number | null {
   const first = (text ?? "").split(",")[0];
-  const m = /^\s*(?:walk\s*)?(\d+)\s*(?:ft|feet)\b/i.exec(first);
+  // A bare number ("30") counts as feet, as on a typed character sheet; any other unit ("30 m") does not.
+  const m = /^\s*(?:walk\s*)?(\d+)\s*(?:(?:ft|feet)\b.*)?$/i.exec(first);
   return m ? Number(m[1]) : null;
 }
 
