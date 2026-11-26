@@ -78,7 +78,7 @@ test("makes a drawn Line a Route, labels its length, and dragging a point update
   await map.getByRole("button", { name: "Make route" }).click();
   const route = map.getByRole("button", { name: "Route 1", exact: true });
   await expect(route).toBeVisible();
-  await expect(route.locator(".map-route-label")).toHaveText("35 ft");
+  await expect(map.locator(".map-route-label")).toHaveText("35 ft");
   await expect.poll(async () => (await storedLines(page)).length).toBe(1);
   expect((await storedLines(page))[0]).toMatchObject({ closed: false, route: true, points: [P(2, 2), P(6, 2), P(6, 5)] });
 
@@ -89,10 +89,10 @@ test("makes a drawn Line a Route, labels its length, and dragging a point update
   await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2);
   await page.mouse.down();
   await page.mouse.move(...at(6, 8), { steps: 6 }); // 4 + 6 squares
-  await expect(route.locator(".map-route-label")).toHaveText("50 ft"); // live, before release
+  await expect(map.locator(".map-route-label")).toHaveText("50 ft"); // live, before release
   await page.mouse.up();
   await expect.poll(async () => (await storedLines(page))[0].points[2]).toEqual(P(6, 8));
-  await expect(route.locator(".map-route-label")).toHaveText("50 ft");
+  await expect(map.locator(".map-route-label")).toHaveText("50 ft");
 });
 
 test("drags a selected Area by its fill: the whole Shape moves by whole squares", async ({ page }) => {

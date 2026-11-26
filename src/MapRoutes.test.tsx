@@ -75,13 +75,13 @@ describe("Routes", () => {
     const { id, panel } = await openMap(user, [route(), line("l", [[1, 8], [3, 8]], false)]);
     const r = await panel.findByRole("button", { name: "Route 1" });
     expect(r).toHaveClass("map-route");
-    expect(within(r).getByText("35 ft")).toBeInTheDocument(); // 7 squares x 5 ft
+    expect(panel.getByText("35 ft")).toHaveClass("map-route-label"); // 7 squares x 5 ft (labels draw in the top layer, not inside the Route)
     expect(panel.getByRole("button", { name: "Line 1" })).not.toHaveClass("map-route");
 
 
     // from 1,000 ft it reads in miles (5 ft per square)
     await updateMap((await stored(id)).id, (m) => ({ ...m, lines: [line("r", [[0, 0], [400, 0]], false, { route: true })] }));
-    await waitFor(() => expect(panel.getByRole("button", { name: "Route 1" })).toHaveTextContent("0.38 mi"));
+    await waitFor(() => expect(panel.getByText("0.38 mi")).toHaveClass("map-route-label"));
   });
 
   it("selects a Route, shows its length, offers no Make area or segment types, and deletes it", async () => {
@@ -153,9 +153,10 @@ describe("Route distance label", () => {
     render(<App />);
     const { panel } = await openMap(user, [route()]);
     const routeEl = await panel.findByRole("button", { name: "Route 1" });
-    expect(within(routeEl).getByText("35 ft")).toBeInTheDocument();
+    expect(routeEl).toBeInTheDocument();
+    expect(panel.getByText("35 ft")).toBeInTheDocument();
     for (let i = 0; i < 4; i++) await user.click(panel.getByRole("button", { name: "Zoom out" })); // 32 -> ~6.3 px/square: box ~25 px
-    await waitFor(() => expect(within(panel.getByRole("button", { name: "Route 1" })).queryByText("35 ft")).not.toBeInTheDocument());
+    await waitFor(() => expect(panel.queryByText("35 ft")).not.toBeInTheDocument());
     expect(panel.getByRole("button", { name: "Route 1" }).querySelector(".map-route-path")).toBeInTheDocument();
   });
 });

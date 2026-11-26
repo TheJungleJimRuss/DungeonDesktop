@@ -186,10 +186,21 @@ describe("areaLabelOpacity", () => {
     expect(areaLabelOpacity(1, 200, "Town")).toBe(1);
     expect(areaLabelOpacity(1, 20, "Town")).toBe(0);
   });
-  it("Major follows the Area's own fade, whatever the text width", () => {
-    expect(areaLabelOpacity(1, 20, "A very long town name", "major")).toBe(1);
-    expect(areaLabelOpacity(0.5, 20, "Town", "major")).toBe(0.5);
-    expect(areaLabelOpacity(0, 2, "Town", "major")).toBe(0);
+  it("Medium keeps the label until the Area is narrower than half its text", () => {
+    expect(areaLabelOpacity(1, 14, "Town", "medium")).toBe(1); // "Town" needs ~22 px, half is ~11
+    expect(areaLabelOpacity(1, 10, "Town", "medium")).toBe(0);
+    expect(areaLabelOpacity(1, 20, "Town")).toBe(0);
+  });
+  it("High follows the Area's own fade, whatever the text width", () => {
+    expect(areaLabelOpacity(1, 20, "A very long town name", "high")).toBe(1);
+    expect(areaLabelOpacity(0.5, 20, "Town", "high")).toBe(0.5);
+    expect(areaLabelOpacity(0, 2, "Town", "high")).toBe(0);
+  });
+  it("Highest outlasts the Area's fade until it is 10x smaller, then fades out", () => {
+    expect(areaLabelOpacity(1, 20, "A very long town name", "highest")).toBe(1);
+    expect(areaLabelOpacity(0, 2, "City", "highest")).toBe(1);
+    expect(areaLabelOpacity(0, 0.9, "City", "highest")).toBeCloseTo(0.5);
+    expect(areaLabelOpacity(0, 0.5, "City", "highest")).toBe(0);
   });
   it("Always keeps the label even after the Area has faded", () => {
     expect(areaLabelOpacity(0, 0.01, "Capital", "always")).toBe(1);

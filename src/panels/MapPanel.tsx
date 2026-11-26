@@ -17,7 +17,7 @@ import { createLocation, selectLocation, useLocations } from "../storage/locatio
 import { setPartyLocation } from "../storage/campaigns";
 import { useShortcutClaim } from "../shortcuts/shortcuts";
 import { routeLength } from "../map/routes";
-import { ScreenSized } from "../map/ScreenSized";
+import { LabelLayer, ScreenSized } from "../map/ScreenSized";
 import { partyLocationAt, partyLocationInSquare } from "../map/party";
 import { BATTLE_PX_PER_SQUARE, battleView, FEET_PER_MILE, FEET_PER_SQUARE, MILES_FROM_FEET, clampPxPerSquare, fitView, formatSquares, gridLadder, mapBounds } from "../map/scale";
 import { CELL, lineLabels, newLine, pointerSquare, segmentsOf, splitSegment, unitsPerSquare, useCanvasSize } from "../map/lines";
@@ -63,6 +63,7 @@ const COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12", "#8e44ad", "#7f8c8d"
 function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   const campaignId = map.campaignId;
   const svg = useRef<SVGSVGElement>(null);
+  const [labelLayer, setLabelLayer] = useState<SVGGElement | null>(null);
   const panning = useRef<{ x: number; y: number; sx: number; sy: number; moved: boolean } | null>(null);
   const justPanned = useRef(false); // the click that ends a drag-pan must not select what lay under it
   // The view is where the DM is looking: centre in squares, on-screen pixels per square. A new Map opens at battle scale at (0, 0).
@@ -542,21 +543,24 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
       </details>
       <div className="map-scroll fit">
         <svg ref={svg} viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`} className="map-canvas" role="group" aria-label="Map canvas" style={{ "--ui": U / pxPerSquare } as React.CSSProperties}>
+          <LabelLayer.Provider value={labelLayer}>
           {/* Drag the background to pan. */}
           <rect x={box.x} y={box.y} width={box.w} height={box.h} className="map-bg" data-testid="map-pan"
             onPointerDown={panStart} onPointerMove={panMove} onPointerUp={() => { if (!panEnd()) clickEmpty(); }} />
-          {map.showGrid && gridSteps.map((g) => (
-            <g key={g.ft} className="grid-step" opacity={+g.w.toFixed(3)} pointerEvents="none">
-              {gridAt(view_.x0, view_.x1, g.ft / FEET_PER_SQUARE, A.x).map((x) => <line key={`v${x}`} x1={x} y1={box.y} x2={x} y2={box.y + box.h} className="grid-line" />)}
-              {gridAt(view_.y0, view_.y1, g.ft / FEET_PER_SQUARE, A.y).map((y) => <line key={`h${y}`} x1={box.x} y1={y} x2={box.x + box.w} y2={y} className="grid-line" />)}
-            </g>
-          ))}
           <AreasLayer lines={liveLines} pxPerSquare={pxPerSquare} full={fullIds} labelOf={areaText} labelAt={areaLabelAt} selectedId={selected?.id} selectable={tool === "select"} onSelect={pickArea} onEmpty={clickEmpty} snap={snapping && gridSquares}
             fits={(l) => l.points.every((p) => p.x * U >= box.x && p.x * U <= box.x + box.w && p.y * U >= box.y && p.y * U <= box.y + box.h)}
             covers={(l) => [[box.x, box.y], [box.x + box.w, box.y], [box.x, box.y + box.h], [box.x + box.w, box.y + box.h]].every(([x, y]) => pointInPolygon({ x: x / U, y: y / U }, l.points))}
             onShift={(id, by) => setShift({ id, by })}
             onShiftEnd={(id, by) => { if (!by) { setShift(null); return; } void patchLine(id, (l) => mapLinePoints(l, (p) => ({ x: p.x + by.x, y: p.y + by.y }))).then(() => setShift(null)); }}
             pointAt={freePoint} onPanStart={panStart} onPanMove={panMove} onPanEnd={panEnd} />
+          {/* Draw order, bottom to top: Area fills, grid, Lines (Shapes, walls, doors, then Routes), Markers, speed ring, Tokens, Party Token,
+              editing overlays (draft, ruler, handles), and last the labels. */}
+          {map.showGrid && gridSteps.map((g) => (
+            <g key={g.ft} className="grid-step" opacity={+g.w.toFixed(3)} pointerEvents="none">
+              {gridAt(view_.x0, view_.x1, g.ft / FEET_PER_SQUARE, A.x).map((x) => <line key={`v${x}`} x1={x} y1={box.y} x2={x} y2={box.y + box.h} className="grid-line" />)}
+              {gridAt(view_.y0, view_.y1, g.ft / FEET_PER_SQUARE, A.y).map((y) => <line key={`h${y}`} x1={box.x} y1={y} x2={box.x + box.w} y2={y} className="grid-line" />)}
+            </g>
+          ))}
           <LinesLayer lines={liveLines} pxPerSquare={pxPerSquare} full={fullIds} labels={labels} selectedId={selected?.id} selectable={tool === "select"} onSelect={onLine}
             selectedSegment={selSeg} onSegment={setSelSeg}
             onSplit={(i, e) => {
@@ -667,6 +671,9 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
               onMove={(index, at) => { setDragRefused(null); setMoved({ id: selected.id, hole: k, index, at: W(at) }); }}
               onDrop={(index, at) => { setMoved(null); dropAreaPoint(selected, k, index, W(at)); }} />
           ))}
+          {/* Last, so Area, Route and Marker labels (portalled here by OnTop) draw above everything else on the map. */}
+          <g ref={setLabelLayer} className="map-labels" pointerEvents="none" />
+          </LabelLayer.Provider>
         </svg>
         {bar && (
           <div className="map-scale" role="img" aria-label={`Scale bar ${formatDistance(bar.amount, barUnit)}`}>

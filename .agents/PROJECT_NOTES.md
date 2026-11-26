@@ -1,6 +1,8 @@
 # Project notes
 
 ## Status
+2026-11-26: Map draw order: Area fills, grid, Lines (Routes last), Markers, speed ring, Tokens, Party Token, edit overlays, then a top `.map-labels` group; Area/Route/Marker labels portal into it via `<OnTop>` (src/map/ScreenSized.tsx), so tests find labels on the panel, not inside their item. Routes 1.5px. 688 tests pass, browser-checked. Committed, pushed, Pages deployed.
+2026-11-26: Area Priority is now Normal/Medium/High/Highest/Always (Major renamed High, read via areaPriorityOf; Medium = hides below half the name width; Highest = dot + label until 10x past the Area's fade). Tests pass. Committed and pushed.
 2026-11-26: Locations no longer have a size (field, constants, inputs and "size N" label removed; old records keep an unread `size`). 684 tests pass. Committed, pushed, Pages deployed. Not browser-checked.
 2026-11-26: Area Priority (Normal/Major/Always, `area.priority`, absent = normal) keeps an Area's label when zoomed out: areaLabelOpacity in geometry.ts, select "Area priority" in AreaEditor; Always draws a dot + label after the fill fades. Tests in MapFade/geometry, browser-checked. Committed and pushed.
 2026-11-26: Route tool (and R key) removed: a selected open Line has Make route / Unmake route in its Line editor (segment types kept). Committed and pushed.

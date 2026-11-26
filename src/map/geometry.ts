@@ -144,13 +144,15 @@ export function markerOpacity(placedAt: number, pxPerSquare: number, priority: k
 export const SEGMENT_MIN_PX = 4, AREA_MIN_PX = 6, TOKEN_MIN_PX = 3;
 /** On-screen length of a segment given pixels per square. */
 export const segmentScreenLength = (a: Pt, b: Pt, pxPerUnit: number) => Math.hypot(b.x - a.x, b.y - a.y) * pxPerUnit;
-/** Rough on-screen width of a 13px label (about 0.6 em per character). The label fades out when this exceeds the Area's on-screen width. */
-export const labelWidthPx = (text: string) => text.length * 7.8;
-/** Opacity 0..1 of an Area's label, given the Area's own fade, its on-screen width and its Priority (see AreaPriority). */
-export function areaLabelOpacity(fade: number, widthPx: number, text: string, priority: "normal" | "major" | "always" = "normal"): number {
+/** Rough on-screen width of a 9px label (about 0.6 em per character). The label fades out when this exceeds the Area's on-screen width. */
+export const labelWidthPx = (text: string) => text.length * 5.4;
+/** Opacity 0..1 of an Area's label, given the Area's own fade, its on-screen width, its Priority (see AreaPriority) and its on-screen larger side
+ *  (`sizePx`, default the width). Highest outlasts the Area's own fade by 10x: it fades out like an Area with a tenth of AREA_MIN_PX. */
+export function areaLabelOpacity(fade: number, widthPx: number, text: string, priority: "normal" | "medium" | "high" | "highest" | "always" = "normal", sizePx = widthPx): number {
   if (priority === "always") return 1;
-  if (priority === "major") return fade;
-  const need = labelWidthPx(text);
+  if (priority === "highest") return Math.max(fade, fadeBySize(sizePx, AREA_MIN_PX / 10));
+  if (priority === "high") return fade;
+  const need = labelWidthPx(text) * (priority === "medium" ? 0.5 : 1);
   return Math.min(fade, fadeBySize(widthPx, need, need * 0.25));
 }
 

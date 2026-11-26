@@ -16,8 +16,12 @@ export interface MapMarker { id: string; x: number; y: number; name: string; col
   /** Pixels per square when it was placed (absent: battle scale, 32). */ placedAt?: number;
   /** How far out it stays visible (absent: normal). */ priority?: MarkerPriority; }
 export type MarkerPriority = "minor" | "normal" | "major" | "always";
-/** Normal: the label hides once the Area is narrower on screen than the text. Major: the label stays while the Area is drawn. Always: the label (with a dot) stays at every zoom. */
-export type AreaPriority = "normal" | "major" | "always";
+/** Normal: the label hides once the Area is narrower on screen than the text. Medium: it hides once the Area is narrower than half the text. High: the label stays while the Area is drawn.
+ *  Highest: after the Area fades, a dot and the label stay until it is 10x further out. Always: the label (with a dot) stays at every zoom. */
+export type AreaPriority = "normal" | "medium" | "high" | "highest" | "always";
+/** An Area's Priority as stored, reading the old "major" (before High/Highest, 2026-11-26) as "high". */
+export const areaPriorityOf = (area: { priority?: string } | undefined): AreaPriority =>
+  area?.priority === "major" ? "high" : (area?.priority as AreaPriority | undefined) ?? "normal";
 /** A Token. `x`/`y` are whole squares. A Token with a `combatantId` is linked: it shows that Combatant's name (`name` is only the last copy) and goes when the Combatant does. */
 export interface MapToken { id: string; name: string; color: string; x: number; y: number; combatantId?: string; }
 

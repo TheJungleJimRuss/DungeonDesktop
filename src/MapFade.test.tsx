@@ -117,22 +117,35 @@ describe("Party Token zoomed far out", () => {
 });
 
 describe("Area Priority", () => {
-  const named = (id: string, x: number, priority?: "major" | "always"): MapLine =>
+  const named = (id: string, x: number, priority?: "medium" | "high" | "highest" | "always"): MapLine =>
     ({ ...area(id, x, 0, 2), area: { kind: "Area", color: "#3498db", name: `${id} Longname Town`, ...(priority ? { priority } : {}) } });
   const label = (panel: ReturnType<typeof within>, id: string) => panel.queryByText(`${id} Longname Town`, { selector: "text" });
 
-  it("Major keeps a label wider than its Area, Always keeps it after the Area fades", async () => {
+  it("High keeps a label wider than its Area, Highest keeps it 10x further out, Always keeps it at every zoom", async () => {
     const user = userEvent.setup();
     render(<App />);
-    const { panel } = await openMap(user, () => ({ lines: [named("Nrm", -4), named("Maj", 0, "major"), named("Alw", 4, "always")] }));
-    await panel.findByRole("button", { name: /^Area Maj/ });
+    const { panel } = await openMap(user, () => ({ lines: [named("Nrm", -6), named("Hig", -2, "high"), named("Hst", 2, "highest"), named("Alw", 6, "always")] }));
+    await panel.findByRole("button", { name: /^Area Hig/ });
     expect(label(panel, "Nrm")).toBeNull(); // 2 squares = 64 px, the text needs ~150 px
-    expect(label(panel, "Maj")).toBeInTheDocument();
-    expect(label(panel, "Alw")).toBeInTheDocument();
+    for (const id of ["Hig", "Hst", "Alw"]) expect(label(panel, id)).toBeInTheDocument();
     await zoomOut(user, panel, 6); // 2 squares = 5.6 px: every Area fades away
     expect(panel.queryAllByRole("button", { name: /^Area / })).toHaveLength(0);
-    expect(label(panel, "Maj")).toBeNull();
+    expect(label(panel, "Hig")).toBeNull();
+    expect(label(panel, "Hst")).toBeInTheDocument();
     expect(label(panel, "Alw")).toBeInTheDocument();
+    await zoomOut(user, panel, 7); // 2 squares is well under 0.6 px
+    expect(label(panel, "Hst")).toBeNull();
+    expect(label(panel, "Alw")).toBeInTheDocument();
+  });
+
+  it("reads an Area saved as Major as High", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const old = { ...named("Old", 0), area: { kind: "Area", color: "#3498db", name: "Old Longname Town", priority: "major" } } as unknown as MapLine;
+    const { panel } = await openMap(user, () => ({ lines: [old] }));
+    expect(await panel.findByText("Old Longname Town", { selector: "text" })).toBeInTheDocument();
+    await user.click(panel.getByRole("button", { name: /^Area Old/ }));
+    expect(panel.getByRole("combobox", { name: "Area priority" })).toHaveValue("high");
   });
 
   it("sets and persists an Area's Priority from its editor", async () => {
@@ -141,6 +154,8 @@ describe("Area Priority", () => {
     const { id, panel } = await openMap(user, () => ({ lines: [named("Nrm", 0)] }));
     await user.click(await panel.findByRole("button", { name: /^Area Nrm/ }));
     expect(panel.getByRole("combobox", { name: "Area priority" })).toHaveValue("normal");
+    await user.selectOptions(panel.getByRole("combobox", { name: "Area priority" }), "Medium");
+    await waitFor(async () => expect((await listMaps(id))[0].lines[0].area?.priority).toBe("medium"));
     await user.selectOptions(panel.getByRole("combobox", { name: "Area priority" }), "Always");
     await waitFor(async () => expect((await listMaps(id))[0].lines[0].area?.priority).toBe("always"));
     await user.selectOptions(panel.getByRole("combobox", { name: "Area priority" }), "Normal");

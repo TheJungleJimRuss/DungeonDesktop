@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { MapLine } from "../storage/maps";
 import { segmentsOf, unitsPerSquare } from "./lines";
-import { ScreenSized } from "./ScreenSized";
+import { OnTop, ScreenSized } from "./ScreenSized";
 import { AREA_MIN_PX, SEGMENT_MIN_PX, boundsOf, fadeBySize, polylineLength, routeLabelOpacity, type Pt } from "./geometry";
 import { pointAlong, routeLength } from "./routes";
 
@@ -38,7 +38,7 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
   const u = unitsPerSquare(pxPerSquare), px = (n: number) => n * u;
   return (
     <g className="map-lines">
-      {lines.map((l) => {
+      {[...lines.filter((l) => !l.route), ...lines.filter((l) => l.route)].map((l) => { // Routes over Shapes and walls
         const label = labels.get(l.id)!;
         const d = l.points.map((p, i) => `${i ? "L" : "M"}${px(p.x)} ${px(p.y)}`).join(" ") + (l.closed ? " Z" : "");
         // A Line fades as one piece, by its whole size, so a shape never loses its short sides before the rest: a Route by its length, an Area
@@ -61,7 +61,7 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
               const text = routeLength(l.points), labelF = routeLabelOpacity(routeF, side, text);
               if (labelF <= 0) return null;
               const m = pointAlong(l.points, 0.5);
-              return <ScreenSized x={px(m.x)} y={px(m.y)} opacity={labelF}><text className="map-route-label" textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{text}</text></ScreenSized>;
+              return <OnTop><ScreenSized x={px(m.x)} y={px(m.y)} opacity={labelF}><text className="map-route-label" data-route={l.id} textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{text}</text></ScreenSized></OnTop>;
             })()}
           </g>
         );

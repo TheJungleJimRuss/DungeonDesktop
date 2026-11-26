@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { OnTop, ScreenSized } from "./ScreenSized";
 import type { MapMarker } from "../storage/maps";
 import { unitsPerSquare } from "./lines";
 import { MarkerGlyph } from "./icons";
@@ -23,19 +24,21 @@ export function MarkersLayer({ markers, labelOf, pxPerSquare, selectedId, select
         const opacity = on || drag?.id === m.id ? 1 : markerOpacity(m.placedAt ?? BATTLE_PX_PER_SQUARE, pxPerSquare, m.priority ?? "normal");
         if (opacity <= 0) return null;
         return (
-          <g key={m.id} className={"map-marker" + (on ? " selected" : "")} role="button" aria-label={`Marker ${label}`} aria-pressed={on} data-marker={m.id}
+          <Fragment key={m.id}>
+          <g className={"map-marker" + (on ? " selected" : "")} role="button" aria-label={`Marker ${label}`} aria-pressed={on} data-marker={m.id}
             tabIndex={selectable ? 0 : -1} pointerEvents={selectable ? undefined : "none"} transform={`translate(${at.x * U} ${at.y * U})`} opacity={opacity < 1 ? opacity : undefined}
             onClick={() => onSelect(m.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(m.id); } }}
             onPointerDown={(e) => { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); onSelect(m.id); setDrag({ id: m.id, at: { x: m.x, y: m.y }, moved: false, sx: e.clientX, sy: e.clientY }); }}
             onPointerMove={(e) => { if (drag?.id === m.id) { if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < DRAG_SLOP_PX) return; const p = svgPoint(e); if (p) setDrag({ ...drag, at: p, moved: true }); } }}
             onPointerUp={() => { if (drag?.id === m.id) { if (drag.moved) onDrop(m.id, drag.at); setDrag(null); } }}>
             <g className="map-marker-body" style={{ transform: "scale(var(--ui))" }}>
-              <circle r={15} className="map-marker-badge" style={{ stroke: m.color, color: m.color }} />
-              <g style={{ color: m.color }}><MarkerGlyph icon={m.icon} size={20} /></g>
-              <text y={29} textAnchor="middle" className="map-marker-label" pointerEvents="none">{label}</text>
+              <circle r={10} className="map-marker-badge" style={{ stroke: m.color, color: m.color }} />
+              <g style={{ color: m.color }}><MarkerGlyph icon={m.icon} size={14} /></g>
             </g>
             <title>{label}</title>
           </g>
+          <OnTop><ScreenSized x={at.x * U} y={at.y * U} opacity={opacity}><text y={20} textAnchor="middle" className="map-marker-label" pointerEvents="none">{label}</text></ScreenSized></OnTop>
+          </Fragment>
         );
       })}
     </g>

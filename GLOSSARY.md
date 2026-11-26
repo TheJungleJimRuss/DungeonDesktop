@@ -34,7 +34,7 @@ _Avoid_: erase, boolean
 **Marker**: A point on a Map with a name, color, icon and short note, optionally linked to a Location. Unlike a Token, it is placed freely, not on squares. It remembers the zoom it was placed at and fades out once the view zooms out past its Priority.
 _Avoid_: pin, node.
 
-**Priority**: How far out a Marker stays visible, counted from the zoom it was placed at: Minor (3x, a chest), Normal (10x, a room or building), Major (100x, a town) or Always (never fades, a capital). An Area has its own Priority for its label: Normal (the label hides once the Area is narrower on screen than its name), Major (the label stays while the Area is drawn) or Always (a dot and the label stay at every zoom).
+**Priority**: How far out a Marker stays visible, counted from the zoom it was placed at: Minor (3x, a chest), Normal (10x, a room or building), Major (100x, a town) or Always (never fades, a capital). An Area has its own Priority for its label: Normal (the label hides once the Area is narrower on screen than its name), Medium (it hides once the Area is narrower than half its name), High (the label stays while the Area is drawn), Highest (a dot and the label stay until the Area is 10x further out than where it fades) or Always (a dot and the label stay at every zoom). Areas saved with the old "Major" read as High.
 
 **Route**: An open Line turned into a Route with Make route (Unmake route turns it back), the way a Shape becomes an Area. It shows its length from the 5 ft base square, in ft below 1,000 ft and in mi from there.
 _Avoid_: edge.
