@@ -117,6 +117,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
     anim.current = { id: requestAnimationFrame(tick), to, timer: window.setTimeout(() => tick(start + ZOOM_MS), ZOOM_MS + 100) };
   };
   // Cmd/Ctrl + scroll wheel (and trackpad pinch, which arrives as Ctrl + wheel) zooms about the pointer: the point under it stays put.
+  // A plain wheel or trackpad swipe pans; Shift + wheel pans sideways.
   // A native listener, because React's wheel listener is passive and could not stop the page from zooming or scrolling.
   const wheelView = useRef(view);
   wheelView.current = view;
@@ -124,9 +125,19 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
     const el = svg.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || !e.deltaY) return;
-      e.preventDefault();
       const cur = wheelView.current;
+      // A plain wheel (or trackpad swipe) pans; Shift turns a vertical wheel sideways (some browsers already swap it into deltaX).
+      if (!(e.metaKey || e.ctrlKey)) {
+        const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight || 500 : 1;
+        let dx = e.deltaX * unit, dy = e.deltaY * unit;
+        if (e.shiftKey && !dx) [dx, dy] = [dy, 0];
+        if (!dx && !dy) return;
+        e.preventDefault();
+        setView({ pxPerSquare: cur.pxPerSquare, centre: { x: cur.centre.x + dx / cur.pxPerSquare, y: cur.centre.y + dy / cur.pxPerSquare } });
+        return;
+      }
+      if (!e.deltaY) return;
+      e.preventDefault();
       const k = Math.exp(-Math.max(-100, Math.min(100, e.deltaY)) * 0.005);
       const ctm = el.getScreenCTM?.();
       const p = ctm ? new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse()) : null;

@@ -26,6 +26,28 @@ test("Ctrl + wheel zooms smoothly about the pointer: the point under it stays pu
   expect(Math.abs(after[1] - before[1])).toBeLessThan(1.5);
 });
 
+test("a plain wheel pans the map and Shift + wheel pans it sideways, without zooming or scrolling the page", async ({ page }) => {
+  const map = await openMap(page, "Pan Camp");
+  const at = await gridAt(map);
+  await map.getByRole("button", { name: "Marker", exact: true }).click();
+  await page.mouse.click(...at(5, 3));
+  await map.getByRole("button", { name: "Select", exact: true }).click();
+  const badge = map.getByRole("button", { name: /^Marker Marker 1$/ });
+  const pos = async () => { const b = (await badge.boundingBox())!; return [b.x, b.y]; };
+  const zoom = await map.getByRole("group", { name: "Zoom" }).innerText();
+  const scrollY = await page.evaluate(() => window.scrollY);
+  const [x0, y0] = await pos();
+  await page.mouse.move(...at(8, 6));
+  await page.mouse.wheel(0, 64); // content moves up by 64 px
+  await expect.poll(async () => Math.round((await pos())[1] - y0)).toBe(-64);
+  await page.keyboard.down("Shift");
+  await page.mouse.wheel(0, 32); // sideways: content moves left by 32 px
+  await page.keyboard.up("Shift");
+  await expect.poll(async () => Math.round((await pos())[0] - x0)).toBe(-32);
+  expect(await map.getByRole("group", { name: "Zoom" }).innerText()).toBe(zoom);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+});
+
 test("drawing a wall and dragging a Token 1,000,000 squares from the start point land exactly on the grid", async ({ page }) => {
   const name = "Far Camp", FAR = 1_000_000, view = { cx: FAR, cy: FAR, px: 32 };
   const map0 = await openMap(page, name);

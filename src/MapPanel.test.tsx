@@ -51,6 +51,24 @@ describe("Map panel", () => {
     expect(await panel.findByText("Nothing found")).toBeInTheDocument();
   });
 
+  it("a plain wheel pans the view; Shift + wheel pans sideways; neither zooms", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMapPanel(user);
+    await user.click(await panel.findByRole("button", { name: "New map" }));
+    await waitFor(async () => expect(await listMaps(id)).toHaveLength(1));
+    const map = (await listMaps(id))[0];
+    const view = () => JSON.parse(localStorage.getItem(`dungeon-desktop:map-view:${map.id}`) ?? "null");
+    const canvas = await panel.findByRole("group", { name: "Map canvas" });
+    // At battle scale (32 px per square): 64 px down = 2 squares down.
+    fireEvent.wheel(canvas, { deltaY: 64 });
+    await waitFor(() => expect(view()).toMatchObject({ x: 0, y: 2, pxPerSquare: 32 }));
+    fireEvent.wheel(canvas, { deltaX: -32 }); // trackpad sideways swipe
+    await waitFor(() => expect(view()).toMatchObject({ x: -1, y: 2 }));
+    fireEvent.wheel(canvas, { deltaY: 96, shiftKey: true }); // mouse wheel + Shift = sideways
+    await waitFor(() => expect(view()).toMatchObject({ x: 2, y: 2, pxPerSquare: 32 }));
+  });
+
   it("offers New map when empty, then creates, renames and deletes with a confirm", async () => {
     const user = userEvent.setup();
     render(<App />);
