@@ -6,17 +6,6 @@ import type { MapRecord } from "./maps";
 import { unlinkLocationFromLines } from "../map/areas";
 import { unlinkLocationFromMarkers } from "../map/markers";
 
-/** How big a place is, in map units. Kept on the record but not used by the Map (Markers have their own look). */
-export const DEFAULT_LOCATION_SIZE = 14;
-export const MIN_LOCATION_SIZE = 3;
-export const MAX_LOCATION_SIZE = 200;
-const LEGACY_SIZES: Record<string, number> = { tiny: 8, small: 11, medium: 14, large: 19, huge: 25 };
-/** A location's size as a number (older records stored a size word). */
-export function locationSizeOf(l: { size?: number | string }): number {
-  const n = typeof l.size === "number" ? l.size : LEGACY_SIZES[l.size ?? ""] ?? DEFAULT_LOCATION_SIZE;
-  return Math.min(MAX_LOCATION_SIZE, Math.max(MIN_LOCATION_SIZE, n));
-}
-
 /** What kind of place a location is. Each gets its own color. */
 export const LOCATION_TYPES = [
   { id: "city", label: "City", color: "#5b7cff" },
@@ -40,7 +29,6 @@ export interface Location extends CollectionRecord {
   name: string;
   notes: string;
   type?: LocationType;
-  size?: number;
   /** Starred locations can be filtered to. */
   starred?: boolean;
   createdAt: number;
@@ -51,7 +39,6 @@ export interface LocationDraft {
   name: string;
   notes: string;
   type?: LocationType;
-  size?: number;
 }
 
 const listeners = new Set<() => void>();

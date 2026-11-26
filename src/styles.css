@@ -787,7 +787,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .update-prompt { box-shadow:0 0 16px rgba(91,124,255,.2); }
 
 .map-bg { fill:transparent; cursor:move; }
-input.loc-size { width:64px; }
 
 /* Map speed ring: how far the selected token can move this turn. */
 .map-canvas .speed-ring circle { fill:var(--accent, #f39c12); fill-opacity:.07; stroke:var(--accent, #f39c12); stroke-opacity:.55; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }

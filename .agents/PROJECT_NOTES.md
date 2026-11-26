@@ -1,6 +1,7 @@
 # Project notes
 
 ## Status
+2026-11-26: Locations no longer have a size (field, constants, inputs and "size N" label removed; old records keep an unread `size`). 684 tests pass. Committed, pushed, Pages deployed. Not browser-checked.
 2026-11-26: Area Priority (Normal/Major/Always, `area.priority`, absent = normal) keeps an Area's label when zoomed out: areaLabelOpacity in geometry.ts, select "Area priority" in AreaEditor; Always draws a dot + label after the fill fades. Tests in MapFade/geometry, browser-checked. Committed and pushed.
 2026-11-26: Route tool (and R key) removed: a selected open Line has Make route / Unmake route in its Line editor (segment types kept). Committed and pushed.
 2026-11-26: Spec 0012 Area holes built (tickets .agents/issues/area-holes/ 01-05 done), code-reviewed, review fixes applied; 673 vitest pass, map e2e pass except battle-map ruler test (broken by the separate uncommitted 'tools return to Select' change). Not committed, not browser-checked by hand.

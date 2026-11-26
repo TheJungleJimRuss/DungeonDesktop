@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { registerPanel, type PanelProps } from "./registry";
 import {
-  DEFAULT_LOCATION_SIZE, DEFAULT_LOCATION_TYPE, LOCATION_TYPES, MAX_LOCATION_SIZE, MIN_LOCATION_SIZE, createLocation, locationTypeOf, selectLocation, setLocationStarred,
+  DEFAULT_LOCATION_TYPE, LOCATION_TYPES, createLocation, locationTypeOf, selectLocation, setLocationStarred,
   useLocations, useSelectedLocationId, type LocationType,
 } from "../storage/locations";
 import { useNpcs } from "../storage/npcs";
@@ -14,7 +14,6 @@ function LocationListPanel({ campaign }: PanelProps) {
   const selected = useSelectedLocationId(campaign.id);
   const [name, setName] = useState("");
   const [newType, setNewType] = useState<LocationType>(DEFAULT_LOCATION_TYPE);
-  const [newSize, setNewSize] = useState(String(DEFAULT_LOCATION_SIZE));
   const [typeFilter, setTypeFilter] = useState("");
   const [starredOnly, setStarredOnly] = useState(false);
 
@@ -23,7 +22,7 @@ function LocationListPanel({ campaign }: PanelProps) {
     const n = name.trim();
     if (!n) return;
     setName("");
-    void createLocation(campaign.id, { name: n, notes: "", type: newType, size: Number(newSize) || DEFAULT_LOCATION_SIZE }).then((l) => selectLocation(campaign.id, l.id));
+    void createLocation(campaign.id, { name: n, notes: "", type: newType }).then((l) => selectLocation(campaign.id, l.id));
   };
 
   if (!locations) return <Loading />;
@@ -38,7 +37,6 @@ function LocationListPanel({ campaign }: PanelProps) {
         <select aria-label="New location type" value={newType} onChange={(e) => setNewType(e.target.value as LocationType)}>
           {LOCATION_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
         </select>
-        <input type="number" aria-label="New location size" title="Size (map marker radius)" className="loc-size" min={MIN_LOCATION_SIZE} max={MAX_LOCATION_SIZE} step="1" value={newSize} onChange={(e) => setNewSize(e.target.value)} />
         <button type="submit" className="primary">Add location</button>
       </form>
       {locations.length > 0 && (
