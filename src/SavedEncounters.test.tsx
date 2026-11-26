@@ -30,6 +30,28 @@ beforeEach(() => { localStorage.clear(); setMonsterSource(async () => FIXTURE_MO
 afterEach(() => setMonsterSource(null));
 
 describe("saved encounters", () => {
+  it("has a Save encounter button in the tracker's top row that explains, saves and confirms", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const p = await openCombat(user);
+    const id = (await listCampaigns())[0].id;
+    await user.click(within(p).getByRole("button", { name: /start encounter/i }));
+    const end = await screen.findByRole("button", { name: /end encounter/i });
+    const save = screen.getByRole("button", { name: "Save encounter" });
+    expect(save.parentElement).toBe(end.parentElement);
+
+    await user.click(save);
+    expect(screen.getByRole("status", { name: "Save encounter" })).toHaveTextContent(/add a monster or ad-hoc combatant/i);
+
+    await addMonster(user, "goblin", "Goblin Warrior");
+    const field = await screen.findByLabelText("Saved encounter name");
+    expect(field).toHaveFocus();
+    await user.type(field, "Ambush{Enter}");
+    await waitFor(async () => expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1));
+    expect(await screen.findByRole("status", { name: "Save encounter" })).toHaveTextContent(/saved "Ambush"/i);
+    expect(screen.queryByLabelText("Saved encounter name")).toBeNull();
+  });
+
   it("saves a composition, lists, renames, loads into a fresh Encounter with the Party, deletes, and exports", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -47,8 +69,9 @@ describe("saved encounters", () => {
     await user.click(screen.getByRole("button", { name: /add ad-hoc/i }));
     await user.type(screen.getByLabelText("Initiative Thia"), "17{Enter}");
 
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
     await user.type(screen.getByLabelText("Saved encounter name"), "Goblin ambush");
-    await user.click(screen.getByRole("button", { name: /save encounter/i }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
     expect((await exportCampaign(id))!.collections.savedEncounters).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
     await user.click(await screen.findByRole("button", { name: /yes, end it/i }));

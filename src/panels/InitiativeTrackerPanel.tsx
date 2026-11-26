@@ -17,7 +17,7 @@ import AddNpcCombatants from "./AddNpcCombatants";
 import AddSelect from "./AddSelect";
 import EncounterDifficulty from "./EncounterDifficulty";
 import { pickCombatant, useCombatPick } from "../combat/combatSelection";
-import { SaveEncounterControl, SavedEncounterList } from "./SavedEncounters";
+import { SaveEncounterButton, SaveEncounterForm, SavedEncounterList } from "./SavedEncounters";
 import {
   abilityMod, addCombatant, isDying, maxHpOf, moveTie, removeCombatant, rewindTurn, setInitiative,
   type Encounter, type NewCombatant,
@@ -180,6 +180,7 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
     setFocusAmount(null);
   }, [focusAmount]);
   const [awarding, setAwarding] = useState(false);
+  const [saving, setSaving] = useState(false);
   const hasParty = enc.combatants.some((c) => c.kind === "party" && c.partyId);
   // Party HP is written back first; XP (if any) lands after, so its level-up sees the final HP.
   const finish = async (award: (() => Promise<void>) | null) => {
@@ -198,8 +199,10 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
         <button className="primary" onClick={() => update(advanceTurnWithConditions)} disabled={!n}>Next turn</button>
         <button onClick={rollMonsters} disabled={!enc.combatants.some((c) => c.kind === "monster")}>Roll monster initiative</button>
         <DefeatModeToggle enc={enc} update={update} />
+        <SaveEncounterButton open={saving} onToggle={() => setSaving((v) => !v)} />
         {!awarding && <EndEncounterButton onEnd={() => (hasParty ? setAwarding(true) : void finish(null))} />}
       </div>
+      {saving && <SaveEncounterForm campaignId={campaign.id} enc={enc} onClose={() => setSaving(false)} />}
       {awarding && <AwardXpStep campaignId={campaign.id} enc={enc} onFinish={(a) => void finish(a)} />}
       <ConditionNotices enc={enc} update={update} />
       {n === 0 && <p className="muted">Add combatants below.</p>}
@@ -255,7 +258,6 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
       <div className="init-side">
         <AddCombatants campaign={campaign} inFight={inFight} onAdd={addAll} />
         <EncounterDifficulty campaignId={campaign.id} enc={enc} />
-        <SaveEncounterControl campaignId={campaign.id} enc={enc} />
       </div>
     </div>
   );

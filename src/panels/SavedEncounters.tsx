@@ -9,20 +9,46 @@ import {
   createSavedEncounter, deleteSavedEncounter, renameSavedEncounter, useSavedEncounters, type SavedEncounter,
 } from "../storage/savedEncounters";
 
-/** Shown inside a running Encounter: saves its composition (monsters and ad-hoc, no initiative) under a name. */
-export function SaveEncounterControl({ campaignId, enc }: { campaignId: string; enc: Encounter }) {
+/** The tracker's top-row button: toggles the name field for saving the running Encounter. */
+export function SaveEncounterButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return <button aria-expanded={open} onClick={onToggle}>Save encounter</button>;
+}
+
+/** Opened from SaveEncounterButton: saves the composition (monsters and ad-hoc, no initiative) under a name. */
+export function SaveEncounterForm({ campaignId, enc, onClose }: { campaignId: string; enc: Encounter; onClose: () => void }) {
   const [name, setName] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
   const members = compositionOf(enc);
   const save = async () => {
-    if (!name.trim() || !members.length) return;
+    const n = name.trim();
+    if (!n || !members.length) return;
     const stored = enc.mapId ? await getMap(enc.mapId) : undefined;
-    await createSavedEncounter(campaignId, name.trim(), members, stored ? { mapId: stored.id, tokens: snapshotTokens(stored, (id) => linkKeyOf(enc, id)), spot: enc.spot } : undefined);
+    await createSavedEncounter(campaignId, n, members, stored ? { mapId: stored.id, tokens: snapshotTokens(stored, (id) => linkKeyOf(enc, id)), spot: enc.spot } : undefined);
     setName("");
+    setSaved(n);
   };
+  if (saved) {
+    return (
+      <p className="row" role="status" aria-label="Save encounter">
+        <span>Saved "{saved}". Load it from Saved encounters once this fight ends.</span>
+        <button className="link" onClick={onClose}>OK</button>
+      </p>
+    );
+  }
+  if (!members.length) {
+    return (
+      <p className="row muted" role="status" aria-label="Save encounter">
+        <span>Add a monster or ad-hoc combatant to save this encounter (Party members are added on load).</span>
+        <button className="link" onClick={onClose}>Close</button>
+      </p>
+    );
+  }
   return (
     <form className="row" aria-label="Save encounter" onSubmit={(e) => { e.preventDefault(); void save(); }}>
-      <input aria-label="Saved encounter name" placeholder="Save as..." value={name} onChange={(e) => setName(e.target.value)} />
-      <button type="submit" disabled={!name.trim() || !members.length}>Save encounter</button>
+      <input aria-label="Saved encounter name" placeholder="Name, e.g. Goblin ambush" autoFocus value={name}
+        onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } }} />
+      <button type="submit" className="primary" disabled={!name.trim()}>Save</button>
+      <button type="button" onClick={onClose}>Cancel</button>
     </form>
   );
 }

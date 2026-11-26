@@ -140,7 +140,7 @@ An Encounter is played on a Map: either one the DM picks, or a blank one made fo
   - Starting an Encounter offers a Map picker.
   - With no choice, a blank Map is created (20×20, 5 ft, grid on, named after the Encounter).
   - Combatant Token placement reuses today's side-lining logic, moved to work on a Map.
-  - Ending an Encounter leaves all Tokens on the Map; linked Tokens whose Combatant is gone become free Tokens with their last name.
+  - Ending an Encounter removes its linked Tokens from the Map (changed 2026-11-26 at the DM's request); free Tokens stay.
 - **Saved encounter** stores `mapId` plus `tokens` (each with position and the same link key used today) instead of a whole map copy.
   - Loading replaces that Map's tokens for those links, and creates a blank Map if `mapId` no longer exists.
 - **Party Token:**

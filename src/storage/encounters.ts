@@ -39,8 +39,8 @@ export async function saveEncounter(e: Encounter): Promise<void> {
   await tx.done;
 }
 
-/** Ends the Encounter. Its Tokens stay on the Map: linked ones become free Tokens keeping their last name
- *  (defeated ones too, even when "remove defeated" hid them during the fight). */
+/** Ends the Encounter and removes its Tokens (the ones linked to its Combatants, defeated ones too) from its Map.
+ *  Free Tokens the DM placed by hand stay. */
 export async function endEncounter(campaignId: string): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(["encounters", "maps"], "readwrite");
@@ -49,12 +49,7 @@ export async function endEncounter(campaignId: string): Promise<void> {
     await tx.objectStore("encounters").delete(r.id);
     const map = r.mapId ? ((await tx.objectStore("maps").get(r.mapId)) as MapRecord | undefined) : undefined;
     if (!map?.tokens.some((t) => t.combatantId)) continue;
-    const tokens = map.tokens.flatMap((t) => {
-      if (!t.combatantId) return [t];
-      const c = r.combatants.find((x) => x.id === t.combatantId);
-      const { combatantId: _drop, ...free } = t;
-      return [{ ...free, name: c?.name ?? t.name }];
-    });
+    const tokens = map.tokens.filter((t) => !t.combatantId);
     await tx.objectStore("maps").put({ ...map, tokens, updatedAt: Date.now() } as unknown as CollectionRecord);
   }
   await tx.done;

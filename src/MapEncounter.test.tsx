@@ -242,7 +242,7 @@ describe("Tokens linked to Combatants", () => {
 });
 
 describe("Ending an Encounter", () => {
-  it("keeps its tokens on the Map: linked ones become free tokens with their last name; defeated ones hidden during the fight stay too", async () => {
+  it("removes its Combatants' tokens from the Map (defeated ones hidden during the fight too) and keeps free tokens", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { id, map } = await openCombat(user);
@@ -257,8 +257,6 @@ describe("Ending an Encounter", () => {
     g2.focus();
     await user.keyboard("{ArrowLeft}{ArrowDown}");
     await waitFor(async () => expect((await rows(id, "maps"))[0].tokens.find((t: any) => t.name === "Goblin Warrior 2")).toMatchObject({ x: c0 - 1, y: r0 + 1 }));
-    const before = (await rows(id, "maps"))[0].tokens.map((t: any) => [t.name, t.x, t.y]);
-
     // Bandit is defeated while the Encounter hides defeated combatants: its token is out of sight, but ending keeps it
     await expand(user, "Bandit");
     await user.type(within(row("Bandit")).getByLabelText("Amount Bandit"), "10");
@@ -269,12 +267,11 @@ describe("Ending an Encounter", () => {
     await endEncounter(user);
     await waitFor(async () => expect(await rows(id, "encounters")).toHaveLength(0));
     const [m] = await rows(id, "maps");
-    expect(m.tokens.map((t: any) => [t.name, t.x, t.y])).toEqual(before);
-    expect(m.tokens.every((t: any) => t.combatantId === undefined)).toBe(true);
+    expect(m.tokens.map((t: any) => t.name)).toEqual(["Rock"]);
 
-    // the Map is still there with the tokens as free tokens: editable names, no combatant link
-    await map.findByRole("button", { name: "Token Goblin Warrior 2" });
-    expect((map.getByLabelText("Name of Goblin Warrior 2") as HTMLInputElement).tagName).toBe("INPUT");
+    // the Map is still there with only the free token
+    await map.findByRole("button", { name: "Token Rock" });
+    expect(map.queryByRole("button", { name: /Token Goblin/ })).not.toBeInTheDocument();
     expect(map.queryByRole("button", { name: /add tokens for all combatants/i })).not.toBeInTheDocument();
     expect(map.getByRole("combobox", { name: "Map" })).toBeEnabled();
   });
@@ -295,8 +292,9 @@ describe("Saved encounters keep their Map and token positions", () => {
     goblin2.focus();
     await user.keyboard("{ArrowLeft}{ArrowLeft}{ArrowDown}");
     await waitFor(() => expect(pos(map.getByRole("button", { name: "Token Goblin Warrior 2" }))).toEqual(["5", "3"]));
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
     await user.type(screen.getByLabelText("Saved encounter name"), "Ambush");
-    await user.click(screen.getByRole("button", { name: /save encounter/i }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(async () => expect(await rows(id, "savedEncounters")).toHaveLength(1));
     await endEncounter(user);
     await user.click(await screen.findByRole("button", { name: /end without xp/i }, { timeout: 4000 }));
@@ -316,8 +314,8 @@ describe("Saved encounters keep their Map and token positions", () => {
     expect(saved.tokens.find((t: any) => t.name === "Goblin Warrior 2")).toMatchObject({ x: 5, y: 3, link: "m:1", color: expect.any(String) });
     expect(saved.tokens.find((t: any) => t.name === "Aria").link).toMatch(/^p:/);
 
-    // ending left free tokens behind; loading replaces them rather than stacking a second set
-    expect((await rows(id, "maps"))[0].tokens).toHaveLength(4);
+    // ending removed the Encounter's tokens; loading puts them back
+    expect((await rows(id, "maps"))[0].tokens).toHaveLength(0);
     await load(user);
     const g2 = await map.findByRole("button", { name: "Token Goblin Warrior 2" });
     expect(pos(g2)).toEqual(["5", "3"]);

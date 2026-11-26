@@ -79,8 +79,9 @@ describe("Encounter spot", () => {
     writeMapView(field.id, { centre: { x: 50, y: 40 }, pxPerSquare: 4 });
     await startOn(user, "Field");
     await addBandit(user);
+    await user.click(screen.getByRole("button", { name: "Save encounter" }));
     await user.type(screen.getByLabelText("Saved encounter name"), "Ambush");
-    await user.click(screen.getByRole("button", { name: /save encounter/i }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(async () => expect(await rows(id, "savedEncounters")).toHaveLength(1));
     expect((await rows(id, "savedEncounters"))[0].spot).toEqual({ x: 50, y: 40 });
     await user.click(screen.getByRole("button", { name: /end encounter/i }));
