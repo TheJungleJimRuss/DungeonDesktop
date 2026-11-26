@@ -1,6 +1,7 @@
 # Project notes
 
 ## Status
+2026-11-26: End encounter confirm has a "Keep its tokens on the map" checkbox (off = remove linked Tokens, on = they become free Tokens with their last name; endEncounter(id, {keepTokens})). Test in MapEncounter.test.tsx. Not committed.
 2026-11-26: "Save encounter" moved from the bottom of the tracker's side column to its top row (next to End encounter); it opens a name field, explains when there is nothing to save, and confirms 'Saved "X"'. Tests updated + new one in SavedEncounters.test.tsx; browser-checked. Not committed.
 2026-11-26: Area lock (`area.locked`, "Locked" checkbox in AreaEditor): a single click on a locked, unselected Area (fill or outline) passes through to an unlocked Area under it or acts as empty Map; a double-click selects it. Tests in MapFade.test.tsx + e2e/map-lock.spec.ts; 690 vitest pass. Committed (98f348b), not pushed.
 2026-11-26: Map draw order: Area fills, grid, Lines (Routes last), Markers, speed ring, Tokens, Party Token, edit overlays, then a top `.map-labels` group; Area/Route/Marker labels portal into it via `<OnTop>` (src/map/ScreenSized.tsx), so tests find labels on the panel, not inside their item. Routes 1.5px. 688 tests pass, browser-checked. Committed, pushed, Pages deployed.

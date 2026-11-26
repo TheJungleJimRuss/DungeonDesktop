@@ -41,7 +41,7 @@ _Avoid_: edge.
 
 **Location**: A place record that NPCs and Scenes link to. It has no position of its own; it appears on Maps through linked Areas and Markers, possibly on several Maps.
 
-**Token**: A named, coloured piece on a Map, placed on a grid square. The DM moves it by dragging (it snaps to squares) or with the arrow keys. It is free or linked to a Combatant. Tokens stay on the Map after the Encounter ends.
+**Token**: A named, coloured piece on a Map, placed on a grid square. The DM moves it by dragging (it snaps to squares) or with the arrow keys. It is free or linked to a Combatant. Ending an Encounter asks whether to keep its linked Tokens (kept ones become free Tokens with their last name) or remove them (the default); free Tokens always stay.
 
 **Party Token**: An optional Token (at most one per Map) standing for the whole party. Unlike other Tokens it never fades when zoomed out. Dropping it inside an Area, or on a Marker, that is linked to a Location sets the party's location.
 

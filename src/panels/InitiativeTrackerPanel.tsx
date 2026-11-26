@@ -141,14 +141,16 @@ function NoEncounter({ campaign }: { campaign: PanelProps["campaign"] }) {
   );
 }
 
-/** Ending clears the order, HP and conditions, so it asks first. */
-function EndEncounterButton({ onEnd }: { onEnd: () => void }) {
+/** Ending clears the order, HP and conditions, so it asks first, and asks whether its Tokens stay on the Map. */
+function EndEncounterButton({ onEnd }: { onEnd: (keepTokens: boolean) => void }) {
   const [asking, setAsking] = useState(false);
-  if (!asking) return <button className="danger" onClick={() => setAsking(true)}>End encounter</button>;
+  const [keep, setKeep] = useState(false);
+  if (!asking) return <button className="danger" onClick={() => { setKeep(false); setAsking(true); }}>End encounter</button>;
   return (
     <span className="confirm-inline" role="group" aria-label="Confirm end encounter">
-      <span>End encounter? Order, HP and conditions are cleared (party HP is kept); its tokens stay on the map.</span>
-      <button className="danger" autoFocus onClick={() => { setAsking(false); onEnd(); }}>Yes, end it</button>
+      <span>End encounter? Order, HP and conditions are cleared (party HP is kept).</span>
+      <label><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep its tokens on the map</label>
+      <button className="danger" autoFocus onClick={() => { setAsking(false); onEnd(keep); }}>Yes, end it</button>
       <button onClick={() => setAsking(false)}>Keep fighting</button>
     </span>
   );
@@ -180,13 +182,14 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
     setFocusAmount(null);
   }, [focusAmount]);
   const [awarding, setAwarding] = useState(false);
+  const [keepTokens, setKeepTokens] = useState(false);
   const [saving, setSaving] = useState(false);
   const hasParty = enc.combatants.some((c) => c.kind === "party" && c.partyId);
   // Party HP is written back first; XP (if any) lands after, so its level-up sees the final HP.
-  const finish = async (award: (() => Promise<void>) | null) => {
+  const finish = async (award: (() => Promise<void>) | null, keep = keepTokens) => {
     await writeBackPartyHp(enc.combatants);
     if (award) await award();
-    await endEncounter(campaign.id);
+    await endEncounter(campaign.id, { keepTokens: keep });
   };
   const unrolled = enc.combatants.filter((c) => c.kind === "party" && c.initiative === undefined);
   const inFight = new Set(enc.combatants.flatMap((c) => (c.partyId ? [c.partyId] : [])));
@@ -200,7 +203,7 @@ function Tracker({ campaign, enc }: { campaign: PanelProps["campaign"]; enc: Enc
         <button onClick={rollMonsters} disabled={!enc.combatants.some((c) => c.kind === "monster")}>Roll monster initiative</button>
         <DefeatModeToggle enc={enc} update={update} />
         <SaveEncounterButton open={saving} onToggle={() => setSaving((v) => !v)} />
-        {!awarding && <EndEncounterButton onEnd={() => (hasParty ? setAwarding(true) : void finish(null))} />}
+        {!awarding && <EndEncounterButton onEnd={(keep) => { setKeepTokens(keep); if (hasParty) setAwarding(true); else void finish(null, keep); }} />}
       </div>
       {saving && <SaveEncounterForm campaignId={campaign.id} enc={enc} onClose={() => setSaving(false)} />}
       {awarding && <AwardXpStep campaignId={campaign.id} enc={enc} onFinish={(a) => void finish(a)} />}

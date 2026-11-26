@@ -89,7 +89,7 @@ An Encounter is played on a Map: either one the DM picks, or a blank one made fo
 44. As a DM, I want to move Tokens by dragging or with the arrow keys, as today, so that the keyboard path stays.
 45. As a DM, I want Tokens linked to Combatants (name, defeat mark, speed ring) to work on any Map, so that Combat works the same.
 46. As a DM, I want the ruler to measure in the Map's unit, so that it works on world maps as well as battle maps.
-47. As a DM, I want Tokens to stay on the Map after the Encounter ends, so that the aftermath stays where it was.
+47. ~~As a DM, I want Tokens to stay on the Map after the Encounter ends, so that the aftermath stays where it was.~~ Replaced 2026-11-26: ending an Encounter asks whether to keep its linked Tokens (as free Tokens) or remove them (default); free Tokens stay.
 
 ### Party Token
 48. As a DM, I want to add an optional Party Token to a Map (at most one per Map), so that I can show where the group is.
@@ -140,7 +140,7 @@ An Encounter is played on a Map: either one the DM picks, or a blank one made fo
   - Starting an Encounter offers a Map picker.
   - With no choice, a blank Map is created (20×20, 5 ft, grid on, named after the Encounter).
   - Combatant Token placement reuses today's side-lining logic, moved to work on a Map.
-  - Ending an Encounter removes its linked Tokens from the Map (changed 2026-11-26 at the DM's request); free Tokens stay.
+  - Ending an Encounter asks (checkbox "Keep its tokens on the map", off by default): off removes its linked Tokens, on turns them into free Tokens with their last name (changed 2026-11-26 at the DM's request); free Tokens always stay.
 - **Saved encounter** stores `mapId` plus `tokens` (each with position and the same link key used today) instead of a whole map copy.
   - Loading replaces that Map's tokens for those links, and creates a blank Map if `mapId` no longer exists.
 - **Party Token:**

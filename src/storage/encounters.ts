@@ -39,9 +39,9 @@ export async function saveEncounter(e: Encounter): Promise<void> {
   await tx.done;
 }
 
-/** Ends the Encounter and removes its Tokens (the ones linked to its Combatants, defeated ones too) from its Map.
- *  Free Tokens the DM placed by hand stay. */
-export async function endEncounter(campaignId: string): Promise<void> {
+/** Ends the Encounter. Its Tokens (the ones linked to its Combatants, defeated ones too) are removed from its Map,
+ *  or with `keepTokens` stay as free Tokens keeping their last name. Free Tokens the DM placed by hand always stay. */
+export async function endEncounter(campaignId: string, { keepTokens = false }: { keepTokens?: boolean } = {}): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(["encounters", "maps"], "readwrite");
   const rows = (await tx.objectStore("encounters").index("byCampaign").getAll(campaignId)) as unknown as Row[];
@@ -49,7 +49,13 @@ export async function endEncounter(campaignId: string): Promise<void> {
     await tx.objectStore("encounters").delete(r.id);
     const map = r.mapId ? ((await tx.objectStore("maps").get(r.mapId)) as MapRecord | undefined) : undefined;
     if (!map?.tokens.some((t) => t.combatantId)) continue;
-    const tokens = map.tokens.filter((t) => !t.combatantId);
+    const tokens = map.tokens.flatMap((t) => {
+      if (!t.combatantId) return [t];
+      if (!keepTokens) return [];
+      const c = r.combatants.find((x) => x.id === t.combatantId);
+      const { combatantId: _drop, ...free } = t;
+      return [{ ...free, name: c?.name ?? t.name }];
+    });
     await tx.objectStore("maps").put({ ...map, tokens, updatedAt: Date.now() } as unknown as CollectionRecord);
   }
   await tx.done;

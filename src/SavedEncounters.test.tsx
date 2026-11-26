@@ -61,7 +61,9 @@ describe("saved encounters", () => {
     await user.click(within(p).getByRole("button", { name: /start encounter/i }));
     await screen.findByRole("button", { name: /end encounter/i });
     await addMonster(user, "goblin", "Goblin Warrior");
+    await screen.findByRole("listitem", { name: /Goblin Warrior/ });
     await addMonster(user, "goblin", "Goblin Warrior");
+    await waitFor(() => expect(order().filter((n) => n?.startsWith("Goblin Warrior"))).toHaveLength(2));
     await screen.findByRole("option", { name: "Thia" });
     await user.selectOptions(screen.getByRole("combobox", { name: "Add Party member" }), "Thia");
     await user.type(screen.getByLabelText("Ad-hoc name"), "Bandit");

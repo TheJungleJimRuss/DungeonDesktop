@@ -39,8 +39,9 @@ const expand = async (user: User, name: string) => { const b = screen.queryByRol
 const row = (name: string) => screen.getByRole("listitem", { name });
 const pos = (el: HTMLElement) => [el.getAttribute("data-col"), el.getAttribute("data-row")];
 const rows = async (id: string, store: "maps" | "encounters" | "savedEncounters") => (await exportCampaign(id))!.collections[store] as unknown as Record<string, any>[];
-const endEncounter = async (user: User) => {
+const endEncounter = async (user: User, keepTokens = false) => {
   await user.click(screen.getByRole("button", { name: /end encounter/i }));
+  if (keepTokens) await user.click(await screen.findByRole("checkbox", { name: /keep its tokens on the map/i }));
   await user.click(await screen.findByRole("button", { name: /yes, end it/i }));
 };
 
@@ -242,6 +243,27 @@ describe("Tokens linked to Combatants", () => {
 });
 
 describe("Ending an Encounter", () => {
+  it("asks whether to keep its tokens: kept ones become free tokens with their last name", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, map } = await openCombat(user);
+    await addMonster(user, "goblin", "Goblin Warrior");
+    await addAdhoc(user, "Bandit", "10");
+    await user.click(map.getByRole("button", { name: /add tokens for all combatants/i }));
+    await map.findByRole("button", { name: "Token Bandit" });
+
+    await user.click(screen.getByRole("button", { name: /end encounter/i }));
+    const keep = await screen.findByRole("checkbox", { name: /keep its tokens on the map/i });
+    expect(keep).not.toBeChecked();
+    await user.click(keep);
+    await user.click(screen.getByRole("button", { name: /yes, end it/i }));
+    await waitFor(async () => expect(await rows(id, "encounters")).toHaveLength(0));
+    const [m] = await rows(id, "maps");
+    expect(m.tokens.map((t: any) => t.name).sort()).toEqual(["Bandit", "Goblin Warrior"]);
+    expect(m.tokens.every((t: any) => !t.combatantId)).toBe(true);
+    await map.findByRole("button", { name: "Token Bandit" });
+  });
+
   it("removes its Combatants' tokens from the Map (defeated ones hidden during the fight too) and keeps free tokens", async () => {
     const user = userEvent.setup();
     render(<App />);
