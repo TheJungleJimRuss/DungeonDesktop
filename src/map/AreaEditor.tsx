@@ -1,10 +1,11 @@
-import type { MapLine } from "../storage/maps";
+import type { AreaPriority, MapLine } from "../storage/maps";
 import type { Location } from "../storage/locations";
 import { DEFAULT_AREA_COLOR, DEFAULT_AREA_KIND } from "./areas";
 import { commitOnEnter } from "./fields";
 
 type Area = NonNullable<MapLine["area"]>;
 const CREATE = "__create";
+const PRIORITIES: [AreaPriority, string][] = [["normal", "Normal"], ["major", "Major"], ["always", "Always"]];
 
 /** Under the canvas, for a selected closed Line: Make area, or its kind, color, name, Location link and Unmake area.
  *  Text inputs commit on blur/Enter (committing per keystroke remounts the input and drops focus). */
@@ -34,6 +35,10 @@ export function AreaEditor({ label, area, locations, onChange, onCreateLocation,
         <option value="">None</option>
         {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
         <option value={CREATE}>Create location</option>
+      </select></label>
+      <label title="How far out the label stays: Normal hides it once the Area is narrower than its name, Major keeps it while the Area is drawn, Always keeps it at every zoom">Priority <select aria-label="Area priority" value={area.priority ?? "normal"}
+        onChange={(e) => { const priority = e.target.value as AreaPriority; onChange((a) => { if (!a) return a; const { priority: _old, ...rest } = a; return priority === "normal" ? rest : { ...rest, priority }; }); }}>
+        {PRIORITIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select></label>
       {holeSelected && <button onClick={onRemoveHole} title="Fill this Hole back in (Delete)">Remove hole</button>}
       {!subtracting && <button onClick={onSubtract} title="Cut another Shape or Area out of this Area">Subtract shape</button>}

@@ -9,12 +9,15 @@ export interface MapPoint { x: number; y: number; }
 export interface MapLine {
   id: string; points: MapPoint[]; closed: boolean; segments: SegmentKind[]; route?: true;
   /** Present when the Shape is an Area. `holes`: parts cut out of it (rings of points in squares, strictly inside the outline, not overlapping); absent = none. */
-  area?: { kind: string; color: string; name?: string; locationId?: string; holes?: MapPoint[][] };
+  /** `priority`: how far out its label stays (absent: normal). */
+  area?: { kind: string; color: string; name?: string; locationId?: string; holes?: MapPoint[][]; priority?: AreaPriority };
 }
 export interface MapMarker { id: string; x: number; y: number; name: string; color: string; icon: string; note: string; locationId?: string;
   /** Pixels per square when it was placed (absent: battle scale, 32). */ placedAt?: number;
   /** How far out it stays visible (absent: normal). */ priority?: MarkerPriority; }
 export type MarkerPriority = "minor" | "normal" | "major" | "always";
+/** Normal: the label hides once the Area is narrower on screen than the text. Major: the label stays while the Area is drawn. Always: the label (with a dot) stays at every zoom. */
+export type AreaPriority = "normal" | "major" | "always";
 /** A Token. `x`/`y` are whole squares. A Token with a `combatantId` is linked: it shows that Combatant's name (`name` is only the last copy) and goes when the Combatant does. */
 export interface MapToken { id: string; name: string; color: string; x: number; y: number; combatantId?: string; }
 

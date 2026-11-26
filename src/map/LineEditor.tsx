@@ -2,13 +2,17 @@ import type { MapLine, SegmentKind } from "../storage/maps";
 
 const KINDS: [SegmentKind, string][] = [["plain", "Plain"], ["wall", "Wall"], ["door", "Door"]];
 
-/** Under the canvas: one type for the whole Line (plain, Wall or Door), or, once a segment is clicked on the canvas, that segment's type alone. */
-export function LineEditor({ line, label, length, segment, onSegment, onSplit, onKind, onDelete }: {
+/** Under the canvas: one type for the whole Line (plain, Wall or Door), or, once a segment is clicked on the canvas, that segment's type alone.
+ *  A Route has no types: it shows its length, and a clicked segment can be split. An open Line can be made a Route (Make route), and back
+ *  (Unmake route; its segment types were kept). */
+export function LineEditor({ line, label, length, segment, onSegment, onSplit, onKind, onRoute, onDelete }: {
   line: MapLine; label: string; length?: string; segment: number | null; onSegment: (index: number | null) => void;
   /** Add a point in the middle of segment `index`. */
   onSplit: (index: number) => void;
   /** `index` null = every segment. */
-  onKind: (index: number | null, kind: SegmentKind) => void; onDelete: () => void;
+  onKind: (index: number | null, kind: SegmentKind) => void;
+  /** Make the open Line a Route (true) or a plain Line again (false). */
+  onRoute: (route: boolean) => void; onDelete: () => void;
 }) {
   const kinds = new Set(line.segments);
   const options = KINDS.map(([v, t]) => <option key={v} value={v}>{t}</option>);
@@ -17,6 +21,12 @@ export function LineEditor({ line, label, length, segment, onSegment, onSplit, o
     <div className="row map-line-editor" role="group" aria-label={`Edit ${label}`}>
       <strong>{label}</strong>
       {line.route && <span>{length}</span>}
+      {line.route && one === null && <span className="muted">Click a segment on the map to pick it; double-click it to add a point.</span>}
+      {line.route && one !== null && <>
+        <span>Segment {one + 1}</span>
+        <button onClick={() => onSplit(one)}>Split segment</button>
+        <button onClick={() => onSegment(null)}>Deselect segment</button>
+      </>}
       {!line.route && one === null && <>
         <label>All segments{" "}
           <select aria-label={`${label} type`} value={kinds.size === 1 ? line.segments[0] : "mixed"} onChange={(e) => onKind(null, e.target.value as SegmentKind)}>
@@ -33,6 +43,7 @@ export function LineEditor({ line, label, length, segment, onSegment, onSplit, o
         <button onClick={() => onSplit(one)}>Split segment</button>
         <button onClick={() => onSegment(null)}>All segments</button>
       </>}
+      {!line.closed && <button onClick={() => onRoute(!line.route)} title={line.route ? "Turn this Route back into a Line" : "Turn this Line into a Route that shows its length"}>{line.route ? "Unmake route" : "Make route"}</button>}
       <button className="danger" aria-label={`Delete ${label}`} onClick={onDelete}>Delete</button>
     </div>
   );

@@ -145,7 +145,7 @@ describe("Lines and Shapes on a Map", () => {
     render(<App />);
     const { id, panel } = await openMap(user);
     const pressed = (name: string) => panel.getByRole("button", { name }).getAttribute("aria-pressed");
-    for (const [key, name] of [["r", "Route"], ["p", "Marker"], ["m", "Ruler"], ["l", "Draw"], ["v", "Select"]]) {
+    for (const [key, name] of [["p", "Marker"], ["m", "Ruler"], ["l", "Draw"], ["v", "Select"]]) {
       await user.keyboard(key);
       expect(pressed(name)).toBe("true");
     }

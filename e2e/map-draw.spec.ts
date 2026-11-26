@@ -67,14 +67,15 @@ test("Esc steps back on the Map (cancel the Line, then back to Select) before it
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 });
 
-test("draws a Route, labels its length, and dragging a point updates the label", async ({ page }) => {
+test("makes a drawn Line a Route, labels its length, and dragging a point updates the label", async ({ page }) => {
   const map = await openMap(page, "Route Camp");
   const at = await grid(map);
 
-  await map.getByRole("button", { name: "Route", exact: true }).click();
+  await map.getByRole("button", { name: "Draw", exact: true }).click();
   await page.mouse.click(...at(2, 2));
   await page.mouse.click(...at(6, 2));
   await page.mouse.dblclick(...at(6, 5)); // 4 + 3 squares x 5 ft
+  await map.getByRole("button", { name: "Make route" }).click();
   const route = map.getByRole("button", { name: "Route 1", exact: true });
   await expect(route).toBeVisible();
   await expect(route.locator(".map-route-label")).toHaveText("35 ft");

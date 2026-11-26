@@ -37,25 +37,36 @@ beforeEach(() => localStorage.clear());
 const route = (id = "r") => line(id, [[2, 1], [5, 1], [5, 5]], false, { route: true }); // 3 + 4 squares
 
 describe("Routes", () => {
-  it("the Route tool draws an open Line flagged as a Route; clicking its first point adds a point, it never closes", async () => {
+  it("a drawn Line becomes a Route with Make route, keeps its segment types, and turns back with Unmake route", async () => {
     identitySvg();
     const user = userEvent.setup();
     render(<App />);
     const { id, panel } = await openMap(user);
-    await user.click(panel.getByRole("button", { name: "Route" }));
+    expect(panel.queryByRole("button", { name: "Route" })).not.toBeInTheDocument(); // no Route tool
+    await user.click(panel.getByRole("button", { name: "Draw" }));
     const surface = await panel.findByTestId("map-draw");
     const click = (x: number, y: number) => user.pointer({ target: surface, keys: "[MouseLeft]", coords: { clientX: x, clientY: y } });
-    await click(200, 200); await click(320, 200); await click(320, 320); await click(201, 199); // back on the first point
+    await click(200, 200); await click(320, 200); await click(320, 320);
     await user.keyboard("{Enter}");
-    await waitFor(async () => expect((await stored(id)).lines).toHaveLength(1));
-    expect((await stored(id)).lines[0]).toMatchObject({ closed: false, route: true, points: [{ x: 5, y: 5 }, { x: 8, y: 5 }, { x: 8, y: 8 }, { x: 5, y: 5 }] });
-    expect(await panel.findByRole("button", { name: "Route 1" })).toBeInTheDocument();
+    const editor = await panel.findByRole("group", { name: "Edit Line 1" }); // finishing selects the new Line
+    await user.selectOptions(within(editor).getByLabelText("Line 1 type"), "wall");
+    await user.click(within(editor).getByRole("button", { name: "Make route" }));
+    await waitFor(async () => expect((await stored(id)).lines[0]).toMatchObject({ closed: false, route: true, points: [{ x: 5, y: 5 }, { x: 8, y: 5 }, { x: 8, y: 8 }] }));
+    const routeEditor = await panel.findByRole("group", { name: "Edit Route 1" });
+    expect(within(routeEditor).getByText("30 ft")).toBeInTheDocument();
+    await user.click(within(routeEditor).getByRole("button", { name: "Unmake route" }));
+    await waitFor(async () => expect((await stored(id)).lines[0].route).toBeUndefined());
+    expect((await stored(id)).lines[0].segments).toEqual(["wall", "wall"]);
+    expect(await panel.findByRole("group", { name: "Edit Line 1" })).toBeInTheDocument();
+  });
 
-    // Esc cancels, one point is not a Route
-    await click(40, 40);
-    await user.keyboard("{Escape}");
-    await click(80, 80); await user.keyboard("{Enter}");
-    expect((await stored(id)).lines).toHaveLength(1);
+  it("offers no Make route for a Shape", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMap(user, [line("s", [[1, 1], [4, 1], [4, 4]], true)]);
+    await user.click(await panel.findByRole("button", { name: "Shape 1" }));
+    await panel.findByRole("group", { name: "Edit Shape 1" });
+    expect(panel.queryByRole("button", { name: "Make route" })).not.toBeInTheDocument();
   });
 
   it("labels a multi-segment Route with its length in feet and in miles, and in miles", async () => {
@@ -84,6 +95,24 @@ describe("Routes", () => {
     expect(panel.queryByLabelText("Segment 1 type")).not.toBeInTheDocument();
     await user.click(panel.getByRole("button", { name: "Delete Route 1" }));
     await waitFor(async () => expect((await stored(id)).lines).toHaveLength(0));
+  });
+
+  it("splits a Route segment with the Split segment button, and with a double-click on the segment", async () => {
+    identitySvg();
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user, [route()]);
+    await user.click(await panel.findByRole("button", { name: "Route 1" }));
+    await user.click(await panel.findByRole("button", { name: "Segment 1 of Route 1" }));
+    expect(panel.queryByLabelText("Segment 1 type")).not.toBeInTheDocument();
+    await user.click(panel.getByRole("button", { name: "Split segment" }));
+    await waitFor(async () => expect((await stored(id)).lines[0]).toMatchObject({
+      route: true, points: [{ x: 2, y: 1 }, { x: 3.5, y: 1 }, { x: 5, y: 1 }, { x: 5, y: 5 }], segments: ["plain", "plain", "plain"],
+    }));
+    expect(within(panel.getByRole("group", { name: "Edit Route 1" })).getByText("35 ft")).toBeInTheDocument();
+
+    await user.dblClick(panel.getByRole("button", { name: "Segment 3 of Route 1" }));
+    await waitFor(async () => expect((await stored(id)).lines[0].points).toHaveLength(5));
   });
 });
 
@@ -115,5 +144,18 @@ describe("unlinking a Location from a Marker or Area", () => {
     await updateMap((await stored(id)).id, (m) => ({ ...m, lines: [shape("a", { name: "Own" })] }));
     await user.selectOptions(await panel.findByLabelText("Area location"), "None");
     await waitFor(async () => expect((await stored(id)).lines[0].area).toEqual({ kind: "City", color: "#f00", name: "Own" }));
+  });
+});
+
+describe("Route distance label", () => {
+  it("disappears once the zoomed-out Route is smaller than its text, while the Route still shows", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMap(user, [route()]);
+    const routeEl = await panel.findByRole("button", { name: "Route 1" });
+    expect(within(routeEl).getByText("35 ft")).toBeInTheDocument();
+    for (let i = 0; i < 4; i++) await user.click(panel.getByRole("button", { name: "Zoom out" })); // 32 -> ~6.3 px/square: box ~25 px
+    await waitFor(() => expect(within(panel.getByRole("button", { name: "Route 1" })).queryByText("35 ft")).not.toBeInTheDocument());
+    expect(panel.getByRole("button", { name: "Route 1" }).querySelector(".map-route-path")).toBeInTheDocument();
   });
 });

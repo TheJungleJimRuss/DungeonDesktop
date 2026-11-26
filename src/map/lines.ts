@@ -43,8 +43,8 @@ export function useCanvasSize(svg: RefObject<SVGSVGElement | null>): { w: number
 }
 
 /** A new Line from drawn points: every segment plain; a closed one has one more segment (last back to first). */
-export const newLine = (points: Pt[], closed: boolean, route = false): MapLine => ({
-  id: crypto.randomUUID(), points, closed, segments: Array<SegmentKind>(closed ? points.length : points.length - 1).fill("plain"), ...(route ? { route: true as const } : {}),
+export const newLine = (points: Pt[], closed: boolean): MapLine => ({
+  id: crypto.randomUUID(), points, closed, segments: Array<SegmentKind>(closed ? points.length : points.length - 1).fill("plain"),
 });
 
 /** "Line 1", "Shape 2", "Route 1": numbered by order among Lines of the same kind. */

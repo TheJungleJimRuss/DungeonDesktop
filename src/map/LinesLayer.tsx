@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { MapLine } from "../storage/maps";
 import { segmentsOf, unitsPerSquare } from "./lines";
 import { ScreenSized } from "./ScreenSized";
-import { AREA_MIN_PX, SEGMENT_MIN_PX, boundsOf, fadeBySize, polylineLength, type Pt } from "./geometry";
+import { AREA_MIN_PX, SEGMENT_MIN_PX, boundsOf, fadeBySize, polylineLength, routeLabelOpacity, type Pt } from "./geometry";
 import { pointAlong, routeLength } from "./routes";
 
 
@@ -34,7 +34,7 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
   /** Double-click on a segment: add a point there. */
   onSplit: (index: number, e: { clientX: number; clientY: number }) => void;
 }) {
-  const sel = selectable ? lines.find((l) => l.id === selectedId && !l.route) : undefined;
+  const sel = selectable ? lines.find((l) => l.id === selectedId) : undefined;
   const u = unitsPerSquare(pxPerSquare), px = (n: number) => n * u;
   return (
     <g className="map-lines">
@@ -57,7 +57,12 @@ export function LinesLayer({ lines, pxPerSquare, full, labels, selectedId, onSel
               ? <path d={d} className="map-route-path" fill="none" opacity={routeF} pointerEvents="none" />
               : segs.map(([a, c], i) => (op[i] > 0 ? <Segment key={i} a={a} b={c} u={u} kind={l.segments[i] ?? "plain"} index={i} opacity={op[i]} /> : null))}
             <path d={hit} className="map-hit" fill="none" />
-            {l.route && (() => { const m = pointAlong(l.points, 0.5); return <ScreenSized x={px(m.x)} y={px(m.y)} opacity={routeF}><text className="map-route-label" textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{routeLength(l.points)}</text></ScreenSized>; })()}
+            {l.route && (() => {
+              const text = routeLength(l.points), labelF = routeLabelOpacity(routeF, side, text);
+              if (labelF <= 0) return null;
+              const m = pointAlong(l.points, 0.5);
+              return <ScreenSized x={px(m.x)} y={px(m.y)} opacity={labelF}><text className="map-route-label" textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{text}</text></ScreenSized>;
+            })()}
           </g>
         );
       })}

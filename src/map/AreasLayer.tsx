@@ -3,7 +3,7 @@ import type { MapLine } from "../storage/maps";
 import { unitsPerSquare } from "./lines";
 import { areaAt } from "./areas";
 import { ScreenSized } from "./ScreenSized";
-import { AREA_MIN_PX, boundsOf, fadeBySize, labelWidthPx, pointInArea, pointInPolygon, ringPath, snapToStep, type Pt } from "./geometry";
+import { AREA_MIN_PX, areaLabelOpacity, boundsOf, fadeBySize, pointInArea, pointInPolygon, ringPath, snapToStep, type Pt } from "./geometry";
 
 /** Area fills: translucent, drawn under every Line (as shown, with any drag in progress). In the Select tool a click on a fill selects the
  *  smallest Area under the pointer (`pointAt` gives the unsnapped point; without one, the clicked fill). Dragging the selected Area moves the
@@ -70,9 +70,16 @@ export function AreasLayer({ lines, pxPerSquare, full, labelOf, labelAt, selecte
         const text = labelOf(l.area);
         const b = boundsOf(l.points), forced = full.has(l.id);
         const fade = forced ? 1 : fadeBySize(Math.max(b.x1 - b.x0, b.y1 - b.y0) * pxPerSquare, AREA_MIN_PX);
-        const need = labelWidthPx(text), labelFade = forced ? 1 : Math.min(fade, fadeBySize((b.x1 - b.x0) * pxPerSquare, need, need * 0.25));
+        const labelFade = forced ? 1 : areaLabelOpacity(fade, (b.x1 - b.x0) * pxPerSquare, text, l.area.priority);
         if (covers(l)) return <path key={l.id} d={d} className="map-area-fill map-area-backdrop" fill={l.area.color} fillRule="evenodd" data-area={l.id} pointerEvents="none" />;
-        if (fade <= 0) return null;
+        if (fade <= 0) return labelFade > 0 ? ( // an Always Area too small to draw: a dot and its label
+          <g key={l.id} className="map-area map-area-faded">
+            <ScreenSized x={c.x * U} y={c.y * U}>
+              <circle r={3} fill={l.area.color} className="map-area-dot" pointerEvents="none" />
+              <text className="map-area-label" y={-10} textAnchor="middle" dominantBaseline="middle" pointerEvents="none">{text}</text>
+            </ScreenSized>
+          </g>
+        ) : null;
         return (
           <g key={l.id} className={"map-area" + (l.id === selectedId ? " selected" : "")}>
             <path d={d} className="map-area-fill" fill={l.area.color} fillRule="evenodd" opacity={fade} data-area={l.id} role={selectable ? "button" : undefined} aria-label={selectable ? `Area ${text}` : undefined}

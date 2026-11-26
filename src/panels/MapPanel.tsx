@@ -50,11 +50,11 @@ export const PARTY_MIN_PX = 14;
 const PARTY = "party-token"; // the drag id of the Party Token (Token ids are UUIDs)
 const KEYS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
 const TOOLS: [Tool, string, string][] = [
-  ["select", "Select", "Select, move and edit"], ["draw", "Draw", "Draw Lines and Shapes"], ["route", "Route", "Draw a Route and measure its length"],
+  ["select", "Select", "Select, move and edit"], ["draw", "Draw", "Draw Lines and Shapes"],
   ["marker", "Marker", "Place a Marker"], ["ruler", "Ruler", "Measure a distance"],
 ];
 const TOOL_HINTS: Record<Exclude<Tool, "select">, string> = {
-  draw: "Click to add points", route: "Click to add points", marker: "Click to place a Marker", ruler: "Press and drag, or click start then end",
+  draw: "Click to add points", marker: "Click to place a Marker", ruler: "Press and drag, or click start then end",
 };
 const COLORS = ["#c0392b", "#2980b9", "#27ae60", "#f39c12", "#8e44ad", "#7f8c8d"];
 
@@ -423,12 +423,12 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   // Snapped in world space (the grid is anchored at the world origin), then handed to the layers relative to the anchor.
   const snapping = map.showGrid && map.snapToGrid !== false; // the Snap to grid setting, only while the grid is shown
   const svgPoint = (e: { clientX: number; clientY: number }) => { const w = worldFree(e); return w && L(snapping ? snapToStep(w, gridSquares) : w); };
-  const drawing = (tool === "draw" || tool === "route") && draft.length > 0;
+  const drawing = tool === "draw" && draft.length > 0;
   const finishLine = (closed: boolean, e?: { shiftKey?: boolean }) => {
-    const points = draft, route = tool === "route";
+    const points = draft;
     setDraft([]);
     if (points.length < (closed ? 3 : 2)) return;
-    const l = newLine(points, closed, route), back = backToSelect(e); // the tool changes at once, so no click lands in a new draft
+    const l = newLine(points, closed), back = backToSelect(e); // the tool changes at once, so no click lands in a new draft
     void change((m) => ({ ...m, lines: [...m.lines, l] })).then(() => { if (back) pickLine(l.id); });
   };
   const patchLine = (id: string, fn: (l: MapLine) => MapLine) => change((m) => ({ ...m, lines: m.lines.map((l) => (l.id === id ? fn(l) : l)) }));
@@ -465,7 +465,6 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
   // Tool keys (see src/map/keys.ts). Switching tool mid-Line drops the draft, like the buttons do.
   useShortcutClaim(TOOL_KEYS.select, true, () => pickTool("select"));
   useShortcutClaim(TOOL_KEYS.draw, true, () => pickTool("draw"));
-  useShortcutClaim(TOOL_KEYS.route, true, () => pickTool("route"));
   useShortcutClaim(TOOL_KEYS.marker, true, () => pickTool("marker"));
   useShortcutClaim(TOOL_KEYS.ruler, true, () => pickTool("ruler"));
   useShortcutClaim(FIT_KEY, true, () => setView(fitView(mapBounds(map), size)));
@@ -521,7 +520,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
       </div>
       {/* Always one line tall, so the canvas never shifts while drawing or measuring (a shift moves the next click). */}
       <div className="map-status">
-        {drawing && <span className="muted" role="status" aria-label="Drawing" title="Enter or double-click to finish, Esc to cancel">Drawing {draft.length} {draft.length === 1 ? "point" : "points"}: {tool === "route" ? "" : "click the first point to close, "}Enter or double-click to finish, Esc to cancel</span>}
+        {drawing && <span className="muted" role="status" aria-label="Drawing" title="Enter or double-click to finish, Esc to cancel">Drawing {draft.length} {draft.length === 1 ? "point" : "points"}: click the first point to close, Enter or double-click to finish, Esc to cancel</span>}
         {!drawing && !rule && tool !== "select" && <span className="muted" aria-label="Tool hint">{TOOL_HINTS[tool]}; hold Shift to keep the tool, Esc for Select</span>}
         {pending && (
           <span role="group" aria-label="Cut notch" className="row">
@@ -629,7 +628,7 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
               </g>
             );
           })()}
-          {(tool === "draw" || tool === "route") && <DrawLayer box={box} points={draft.map(L)} pxPerSquare={pxPerSquare} svgPoint={svgPoint} freePoint={freePoint} route={tool === "route"}
+          {tool === "draw" && <DrawLayer box={box} points={draft.map(L)} pxPerSquare={pxPerSquare} svgPoint={svgPoint} freePoint={freePoint}
             onAdd={(p) => setDraft((d) => [...d, W(p)])} onClose={(e) => finishLine(true, e)} onFinish={(e) => finishLine(false, e)} onCancel={() => setDraft([])} />}
           {ruler && <rect x={box.x} y={box.y} width={box.w} height={box.h} className="ruler-square"
             onPointerDown={(e) => rulerDown(rulerAt(e))} onPointerMove={(e) => rulerOver(rulerAt(e))} onPointerUp={(e) => rulerEnd(rulerAt(e), e)} />}
@@ -683,7 +682,8 @@ function MapView_({ map, enc }: { map: MapRecord; enc?: Encounter }) {
       {tool === "select" && selected && <LineEditor line={selected} label={labels.get(selected.id)!} length={routeLength(live(selected).points)} onDelete={deleteSelected}
         segment={selSeg} onSegment={setSelSeg}
         onSplit={(i) => { const [a, b] = segmentsOf(selected)[i]; void patchLine(selected.id, (l) => splitSegment(l, i, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })); setSelSeg(null); }}
-        onKind={(i, kind) => void patchLine(selected.id, (l) => ({ ...l, segments: l.segments.map((k, j) => (i === null || j === i ? kind : k)) }))} />}
+        onKind={(i, kind) => void patchLine(selected.id, (l) => ({ ...l, segments: l.segments.map((k, j) => (i === null || j === i ? kind : k)) }))}
+        onRoute={(on) => { setSelSeg(null); void patchLine(selected.id, ({ route: _old, ...l }) => (on && !l.closed ? { ...l, route: true } : l)); }} />}
       {marker && (tool === "select" || tool === "marker") && <MarkerEditor marker={marker} label={markerText(marker)} locations={locations} pxPerSquare={pxPerSquare}
         onChange={(fn) => void patchMarker(marker.id, fn)} onDelete={deleteSelected}
         onCreateLocation={() => void createLocation(campaignId, { name: marker.name.trim() || "Marker", notes: "" }).then((loc) => {

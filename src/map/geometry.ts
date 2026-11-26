@@ -146,6 +146,19 @@ export const SEGMENT_MIN_PX = 4, AREA_MIN_PX = 6, TOKEN_MIN_PX = 3;
 export const segmentScreenLength = (a: Pt, b: Pt, pxPerUnit: number) => Math.hypot(b.x - a.x, b.y - a.y) * pxPerUnit;
 /** Rough on-screen width of a 13px label (about 0.6 em per character). The label fades out when this exceeds the Area's on-screen width. */
 export const labelWidthPx = (text: string) => text.length * 7.8;
+/** Opacity 0..1 of an Area's label, given the Area's own fade, its on-screen width and its Priority (see AreaPriority). */
+export function areaLabelOpacity(fade: number, widthPx: number, text: string, priority: "normal" | "major" | "always" = "normal"): number {
+  if (priority === "always") return 1;
+  if (priority === "major") return fade;
+  const need = labelWidthPx(text);
+  return Math.min(fade, fadeBySize(widthPx, need, need * 0.25));
+}
+
+/** Opacity 0..1 of a Route's distance label: the Route's own fade, and gone once the Route's on-screen box (larger side, `sizePx`) is narrower than the text. */
+export function routeLabelOpacity(fade: number, sizePx: number, text: string): number {
+  const need = labelWidthPx(text);
+  return Math.min(fade, fadeBySize(sizePx, need, need * 0.25));
+}
 
 export interface Bounds { x0: number; y0: number; x1: number; y1: number }
 export function boundsOf(points: Pt[]): Bounds {

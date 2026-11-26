@@ -116,6 +116,38 @@ describe("Party Token zoomed far out", () => {
   });
 });
 
+describe("Area Priority", () => {
+  const named = (id: string, x: number, priority?: "major" | "always"): MapLine =>
+    ({ ...area(id, x, 0, 2), area: { kind: "Area", color: "#3498db", name: `${id} Longname Town`, ...(priority ? { priority } : {}) } });
+  const label = (panel: ReturnType<typeof within>, id: string) => panel.queryByText(`${id} Longname Town`, { selector: "text" });
+
+  it("Major keeps a label wider than its Area, Always keeps it after the Area fades", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { panel } = await openMap(user, () => ({ lines: [named("Nrm", -4), named("Maj", 0, "major"), named("Alw", 4, "always")] }));
+    await panel.findByRole("button", { name: /^Area Maj/ });
+    expect(label(panel, "Nrm")).toBeNull(); // 2 squares = 64 px, the text needs ~150 px
+    expect(label(panel, "Maj")).toBeInTheDocument();
+    expect(label(panel, "Alw")).toBeInTheDocument();
+    await zoomOut(user, panel, 6); // 2 squares = 5.6 px: every Area fades away
+    expect(panel.queryAllByRole("button", { name: /^Area / })).toHaveLength(0);
+    expect(label(panel, "Maj")).toBeNull();
+    expect(label(panel, "Alw")).toBeInTheDocument();
+  });
+
+  it("sets and persists an Area's Priority from its editor", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user, () => ({ lines: [named("Nrm", 0)] }));
+    await user.click(await panel.findByRole("button", { name: /^Area Nrm/ }));
+    expect(panel.getByRole("combobox", { name: "Area priority" })).toHaveValue("normal");
+    await user.selectOptions(panel.getByRole("combobox", { name: "Area priority" }), "Always");
+    await waitFor(async () => expect((await listMaps(id))[0].lines[0].area?.priority).toBe("always"));
+    await user.selectOptions(panel.getByRole("combobox", { name: "Area priority" }), "Normal");
+    await waitFor(async () => expect((await listMaps(id))[0].lines[0].area).not.toHaveProperty("priority"));
+  });
+});
+
 describe("Marker Priority", () => {
   const pm = (id: string, x: number, priority?: MapMarker["priority"], placedAt = 32): MapMarker =>
     ({ id, x, y: 0, name: id, color: "#e67e22", icon: "pin", note: "", placedAt, ...(priority ? { priority } : {}) });

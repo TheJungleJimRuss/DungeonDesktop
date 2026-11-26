@@ -1,4 +1,4 @@
-import { markerOpacity, boundsIntersect, boundsOf, fadeBySize, labelWidthPx, segmentScreenLength, distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, labelPoint, pointInArea, ringPath, filledArea, polylineLength, snapToCorner, snapToHalf, snapToStep } from "./geometry";
+import { areaLabelOpacity, routeLabelOpacity, markerOpacity, boundsIntersect, boundsOf, fadeBySize, labelWidthPx, segmentScreenLength, distanceToSegment, hitsPoint, hitsSegment, pointInPolygon, polygonArea, polygonCentroid, labelPoint, pointInArea, ringPath, filledArea, polylineLength, snapToCorner, snapToHalf, snapToStep } from "./geometry";
 
 describe("map geometry", () => {
   it("snaps to the nearest grid corner", () => {
@@ -171,4 +171,27 @@ describe("markerOpacity", () => {
     for (const p of ["minor", "normal", "major", "always"] as const) expect(markerOpacity(32, 320, p)).toBe(1);
   });
   it("always never fades", () => expect(markerOpacity(1e9, 0.01, "always")).toBe(1));
+});
+
+describe("routeLabelOpacity", () => {
+  it("hides the distance label once the Route is smaller on screen than the text", () => {
+    expect(routeLabelOpacity(1, 200, "120 ft")).toBe(1);
+    expect(routeLabelOpacity(1, 30, "120 ft")).toBe(0);
+  });
+  it("never shows more than the Route itself", () => expect(routeLabelOpacity(0.3, 200, "120 ft")).toBe(0.3));
+});
+
+describe("areaLabelOpacity", () => {
+  it("Normal hides the label when the Area is narrower than its text", () => {
+    expect(areaLabelOpacity(1, 200, "Town")).toBe(1);
+    expect(areaLabelOpacity(1, 20, "Town")).toBe(0);
+  });
+  it("Major follows the Area's own fade, whatever the text width", () => {
+    expect(areaLabelOpacity(1, 20, "A very long town name", "major")).toBe(1);
+    expect(areaLabelOpacity(0.5, 20, "Town", "major")).toBe(0.5);
+    expect(areaLabelOpacity(0, 2, "Town", "major")).toBe(0);
+  });
+  it("Always keeps the label even after the Area has faded", () => {
+    expect(areaLabelOpacity(0, 0.01, "Capital", "always")).toBe(1);
+  });
 });
