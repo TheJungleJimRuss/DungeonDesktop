@@ -46,6 +46,8 @@ export interface Encounter {
   startedAt: number;
   /** The Map this Encounter is played on (a record in `maps`). Absent only on Encounters from before Maps. */
   mapId?: string;
+  /** Where on the Map the fight is, in squares: the view centre when it started. New Combatant Tokens are placed from here. */
+  spot?: { x: number; y: number };
   /** True once the DM has advanced a turn; before that the top of the order is always active. */
   started?: boolean;
   /** What happens at 0 HP: keep the combatant greyed out (default) or remove it. */

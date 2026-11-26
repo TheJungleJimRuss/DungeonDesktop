@@ -8,15 +8,14 @@ describe("walkSpeedFeet", () => {
 });
 
 describe("reachArea", () => {
-  const map = { width: 20, height: 15 };
-  it("covers speed / square size squares in every direction, diagonals included", () => {
-    expect(reachArea({ x: 10, y: 7 }, 30, 5, map)).toEqual({ x: 4, y: 1, w: 13, h: 13, squares: 6 });
+  it("covers speed / 5 ft squares in every direction, diagonals included", () => {
+    expect(reachArea({ x: 10, y: 7 }, 30)).toEqual({ x: 4, y: 1, w: 13, h: 13, squares: 6 });
   });
-  it("clips at the map edge", () => {
-    expect(reachArea({ x: 1, y: 0 }, 30, 5, map)).toEqual({ x: 0, y: 0, w: 8, h: 7, squares: 6 });
+  it("is not clipped: the Map has no edge", () => {
+    expect(reachArea({ x: 1, y: 0 }, 30)).toEqual({ x: -5, y: -6, w: 13, h: 13, squares: 6 });
   });
   it("rounds partial squares down and handles no movement", () => {
-    expect(reachArea({ x: 5, y: 5 }, 25, 10, map).squares).toBe(2);
-    expect(reachArea({ x: 5, y: 5 }, 0, 5, map)).toEqual({ x: 5, y: 5, w: 1, h: 1, squares: 0 });
+    expect(reachArea({ x: 5, y: 5 }, 27).squares).toBe(5);
+    expect(reachArea({ x: 5, y: 5 }, 0)).toEqual({ x: 5, y: 5, w: 1, h: 1, squares: 0 });
   });
 });

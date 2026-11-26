@@ -21,7 +21,7 @@ async function openMap(user: User, lines: MapLine[] = []) {
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   const id = (await listCampaigns())[0].id;
   if (lines.length) {
     const map = (await listMaps(id))[0];
@@ -87,7 +87,7 @@ describe("Areas", () => {
   it("creates a Location from the Area, named after the Area's name or else its kind", async () => {
     const user = userEvent.setup();
     render(<App />);
-    const { id, panel } = await openMap(user, [area("a", 4, { kind: "Forest", color: "#00aa00", name: "Darkwood" }), { ...area("b", 3, { kind: "Swamp", color: "#336633" }), points: sq(10, 10, 3).map(([x, y]) => ({ x, y })) }]);
+    const { id, panel } = await openMap(user, [area("a", 4, { kind: "Forest", color: "#00aa00", name: "Darkwood" }), { ...area("b", 3, { kind: "Swamp", color: "#336633" }), points: sq(10, 4, 3).map(([x, y]) => ({ x, y })) }]);
     await user.click(await panel.findByRole("button", { name: "Shape 1" }));
     await user.selectOptions(await panel.findByLabelText("Area location"), "Create location");
     await waitFor(async () => expect((await listLocations(id)).map((l) => l.name)).toEqual(["Darkwood"]));

@@ -120,26 +120,46 @@ describe("Campaign export and import", () => {
 });
 
 describe("Importing an old export", () => {
-  it("drops Location map positions and gives an in-progress Encounter without a Map a blank one, clear of the Map names already there", async () => {
+  it("drops Location map positions, skips old-shape Maps without failing, and drops Encounter links to them", async () => {
     const campaign = { id: "c1", name: "Old", createdAt: 1, updatedAt: 2 } as unknown as CampaignExport["campaign"];
     const empty = Object.fromEntries(COLLECTIONS.map((c) => [c, []])) as unknown as CampaignExport["collections"];
     const existing = { id: "m1", campaignId: "c1", name: "Encounter 1", unit: "ft", perSquare: 5, showGrid: true, width: 20, height: 20, lines: [], markers: [], tokens: [], createdAt: 1, updatedAt: 1 };
+    const endless = { id: "m2", campaignId: "c1", name: "Endless", showGrid: true, lines: [], markers: [], tokens: [], createdAt: 1, updatedAt: 1 };
     await importCampaign({
       format: "dungeon-desktop-campaign", version: 1, exportedAt: 3, campaign,
       collections: {
         ...empty,
         locations: [{ id: "l1", campaignId: "c1", name: "Inn", notes: "", x: 3, y: 4 }, { id: "l2", campaignId: "c1", name: "Keep", notes: "" }],
-        maps: [existing],
-        encounters: [{ id: "e1", campaignId: "c1", startedAt: 1, combatants: [] }, { id: "e2", campaignId: "c1", mapId: "m1", startedAt: 1, combatants: [] }],
+        maps: [existing, endless],
+        encounters: [{ id: "e1", campaignId: "c1", startedAt: 1, combatants: [] }, { id: "e2", campaignId: "c1", mapId: "m1", spot: { x: 9, y: 9 }, startedAt: 1, combatants: [] }, { id: "e3", campaignId: "c1", mapId: "m2", startedAt: 1, combatants: [] }],
+        savedEncounters: [{ id: "s1", campaignId: "c1", name: "Ambush", createdAt: 1, members: [], mapId: "m1", spot: { x: 9, y: 9 }, tokens: [{ id: "t", x: 1, y: 1 }] }],
       } as unknown as CampaignExport["collections"],
     });
     const db = await getDb();
     expect(await db.getAll("locations")).toEqual([{ id: "l1", campaignId: "c1", name: "Inn", notes: "" }, { id: "l2", campaignId: "c1", name: "Keep", notes: "" }]);
-    const maps = await db.getAll("maps");
-    const e1 = (await db.get("encounters", "e1")) as unknown as { mapId?: string };
-    const made = maps.find((m) => m.id === e1.mapId);
-    expect(made).toMatchObject({ name: "Encounter 2", campaignId: "c1", width: 20, height: 20, tokens: [] });
-    expect(maps).toHaveLength(2);
-    expect(((await db.get("encounters", "e2")) as unknown as { mapId: string }).mapId).toBe("m1");
+    expect((await db.getAll("maps")).map((m) => m.id)).toEqual(["m2"]); // the old-shape Map is skipped
+    expect(await db.get("encounters", "e1")).not.toHaveProperty("mapId");
+    expect(await db.get("encounters", "e2")).not.toHaveProperty("mapId");
+    expect(await db.get("encounters", "e2")).not.toHaveProperty("spot"); // a spot on a deleted Map means nothing
+    expect(((await db.get("encounters", "e3")) as unknown as { mapId: string }).mapId).toBe("m2");
+    const saved = (await db.get("savedEncounters", "s1")) as unknown as Record<string, unknown>;
+    expect(saved).toMatchObject({ name: "Ambush" });
+    expect(saved).not.toHaveProperty("mapId");
+    expect(saved).not.toHaveProperty("tokens");
+    expect(saved).not.toHaveProperty("spot");
+  });
+});
+
+describe("Marker Priority in a campaign export", () => {
+  it("keeps placedAt and priority through import", async () => {
+    const campaign = { id: "c1", name: "P", createdAt: 1, updatedAt: 2 } as unknown as CampaignExport["campaign"];
+    const empty = Object.fromEntries(COLLECTIONS.map((c) => [c, []])) as unknown as CampaignExport["collections"];
+    const k = { id: "k", x: 1, y: 2, name: "Capital", color: "#fff", icon: "pin", note: "", placedAt: 0.5, priority: "always" };
+    await importCampaign({
+      format: "dungeon-desktop-campaign", version: 1, exportedAt: 3, campaign,
+      collections: { ...empty, maps: [{ id: "m", campaignId: "c1", name: "W", showGrid: true, lines: [], markers: [k], tokens: [], createdAt: 1, updatedAt: 1 }] } as unknown as CampaignExport["collections"],
+    });
+    const m = (await (await getDb()).get("maps", "m")) as unknown as { markers: unknown[] };
+    expect(m.markers).toEqual([k]);
   });
 });

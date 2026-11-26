@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { listCampaigns } from "./storage";
@@ -20,7 +20,7 @@ async function openMap(user: User, lines: MapLine[] = [], markers: MapMarker[] =
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   const id = (await listCampaigns())[0].id;
   if (lines.length || markers.length) await updateMap((await listMaps(id))[0].id, (m) => ({ ...m, lines, markers }));
   return { id, panel };
@@ -34,7 +34,6 @@ const identitySvg = () => {
 afterEach(() => { proto.getScreenCTM = saved.ctm; proto.createSVGPoint = saved.pt; });
 const stored = async (id: string) => (await listMaps(id))[0];
 beforeEach(() => localStorage.clear());
-const setText = (el: HTMLElement, v: string) => { fireEvent.change(el, { target: { value: v } }); fireEvent.blur(el); };
 const route = (id = "r") => line(id, [[2, 1], [5, 1], [5, 5]], false, { route: true }); // 3 + 4 squares
 
 describe("Routes", () => {
@@ -59,7 +58,7 @@ describe("Routes", () => {
     expect((await stored(id)).lines).toHaveLength(1);
   });
 
-  it("labels a multi-segment Route with its length in feet and in miles, and follows a scale change", async () => {
+  it("labels a multi-segment Route with its length in feet and in miles, and in miles", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { id, panel } = await openMap(user, [route(), line("l", [[1, 8], [3, 8]], false)]);
@@ -68,10 +67,10 @@ describe("Routes", () => {
     expect(within(r).getByText("35 ft")).toBeInTheDocument(); // 7 squares x 5 ft
     expect(panel.getByRole("button", { name: "Line 1" })).not.toHaveClass("map-route");
 
-    setText(panel.getByLabelText("Scale per square"), "6");
-    await user.selectOptions(panel.getByLabelText("Scale unit"), "mi");
-    expect(await within(await panel.findByRole("button", { name: "Route 1" })).findByText("42 mi")).toBeInTheDocument();
-    await waitFor(async () => expect(await stored(id)).toMatchObject({ perSquare: 6, unit: "mi" }));
+
+    // from 1,000 ft it reads in miles (5 ft per square)
+    await updateMap((await stored(id)).id, (m) => ({ ...m, lines: [line("r", [[0, 0], [400, 0]], false, { route: true })] }));
+    await waitFor(() => expect(panel.getByRole("button", { name: "Route 1" })).toHaveTextContent("0.38 mi"));
   });
 
   it("selects a Route, shows its length, offers no Make area or segment types, and deletes it", async () => {

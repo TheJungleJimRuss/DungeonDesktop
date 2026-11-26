@@ -3,8 +3,10 @@ import type { MapLine, SegmentKind } from "../storage/maps";
 const KINDS: [SegmentKind, string][] = [["plain", "Plain"], ["wall", "Wall"], ["door", "Door"]];
 
 /** Under the canvas: one type for the whole Line (plain, Wall or Door), or, once a segment is clicked on the canvas, that segment's type alone. */
-export function LineEditor({ line, label, length, segment, onSegment, onKind, onDelete }: {
+export function LineEditor({ line, label, length, segment, onSegment, onSplit, onKind, onDelete }: {
   line: MapLine; label: string; length?: string; segment: number | null; onSegment: (index: number | null) => void;
+  /** Add a point in the middle of segment `index`. */
+  onSplit: (index: number) => void;
   /** `index` null = every segment. */
   onKind: (index: number | null, kind: SegmentKind) => void; onDelete: () => void;
 }) {
@@ -22,12 +24,13 @@ export function LineEditor({ line, label, length, segment, onSegment, onKind, on
             {options}
           </select>
         </label>
-        <span className="muted">Click a segment on the map to change just that one.</span>
+        <span className="muted">Click a segment on the map to change just that one; double-click it to add a point.</span>
       </>}
       {!line.route && one !== null && <>
         <label>Segment {one + 1}{" "}
           <select aria-label={`Segment ${one + 1} type`} value={line.segments[one]} onChange={(e) => onKind(one, e.target.value as SegmentKind)}>{options}</select>
         </label>
+        <button onClick={() => onSplit(one)}>Split segment</button>
         <button onClick={() => onSegment(null)}>All segments</button>
       </>}
       <button className="danger" aria-label={`Delete ${label}`} onClick={onDelete}>Delete</button>

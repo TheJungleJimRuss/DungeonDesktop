@@ -19,7 +19,7 @@ async function openMap(user: User, lines: MapLine[] = []) {
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   const id = (await listCampaigns())[0].id;
   if (lines.length) {
     const map = (await listMaps(id))[0];
@@ -130,5 +130,24 @@ describe("Lines and Shapes on a Map", () => {
     await click(200, 200); await click(320, 200); await click(320, 320); await click(201, 199); // back on the first point
     await waitFor(async () => expect((await stored(id)).lines).toHaveLength(2));
     expect((await stored(id)).lines[1]).toMatchObject({ closed: true, points: [{ x: 5, y: 5 }, { x: 8, y: 5 }, { x: 8, y: 8 }], segments: ["plain", "plain", "plain"] });
+  });
+
+  it("Snap to grid off: drawing lands on the unsnapped point; the setting persists", async () => {
+    identitySvg();
+    const user = userEvent.setup();
+    render(<App />);
+    const { id, panel } = await openMap(user);
+    const snap = panel.getByLabelText("Snap to grid");
+    expect(snap).toBeChecked();
+    await user.click(snap);
+    await waitFor(async () => expect((await stored(id)).snapToGrid).toBe(false));
+    await user.click(panel.getByRole("button", { name: "Draw" }));
+    const surface = await panel.findByTestId("map-draw");
+    const click = (x: number, y: number) => user.pointer({ target: surface, keys: "[MouseLeft]", coords: { clientX: x, clientY: y } });
+    await click(82, 41); await click(158, 43);
+    await user.keyboard("{Enter}");
+    await waitFor(async () => expect((await stored(id)).lines).toHaveLength(1));
+    const [p, q] = (await stored(id)).lines[0].points;
+    expect([p.x, p.y, q.x, q.y].some((v) => !Number.isInteger(v))).toBe(true);
   });
 });

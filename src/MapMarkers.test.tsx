@@ -22,7 +22,7 @@ async function openMap(user: User, lines: MapLine[] = [], markers: MapMarker[] =
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   const id = (await listCampaigns())[0].id;
   if (lines.length || markers.length) {
     const map = (await listMaps(id))[0];

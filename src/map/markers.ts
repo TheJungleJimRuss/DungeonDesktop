@@ -3,11 +3,11 @@ import type { MapMarker } from "../storage/maps";
 export const DEFAULT_MARKER_COLOR = "#e67e22", DEFAULT_MARKER_ICON = "pin";
 
 /** A Marker at a free (unsnapped) point, named "Marker N" with the first number not already used. */
-export function newMarker(at: { x: number; y: number }, existing: MapMarker[]): MapMarker {
+export function newMarker(at: { x: number; y: number }, existing: MapMarker[], placedAt?: number): MapMarker {
   const taken = new Set(existing.map((m) => m.name));
   let n = existing.length + 1;
   while (taken.has(`Marker ${n}`)) n++;
-  return { id: crypto.randomUUID(), x: at.x, y: at.y, name: `Marker ${n}`, color: DEFAULT_MARKER_COLOR, icon: DEFAULT_MARKER_ICON, note: "" };
+  return { id: crypto.randomUUID(), x: at.x, y: at.y, name: `Marker ${n}`, color: DEFAULT_MARKER_COLOR, icon: DEFAULT_MARKER_ICON, note: "", ...(placedAt === undefined ? {} : { placedAt }) };
 }
 
 /** What a Marker is called on the Map: the linked Location's live name, else its own name. */

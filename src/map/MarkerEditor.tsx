@@ -1,14 +1,15 @@
-import type { MapMarker } from "../storage/maps";
+import type { MapMarker, MarkerPriority } from "../storage/maps";
 import type { Location } from "../storage/locations";
 import { MARKER_ICON_IDS, MarkerGlyph } from "./icons";
 import { commitOnEnter } from "./fields";
 
 const CREATE = "__create";
+const PRIORITIES: [MarkerPriority, string][] = [["minor", "Minor"], ["normal", "Normal"], ["major", "Major"], ["always", "Always"]];
 
 /** Under the canvas, for a selected Marker: name, color, icon, note, Location link and Delete. Text fields commit on blur/Enter
  *  (committing per keystroke remounts the input and drops focus). Changes are functions of the stored Marker, so quick commits never overwrite each other. */
-export function MarkerEditor({ marker, label, locations, onChange, onCreateLocation, onDelete }: {
-  marker: MapMarker; label: string; locations: Location[]; onChange: (change: (m: MapMarker) => MapMarker) => void; onCreateLocation: () => void; onDelete: () => void;
+export function MarkerEditor({ marker, label, locations, pxPerSquare, onChange, onCreateLocation, onDelete }: {
+  marker: MapMarker; label: string; locations: Location[]; pxPerSquare: number; onChange: (change: (m: MapMarker) => MapMarker) => void; onCreateLocation: () => void; onDelete: () => void;
 }) {
   const patch = (p: Partial<MapMarker>) => onChange((m) => ({ ...m, ...p }));
   const linked = locations.find((l) => l.id === marker.locationId);
@@ -30,6 +31,10 @@ export function MarkerEditor({ marker, label, locations, onChange, onCreateLocat
           {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           <option value={CREATE}>Create location</option>
         </select></label>
+        <label>Priority <select aria-label="Priority" value={marker.priority ?? "normal"} onChange={(e) => patch({ priority: e.target.value as MarkerPriority })}>
+          {PRIORITIES.map(([v, name]) => <option key={v} value={v}>{name}</option>)}
+        </select></label>
+        <button type="button" title="Measure this Marker's fade from the current zoom" onClick={() => patch({ placedAt: pxPerSquare })}>Set to this zoom</button>
         <button className="danger" aria-label={`Delete Marker ${label}`} onClick={onDelete}>Delete</button>
       </div>
       <div className="row" role="group" aria-label="Marker icon">

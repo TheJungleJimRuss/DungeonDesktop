@@ -14,10 +14,14 @@ describe("Add tokens for all combatants", () => {
     expect(at("g2")).toEqual([7, 2]);
     expect(m.tokens).toHaveLength(4);
   });
-  it("still finds a square on a tiny map", () => {
-    const m = withCombatantTokens({ ...newMapRecord("c", "m"), width: 1, height: 2 }, [
-      { id: "a", kind: "party", name: "A" }, { id: "b", kind: "monster", name: "B" },
-    ]);
-    expect(m.tokens.map((t) => [t.x, t.y])).toEqual([[0, 0], [0, 1]]);
+  it("keeps a big fight inside a battle-scale view: columns of six below the spot, then the next column", () => {
+    const party = Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, kind: "party" as const, name: `P${i}` }));
+    const m = withCombatantTokens(newMapRecord("c", "m"), party, { x: 100, y: 50 });
+    expect(m.tokens.map((t) => [t.x, t.y])).toEqual([[101, 51], [101, 52], [101, 53], [101, 54], [101, 55], [101, 56], [102, 51], [102, 52]]);
+  });
+  it("never runs out of squares on an endless Map", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ id: `m${i}`, kind: "monster" as const, name: `M${i}` }));
+    const m = withCombatantTokens(newMapRecord("c", "m"), many);
+    expect(new Set(m.tokens.map((t) => `${t.x},${t.y}`)).size).toBe(40);
   });
 });

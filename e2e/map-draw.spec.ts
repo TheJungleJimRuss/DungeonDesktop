@@ -1,33 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { gridAt, openMap, storedLines, type View } from "./map-helpers";
 
-async function openMap(page: Page, name: string) {
-  await page.goto("/");
-  await page.getByRole("textbox", { name: "New campaign name" }).fill(name);
-  await page.getByRole("button", { name: "Create campaign" }).click();
-  await page.getByRole("listitem", { name }).getByRole("button", { name: "Open" }).click();
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await page.keyboard.press("Alt+2");
-  const map = page.getByRole("region", { name: "Map" });
-  await map.getByRole("button", { name: "New map" }).click();
-  await expect(map.getByLabel("Map width")).toBeAttached();
-  return map;
-}
-
-/** The stored Lines of the campaign's first Map, read straight from IndexedDB. */
-const storedLines = (page: Page) => page.evaluate(async () => {
-  const dbs = await indexedDB.databases();
-  const db = await new Promise<IDBDatabase>((res, rej) => { const r = indexedDB.open(dbs[0].name!); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-  const rows = await new Promise<{ lines: unknown[] }[]>((res, rej) => { const r = db.transaction("maps").objectStore("maps").getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
-  db.close();
-  return rows[0].lines as { closed: boolean; points: { x: number; y: number }[]; segments: string[] }[];
-});
+const O = { x: 8, y: 7 }; // the old 20 x 20 coordinates, shifted so they fit the canvas
+const grid = (map: Parameters<typeof gridAt>[0]) => gridAt(map, { cx: 0, cy: 0, px: 32 } as View, O);
+const P = (x: number, y: number) => ({ x: x - O.x, y: y - O.y });
 
 test("draws an open Line (double-click), a closed Shape (first point) and drags a point", async ({ page }) => {
   const map = await openMap(page, "Draw Camp");
-  const grid = await map.getByRole("group", { name: "Map canvas" }).boundingBox();
-  const cell = Math.min(grid!.width, grid!.height) / 20;
-  const ox = grid!.x + (grid!.width - cell * 20) / 2, oy = grid!.y + (grid!.height - cell * 20) / 2;
-  const at = (col: number, row: number, f = 0) => [ox + cell * (col + f), oy + cell * (row + f)] as const; // f offsets off the corner: snapping must pull it back
+  let at = await grid(map);
 
   await map.getByRole("button", { name: "Draw", exact: true }).click();
   // open Line: (2,2) (6,2) (6,5), finished by a double-click on the last point
@@ -36,15 +16,17 @@ test("draws an open Line (double-click), a closed Shape (first point) and drags 
   await page.mouse.dblclick(...at(6, 5, 0.1));
   await expect(map.getByRole("button", { name: "Line 1" })).toBeVisible();
   await expect.poll(async () => (await storedLines(page)).length).toBe(1);
-  expect((await storedLines(page))[0]).toMatchObject({ closed: false, points: [{ x: 2, y: 2 }, { x: 6, y: 2 }, { x: 6, y: 5 }], segments: ["plain", "plain"] });
+  expect((await storedLines(page))[0]).toMatchObject({ closed: false, points: [P(2, 2), P(6, 2), P(6, 5)], segments: ["plain", "plain"] });
 
-  // closed Shape: click the first point again
+  // closed Shape: click the first point again. The editor under the canvas may have scrolled the page: measure again.
+  at = await grid(map);
   for (const [c, r] of [[10, 10], [15, 10], [15, 14]]) await page.mouse.click(...at(c, r));
   await page.mouse.click(...at(10, 10, 0.1));
   await expect(map.getByRole("button", { name: "Shape 1" })).toBeVisible();
   await expect.poll(async () => (await storedLines(page)).length).toBe(2);
-  expect((await storedLines(page))[1]).toMatchObject({ closed: true, points: [{ x: 10, y: 10 }, { x: 15, y: 10 }, { x: 15, y: 14 }], segments: ["plain", "plain", "plain"] });
+  expect((await storedLines(page))[1]).toMatchObject({ closed: true, points: [P(10, 10), P(15, 10), P(15, 14)], segments: ["plain", "plain", "plain"] });
 
+  at = await grid(map);
   // Select the Line (click on its first segment), drag its second point to (8,3)
   await map.getByRole("button", { name: "Select", exact: true }).click();
   await page.mouse.click(...at(4, 2));
@@ -54,7 +36,7 @@ test("draws an open Line (double-click), a closed Shape (first point) and drags 
   await page.mouse.down();
   await page.mouse.move(...at(8, 3, 0.2), { steps: 6 });
   await page.mouse.up();
-  await expect.poll(async () => (await storedLines(page))[0].points[1]).toEqual({ x: 8, y: 3 });
+  await expect.poll(async () => (await storedLines(page))[0].points[1]).toEqual(P(8, 3));
 
   // a Wall segment persists too
   await map.getByRole("button", { name: "Segment 1 of Line 1" }).click();
@@ -84,10 +66,7 @@ test("Esc steps back on the Map (cancel the Line, then back to Select) before it
 
 test("draws a Route, labels its length, and dragging a point updates the label", async ({ page }) => {
   const map = await openMap(page, "Route Camp");
-  const grid = await map.getByRole("group", { name: "Map canvas" }).boundingBox();
-  const cell = Math.min(grid!.width, grid!.height) / 20;
-  const ox = grid!.x + (grid!.width - cell * 20) / 2, oy = grid!.y + (grid!.height - cell * 20) / 2;
-  const at = (col: number, row: number) => [ox + cell * col, oy + cell * row] as const;
+  const at = await grid(map);
 
   await map.getByRole("button", { name: "Route", exact: true }).click();
   await page.mouse.click(...at(2, 2));
@@ -97,7 +76,7 @@ test("draws a Route, labels its length, and dragging a point updates the label",
   await expect(route).toBeVisible();
   await expect(route.locator(".map-route-label")).toHaveText("35 ft");
   await expect.poll(async () => (await storedLines(page)).length).toBe(1);
-  expect((await storedLines(page))[0]).toMatchObject({ closed: false, route: true, points: [{ x: 2, y: 2 }, { x: 6, y: 2 }, { x: 6, y: 5 }] });
+  expect((await storedLines(page))[0]).toMatchObject({ closed: false, route: true, points: [P(2, 2), P(6, 2), P(6, 5)] });
 
   await map.getByRole("button", { name: "Select", exact: true }).click();
   await page.mouse.click(...at(4, 2));
@@ -108,16 +87,13 @@ test("draws a Route, labels its length, and dragging a point updates the label",
   await page.mouse.move(...at(6, 8), { steps: 6 }); // 4 + 6 squares
   await expect(route.locator(".map-route-label")).toHaveText("50 ft"); // live, before release
   await page.mouse.up();
-  await expect.poll(async () => (await storedLines(page))[0].points[2]).toEqual({ x: 6, y: 8 });
+  await expect.poll(async () => (await storedLines(page))[0].points[2]).toEqual(P(6, 8));
   await expect(route.locator(".map-route-label")).toHaveText("50 ft");
 });
 
 test("drags a selected Area by its fill: the whole Shape moves by whole squares", async ({ page }) => {
   const map = await openMap(page, "Area Drag Camp");
-  const grid = await map.getByRole("group", { name: "Map canvas" }).boundingBox();
-  const cell = Math.min(grid!.width, grid!.height) / 20;
-  const ox = grid!.x + (grid!.width - cell * 20) / 2, oy = grid!.y + (grid!.height - cell * 20) / 2;
-  const at = (col: number, row: number) => [ox + cell * col, oy + cell * row] as const;
+  const at = await grid(map);
 
   await map.getByRole("button", { name: "Draw", exact: true }).click();
   for (const [c, r] of [[4, 4], [8, 4], [8, 7], [4, 7]]) await page.mouse.click(...at(c, r));
@@ -128,12 +104,11 @@ test("drags a selected Area by its fill: the whole Shape moves by whole squares"
   await expect.poll(async () => !!(await storedLines(page))[0].area).toBe(true);
 
   // The editor below the canvas can scroll the page: measure the canvas again.
-  const g2 = await map.getByRole("group", { name: "Map canvas" }).boundingBox();
-  const oy2 = g2!.y + (g2!.height - cell * 20) / 2, at2 = (col: number, row: number) => [ox + cell * col, oy2 + cell * row] as const;
+  const at2 = await grid(map);
   await page.mouse.move(...at2(6, 5.5));
   await page.mouse.down();
   await page.mouse.move(...at2(9.2, 7.4), { steps: 8 });
   await page.mouse.up();
-  await expect.poll(async () => (await storedLines(page))[0].points).toEqual([{ x: 7, y: 6 }, { x: 11, y: 6 }, { x: 11, y: 9 }, { x: 7, y: 9 }]);
+  await expect.poll(async () => (await storedLines(page))[0].points).toEqual([P(7, 6), P(11, 6), P(11, 9), P(7, 9)]);
   await expect(map.getByRole("group", { name: "Edit Shape 1" })).toBeVisible(); // still selected
 });

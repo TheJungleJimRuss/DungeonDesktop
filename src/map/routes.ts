@@ -1,8 +1,8 @@
-import { formatDistance } from "../battle/measure";
+import { formatSquares } from "./scale";
 import { polylineLength, type Pt } from "./geometry";
 
-/** A Route's total length in the Map's unit: every segment (never closing back) times the scale, e.g. "35 ft", "42 mi". */
-export const routeLength = (points: Pt[], perSquare: number, unit: string): string => formatDistance(polylineLength(points, false) * perSquare, unit);
+/** A Route's total length from the fixed 5 ft base square, every segment (never closing back): "35 ft", "3.2 mi" (miles from 1,000 ft). */
+export const routeLength = (points: Pt[]): string => formatSquares(polylineLength(points, false));
 
 /** The point `t` (0 to 1) of the way along the path, by length; the first point when the path has no length. */
 export function pointAlong(points: Pt[], t: number): Pt {

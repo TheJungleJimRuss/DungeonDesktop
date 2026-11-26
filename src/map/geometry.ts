@@ -46,6 +46,13 @@ export function distanceToSegment(p: Pt, a: Pt, b: Pt): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+/** The point on segment a-b nearest to `p`. */
+export function projectOnSegment(p: Pt, a: Pt, b: Pt): Pt {
+  const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+  return { x: a.x + t * dx, y: a.y + t * dy };
+}
+
 /** Is `p` within `radiusPx` screen pixels of the segment? */
 export const hitsSegment = (p: Pt, a: Pt, b: Pt, pxPerUnit: number, radiusPx: number) => distanceToSegment(p, a, b) * pxPerUnit <= radiusPx;
 /** Is `p` within `radiusPx` screen pixels of the point `q`? */
@@ -62,3 +69,35 @@ export function polygonCentroid(poly: Pt[]): Pt {
   }
   return a === 0 ? mean() : { x: cx / (3 * a), y: cy / (3 * a) };
 }
+
+/** Opacity 0..1 for something `screenPx` pixels big: 0 at or below `minPx`, ramping linearly across `band` px above it (default `minPx`, so it is
+ *  fully there at twice the minimum), then 1. Things fade rather than pop. */
+export function fadeBySize(screenPx: number, minPx: number, band = minPx): number {
+  if (screenPx <= minPx) return 0;
+  if (band <= 0 || screenPx >= minPx + band) return 1;
+  return (screenPx - minPx) / band;
+}
+/** How many times the placing zoom a Marker stays fully visible while zooming out, per Priority. */
+export const MARKER_FACTOR = { minor: 3, normal: 10, major: 100, always: Infinity } as const;
+/** Opacity 0..1 of a Marker: 1 while `placedAt / pxPerSquare` is at or below its Priority's factor, then a linear ramp (in log space) to 0 at 1.5x the factor.
+ *  Zooming in (ratio below 1) is always 1. */
+export function markerOpacity(placedAt: number, pxPerSquare: number, priority: keyof typeof MARKER_FACTOR = "normal"): number {
+  const f = MARKER_FACTOR[priority], ratio = placedAt / pxPerSquare;
+  if (!(ratio > f)) return 1;
+  return Math.max(0, 1 - Math.log(ratio / f) / Math.log(1.5));
+}
+/** Fade thresholds (on-screen px): a Line segment's length, an Area's larger side, a Token's square. */
+export const SEGMENT_MIN_PX = 4, AREA_MIN_PX = 6, TOKEN_MIN_PX = 3;
+/** On-screen length of a segment given pixels per square. */
+export const segmentScreenLength = (a: Pt, b: Pt, pxPerUnit: number) => Math.hypot(b.x - a.x, b.y - a.y) * pxPerUnit;
+/** Rough on-screen width of a 13px label (about 0.6 em per character). The label fades out when this exceeds the Area's on-screen width. */
+export const labelWidthPx = (text: string) => text.length * 7.8;
+
+export interface Bounds { x0: number; y0: number; x1: number; y1: number }
+export function boundsOf(points: Pt[]): Bounds {
+  const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+/** Do the bounds meet the view (widened by `margin` on every side)? Touching counts. */
+export const boundsIntersect = (b: Bounds, view: Bounds, margin = 0) =>
+  b.x1 >= view.x0 - margin && b.x0 <= view.x1 + margin && b.y1 >= view.y0 - margin && b.y0 <= view.y1 + margin;

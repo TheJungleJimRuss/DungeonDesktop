@@ -57,13 +57,13 @@ describe("Encounter map choice", () => {
     await waitFor(async () => expect(await rows(id, "encounters")).toHaveLength(1));
     expect(await rows(id, "maps")).toHaveLength(1);
   });
-  it("with no pick, makes a blank 20x20, 5 ft Map named after the Encounter and shows it in Combat, locked", async () => {
+  it("with no pick, makes a blank endless Map named after the Encounter and shows it in Combat, locked", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { id, map } = await openCombat(user);
     await waitFor(async () => expect(await rows(id, "maps")).toHaveLength(1));
     const [m] = await rows(id, "maps");
-    expect(m).toMatchObject({ name: "Encounter 1", width: 20, height: 20, perSquare: 5, unit: "ft", showGrid: true });
+    expect(m).toMatchObject({ name: "Encounter 1", showGrid: true });
     expect((await rows(id, "encounters"))[0].mapId).toBe(m.id);
     // Combat shows the Encounter's Map; the picker is locked to it and its Map cannot be deleted under it
     const picker = await map.findByRole("combobox", { name: "Map" });
@@ -238,8 +238,6 @@ describe("Tokens linked to Combatants", () => {
     expect(map.queryByTestId("speed-ring")).toBeNull();
     await user.click(map.getByRole("button", { name: "Token Thia" }));
     await map.findByTestId("speed-ring");
-    await user.selectOptions(map.getByLabelText("Scale unit"), "mi"); // feet make no sense on a Map in miles
-    await waitFor(() => expect(map.queryByTestId("speed-ring")).toBeNull());
   });
 });
 
@@ -347,7 +345,7 @@ describe("Saved encounters keep their Map and token positions", () => {
     await waitFor(async () => expect(await listMaps(id)).toHaveLength(1));
     const [fresh] = await listMaps(id);
     expect(fresh.id).not.toBe(old.id);
-    expect(fresh).toMatchObject({ name: "Ambush", width: 20, height: 20, perSquare: 5, unit: "ft", showGrid: true });
+    expect(fresh).toMatchObject({ name: "Ambush", showGrid: true });
     expect((await rows(id, "encounters"))[0].mapId).toBe(fresh.id);
     // the Combatants still get tokens on it, lined up on their sides
     await map.findByRole("button", { name: "Token Aria" });
@@ -387,7 +385,7 @@ describe("Portability and upgrade", () => {
     expect((await exportCampaign(id))!.collections).not.toHaveProperty("battleMaps");
   });
 
-  it("upgrading from version 7 removes battleMaps and the saved-encounter map copy, and gives a running Encounter a Map", async () => {
+  it("upgrading from version 7 removes battleMaps and the saved-encounter map copy, and leaves the running Encounter without a Map", async () => {
     closeDb();
     const old = await openDB("dungeon-desktop", 7, {
       upgrade(db) {
@@ -409,10 +407,8 @@ describe("Portability and upgrade", () => {
     expect([...db.objectStoreNames]).toContain("maps");
     expect(await db.get("savedEncounters", "s1")).toEqual({ id: "s1", campaignId: "c", name: "Ambush", createdAt: 1, members: [{ kind: "adhoc", name: "Bandit", hp: 9, dexMod: 0 }] });
     expect(await db.get("savedEncounters", "s2")).toMatchObject({ name: "Plain" });
-    const maps = await listMaps("c");
-    expect(maps).toHaveLength(1);
-    expect(maps[0]).toMatchObject({ name: "Encounter 1", width: 20, height: 20, perSquare: 5, tokens: [] });
-    expect((await db.get("encounters", "e1"))!.mapId).toBe(maps[0].id);
+    expect(await listMaps("c")).toHaveLength(0); // old Maps are cleared, not converted
+    expect(await db.get("encounters", "e1")).not.toHaveProperty("mapId");
   });
 
   it("changing a Map's tokens from storage keeps whole squares", async () => {

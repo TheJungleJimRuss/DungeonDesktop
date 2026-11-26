@@ -7,8 +7,12 @@ import { normalizeMonster, type Monster } from "../srd/monsters";
  *  A custom monster keeps the SRD Monster shape (minus id and name), so the Stat Block treats both alike. */
 export type CustomKind = "monster" | "spell" | "item";
 export type MonsterData = Omit<Monster, "id" | "name">;
-export interface SpellData { level: number; school: string; castingTime: string; range: string; components: string; duration: string; desc: string }
-export interface ItemData { type: string; rarity: string; desc: string }
+/** `classes`, `ritual`, `higherLevel` and `attunement` are optional: older records and export files lack them (read as empty). */
+export interface SpellData {
+  level: number; school: string; castingTime: string; range: string; components: string; duration: string; desc: string;
+  classes?: string[]; ritual?: boolean; higherLevel?: string;
+}
+export interface ItemData { type: string; rarity: string; desc: string; attunement?: string }
 export type CustomData = MonsterData | SpellData | ItemData;
 
 export interface CustomEntry extends CollectionRecord {
@@ -30,8 +34,8 @@ export const emptyMonsterData = (): MonsterData => ({
   vulnerabilities: [], resistances: [], immunities: [], conditionImmunities: [], senses: "", languages: "",
   cr: 0, xp: 0, pb: 2, traits: [], actions: [], bonusActions: [], reactions: [], legendaryActions: [],
 });
-export const emptySpellData = (): SpellData => ({ level: 0, school: "", castingTime: "", range: "", components: "", duration: "", desc: "" });
-export const emptyItemData = (): ItemData => ({ type: "", rarity: "", desc: "" });
+export const emptySpellData = (): SpellData => ({ level: 0, school: "", castingTime: "", range: "", components: "", duration: "", desc: "", classes: [], ritual: false, higherLevel: "" });
+export const emptyItemData = (): ItemData => ({ type: "", rarity: "", desc: "", attunement: "" });
 export const emptyData = (kind: CustomKind): CustomData =>
   kind === "monster" ? emptyMonsterData() : kind === "spell" ? emptySpellData() : emptyItemData();
 

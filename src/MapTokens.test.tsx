@@ -15,11 +15,10 @@ async function openMap(user: User) {
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   return { id: (await listCampaigns())[0].id, panel };
 }
 const pos = (el: HTMLElement) => [el.getAttribute("data-col"), el.getAttribute("data-row")];
-const setVal = async (user: User, el: HTMLElement, v: string) => { await user.clear(el); await user.type(el, v + "{Tab}"); };
 const addToken = async (user: User, panel: ReturnType<typeof within>, name: string) => {
   await user.type(panel.getByLabelText("Token name"), name);
   await user.click(panel.getByRole("button", { name: /^add token$/i }));
@@ -29,7 +28,7 @@ const addToken = async (user: User, panel: ReturnType<typeof within>, name: stri
 beforeEach(() => localStorage.clear());
 
 describe("Tokens on a Map", () => {
-  it("adds free Tokens, moves them by keyboard in whole squares (past the edge too), keeps them when the Map shrinks, edits and deletes", async () => {
+  it("adds free Tokens, moves them by keyboard in whole squares (past the edge too), edits and deletes", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { id, panel } = await openMap(user);
@@ -53,11 +52,6 @@ describe("Tokens on a Map", () => {
     panel.getByRole("button", { name: "Token Goblin" }).focus();
     await user.keyboard("{ArrowRight}");
     await waitFor(async () => expect((await listMaps(id))[0].tokens[0]).toMatchObject({ x: 3, y: 1 }));
-
-    // shrinking the Map leaves tokens where they are
-    await setVal(user, panel.getByLabelText("Map width"), "2");
-    await waitFor(async () => expect((await listMaps(id))[0]).toMatchObject({ width: 2 }));
-    expect(pos(panel.getByRole("button", { name: "Token Goblin" }))).toEqual(["3", "1"]);
 
     const name = panel.getByLabelText("Name of Goblin");
     await user.clear(name); await user.type(name, "Boss{Enter}");
@@ -99,7 +93,7 @@ describe("Tokens on a Map", () => {
     expect((await listMaps(id))[0].tokens.map((t) => [t.name, t.x, t.y])).toEqual([["Ogre", 0, 0], ["Imp", 2, 2]]);
   });
 
-  it("measures between squares with the ruler (click start, click end) in the Map's unit and scale", async () => {
+  it("measures between squares with the ruler (click start, click end) in feet", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { panel } = await openMap(user);
@@ -119,18 +113,12 @@ describe("Tokens on a Map", () => {
     await user.click(panel.getByLabelText("Square 3,3"));
     expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("3 squares, 15 ft");
 
-    // squares past the Map count too, once zoomed out to show them
+    // squares anywhere count, once zoomed out to show them
     await user.click(panel.getByRole("button", { name: "Zoom out" }));
     await user.click(panel.getByLabelText("Square -2,0"));
     await user.click(panel.getByLabelText("Square 2,0"));
-    // the count is in shown grid squares (zoomed out, each stands for 1.5 of the Map's), the distance in the Map's unit
-    expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("2.67 squares, 20 ft");
-
-    await setVal(user, panel.getByLabelText("Scale per square"), "10");
-    await waitFor(() => expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("40 ft"));
-    await user.selectOptions(panel.getByLabelText("Scale unit"), "mi");
-    await waitFor(() => expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent("2.67 squares, 40 mi"));
-    expect(panel.getByTestId("ruler-line").parentElement).toHaveTextContent("40 mi");
+    // the count is in shown grid squares (zoomed out, each stands for more), the distance in feet (or miles from 1,000 ft)
+    expect(panel.getByRole("status", { name: "Measured distance" })).toHaveTextContent(/squares, 20 ft/);
 
     await user.click(panel.getByRole("button", { name: "Clear measurement" }));
     expect(panel.queryByTestId("ruler-line")).not.toBeInTheDocument();
@@ -138,7 +126,7 @@ describe("Tokens on a Map", () => {
     expect(panel.queryByLabelText("Square 0,0")).not.toBeInTheDocument();
   });
 
-  it("zooms in and out without limit and Fit goes back", async () => {
+  it("zooms in and out and Fit all goes back to battle scale on an empty Map", async () => {
     const user = userEvent.setup();
     render(<App />);
     const { panel } = await openMap(user);
@@ -146,13 +134,11 @@ describe("Tokens on a Map", () => {
     const fit = grid.getAttribute("viewBox")!;
     const width = () => Number(grid.getAttribute("viewBox")!.split(" ")[2]);
     const w0 = width();
-    expect(panel.getByRole("button", { name: "Fit" })).toHaveAttribute("aria-pressed", "true");
     for (let i = 0; i < 8; i++) await user.click(panel.getByRole("button", { name: "Zoom in" }));
-    expect(width()).toBeCloseTo(w0 / 1.5 ** 8);
-    expect(panel.getByRole("button", { name: "Fit" })).toHaveAttribute("aria-pressed", "false");
+    expect(width()).toBeLessThan(w0 / 10); // about 1.5x per click, locked to round grid values
     for (let i = 0; i < 12; i++) await user.click(panel.getByRole("button", { name: "Zoom out" }));
-    expect(width()).toBeCloseTo(w0 * 1.5 ** 4);
-    await user.click(panel.getByRole("button", { name: "Fit" }));
+    expect(width()).toBeGreaterThan(w0);
+    await user.click(panel.getByRole("button", { name: "Fit all" }));
     expect(grid.getAttribute("viewBox")).toBe(fit);
   });
 });

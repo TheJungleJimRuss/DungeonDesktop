@@ -3,7 +3,8 @@ import { combatantForLink, compositionOf, encounterFrom, linkKeyOf, summarize } 
 import type { Encounter } from "../combat/rules";
 import { listParty } from "../storage/party";
 import { saveEncounter } from "../storage/encounters";
-import { createEncounterMap, getMap, restoreTokens, snapshotTokens, updateMap } from "../storage/maps";
+import { createEncounterMap, getMap, restoreTokens, snapshotTokens, updateMap, writeMapView } from "../storage/maps";
+import { BATTLE_PX_PER_SQUARE } from "../map/scale";
 import {
   createSavedEncounter, deleteSavedEncounter, renameSavedEncounter, useSavedEncounters, type SavedEncounter,
 } from "../storage/savedEncounters";
@@ -15,7 +16,7 @@ export function SaveEncounterControl({ campaignId, enc }: { campaignId: string; 
   const save = async () => {
     if (!name.trim() || !members.length) return;
     const stored = enc.mapId ? await getMap(enc.mapId) : undefined;
-    await createSavedEncounter(campaignId, name.trim(), members, stored ? { mapId: stored.id, tokens: snapshotTokens(stored, (id) => linkKeyOf(enc, id)) } : undefined);
+    await createSavedEncounter(campaignId, name.trim(), members, stored ? { mapId: stored.id, tokens: snapshotTokens(stored, (id) => linkKeyOf(enc, id)), spot: enc.spot } : undefined);
     setName("");
   };
   return (
@@ -33,10 +34,13 @@ function Row({ campaignId, s }: { campaignId: string; s: SavedEncounter }) {
     const base = encounterFrom(campaignId, s.members, await listParty(campaignId));
     // The saved Map, or a blank one named after the saved encounter when it is gone.
     const saved = s.mapId ? await getMap(s.mapId) : undefined;
-    const mapId = saved && saved.campaignId === campaignId ? saved.id : (await createEncounterMap(campaignId, s.name)).id;
-    const enc = { ...base, mapId };
+    const fresh = !(saved && saved.campaignId === campaignId);
+    const mapId = fresh ? (await createEncounterMap(campaignId, s.name)).id : saved!.id;
+    // Loading opens the fight where it was: the spot at battle scale.
+    if (s.spot) writeMapView(mapId, { centre: s.spot, pxPerSquare: BATTLE_PX_PER_SQUARE });
+    const enc = { ...base, mapId, ...(s.spot ? { spot: s.spot } : {}) };
     await saveEncounter(enc);
-    await updateMap(mapId, (m) => restoreTokens(m, s.tokens ?? [], (key) => combatantForLink(enc, key), enc.combatants));
+    await updateMap(mapId, (m) => restoreTokens(m, s.tokens ?? [], (key) => combatantForLink(enc, key), enc.combatants, s.spot));
   };
   const commit = () => {
     const n = draft.trim();

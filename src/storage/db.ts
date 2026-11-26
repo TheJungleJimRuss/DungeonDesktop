@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from "idb";
 import { notifyChange } from "../sync/changeBus";
-import { stripLocationPosition, withEncounterMaps } from "./maps";
+import { stripLocationPosition } from "./maps";
 
 /** Per-Campaign collections. Later tickets add records to these stores; the
  *  stores already exist so no schema migration is needed to start using them. */
@@ -56,7 +56,7 @@ export interface DungeonDB extends DBSchema {
 }
 
 export const DB_NAME = "dungeon-desktop";
-export const DB_VERSION = 8;
+export const DB_VERSION = 9;
 
 const WRITES = new Set(["add", "put", "delete", "clear"]);
 
@@ -101,6 +101,13 @@ function withChangeNotifications(db: IDBPDatabase<DungeonDB>): IDBPDatabase<Dung
   });
 }
 
+/** This device's last-Map and Map-view keys point at deleted Maps after the v9 upgrade. */
+function clearMapDeviceKeys(): void {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith("dungeon-desktop:map-last:") || key.startsWith("dungeon-desktop:map-view:")) localStorage.removeItem(key);
+  } catch { /* no storage here */ }
+}
+
 let dbPromise: Promise<IDBPDatabase<DungeonDB>> | null = null;
 
 export function getDb(): Promise<IDBPDatabase<DungeonDB>> {
@@ -123,7 +130,7 @@ export function getDb(): Promise<IDBPDatabase<DungeonDB>> {
         }
       }
       if (oldVersion > 0 && oldVersion < 8) {
-        // v8 (spec 0007): the Battle Map store is gone, saved encounters keep no map copy, and an Encounter in progress gets a blank Map to stand on.
+        // v8 (spec 0007): the Battle Map store is gone and saved encounters keep no map copy.
         const old = db as unknown as IDBPDatabase;
         if (old.objectStoreNames.contains("battleMaps")) old.deleteObjectStore("battleMaps");
         let saved = await tx.objectStore("savedEncounters").openCursor();
@@ -131,10 +138,22 @@ export function getDb(): Promise<IDBPDatabase<DungeonDB>> {
           if ("map" in saved.value) { const { map: _map, ...rest } = saved.value; await saved.update(rest as typeof saved.value); }
           saved = await saved.continue();
         }
-        const encStore = tx.objectStore("encounters");
-        const { encounters, maps } = withEncounterMaps(await encStore.getAll(), (await tx.objectStore("maps").getAll()) as unknown as { campaignId: string; name: string }[]);
-        for (const m of maps) await tx.objectStore("maps").put(m);
-        for (const e of encounters) await encStore.put(e);
+      }
+      if (oldVersion > 0 && oldVersion < 9) {
+        // v9 (spec 0009, ADR 0003): Maps are endless on a fixed 5 ft square, and old ones are not converted. Every Map goes, along with the Map links
+        // (and Tokens) on Encounters and saved encounters; everything else stays. The app warned the DM first (src/ui/OldMapsNotice.tsx).
+        await tx.objectStore("maps").clear();
+        for (const name of ["encounters", "savedEncounters"] as const) {
+          let cursor = await tx.objectStore(name).openCursor();
+          while (cursor) {
+            if ("mapId" in cursor.value || "tokens" in cursor.value || "spot" in cursor.value) {
+              const { mapId: _m, tokens: _t, spot: _s, ...rest } = cursor.value;
+              await cursor.update(rest as typeof cursor.value);
+            }
+            cursor = await cursor.continue();
+          }
+        }
+        clearMapDeviceKeys();
       }
     },
   }).then(withChangeNotifications);

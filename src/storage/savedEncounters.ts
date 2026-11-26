@@ -4,15 +4,15 @@ import { useChangeVersion } from "../sync/changeBus";
 import type { SavedMember } from "../combat/saved";
 import type { SavedToken } from "./maps";
 
-export interface SavedEncounter { id: string; campaignId: string; name: string; members: SavedMember[]; createdAt: number; mapId?: string; tokens?: SavedToken[]; }
+export interface SavedEncounter { id: string; campaignId: string; name: string; members: SavedMember[]; createdAt: number; mapId?: string; tokens?: SavedToken[]; spot?: { x: number; y: number }; }
 
 export async function listSavedEncounters(campaignId: string): Promise<SavedEncounter[]> {
   const rows = (await (await getDb()).getAllFromIndex("savedEncounters", "byCampaign", campaignId)) as unknown as SavedEncounter[];
   return rows.sort((a, b) => a.createdAt - b.createdAt);
 }
 
-export async function createSavedEncounter(campaignId: string, name: string, members: SavedMember[], map?: { mapId: string; tokens: SavedToken[] }): Promise<void> {
-  const row: SavedEncounter = { id: crypto.randomUUID(), campaignId, name, members, createdAt: Date.now(), ...(map ? { mapId: map.mapId, tokens: map.tokens } : {}) };
+export async function createSavedEncounter(campaignId: string, name: string, members: SavedMember[], map?: { mapId: string; tokens: SavedToken[]; spot?: { x: number; y: number } }): Promise<void> {
+  const row: SavedEncounter = { id: crypto.randomUUID(), campaignId, name, members, createdAt: Date.now(), ...(map ? { mapId: map.mapId, tokens: map.tokens, ...(map.spot ? { spot: map.spot } : {}) } : {}) };
   await (await getDb()).add("savedEncounters", row as unknown as CollectionRecord);
 }
 

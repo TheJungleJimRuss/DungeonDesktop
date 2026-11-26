@@ -23,7 +23,7 @@ async function openMap(user: User, build: (loc: { keep: string; cave: string }) 
   await user.keyboard("{Alt>}2{/Alt}");
   const panel = within(await screen.findByRole("region", { name: "Map" }));
   await user.click(await panel.findByRole("button", { name: "New map" }));
-  await panel.findByLabelText("Map width");
+  await panel.findByLabelText("Map summary");
   const id = (await listCampaigns())[0].id;
   const keep = (await createLocation(id, { name: "Keep", notes: "" })).id, cave = (await createLocation(id, { name: "Cave", notes: "" })).id;
   const d = build({ keep, cave });
@@ -35,7 +35,7 @@ const partyAt = async (id: string) => (await listCampaigns()).find((c) => c.id =
 const addParty = async (user: User, panel: ReturnType<typeof within>) => {
   await user.click(panel.getByRole("button", { name: "Add party token" }));
   const tok = await panel.findByRole("button", { name: "Party token" });
-  expect((tok.querySelector("g") as SVGGElement).style.transform).toBe("scale(var(--ui))"); // fixed on-screen size at any zoom
+  expect((tok.querySelector("g") as SVGGElement).style.transform).toBe("scale(1)"); // battle scale: its true square size (no boost)
   tok.focus();
   return tok;
 };

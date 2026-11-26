@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { getDb, type CollectionRecord } from "./db";
 import { useChangeVersion } from "../sync/changeBus";
 import { newEncounter, type Encounter } from "../combat/rules";
-import { createEncounterMap, type MapRecord } from "./maps";
+import { createEncounterMap, readMapView, writeMapView, type MapRecord } from "./maps";
+import { BATTLE_PX_PER_SQUARE } from "../map/scale";
 
 /** At most one in-progress Encounter per Campaign, stored in the `encounters` collection. Ending it deletes the record. */
 type Row = Encounter & CollectionRecord;
@@ -12,10 +13,16 @@ export async function getActiveEncounter(campaignId: string): Promise<Encounter 
   return rows.sort((a, b) => b.startedAt - a.startedAt)[0];
 }
 
-/** A new Encounter on a Map: the picked one, or (with none) a blank Map made for it. Not saved yet; see saveEncounter. */
+/** A new Encounter on a Map: the picked one, or (with none) a blank Map made for it. Not saved yet; see saveEncounter.
+ *  Its spot is the centre of the view on that Map. The Map panel writes its view to this device's storage on every change, so the stored view is the
+ *  current one whether or not the panel is open (and a Map with no stored view, such as a brand-new one, gives (0, 0)).
+ *  Zoomed out past battle scale, the view is set to battle scale at the spot, which a mounted panel picks up through onMapViewWrite. */
 export async function startEncounter(campaignId: string, mapId?: string, mapName?: string): Promise<Encounter> {
   const id = mapId ?? (await createEncounterMap(campaignId, mapName)).id;
-  return { ...newEncounter(campaignId), mapId: id };
+  const view = readMapView(id);
+  const spot = view ? { ...view.centre } : { x: 0, y: 0 };
+  if (view && view.pxPerSquare < BATTLE_PX_PER_SQUARE) writeMapView(id, { centre: spot, pxPerSquare: BATTLE_PX_PER_SQUARE });
+  return { ...newEncounter(campaignId), mapId: id, spot };
 }
 
 /** Saves the Encounter and drops its Map's Tokens whose Combatant is gone (so removal works from any panel or window). */
